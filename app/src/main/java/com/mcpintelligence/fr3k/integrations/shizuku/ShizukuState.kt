@@ -97,6 +97,21 @@ sealed class ShizukuEvent {
      *                 (which the plan's reducer treats as denied).
      */
     data class PermissionResult(val granted: Boolean) : ShizukuEvent()
+
+    /**
+     * Fail-safe reconciliation raised by [ShizukuBridge] on binder
+     * receipt/start. After a process restart the grant is already recorded
+     * by Shizuku Manager, so a new `PermissionResult` callback never
+     * arrives — the bridge re-checks the official
+     * `Shizuku.checkSelfPermission()` plus the `API_V23` Android
+     * permission fallback and reports the authoritative grant state here.
+     *
+     * @param granted true iff the permission is genuinely granted now.
+     *                A `false` here is NOT a user denial — the reducer
+     *                keeps the current requestable state instead of
+     *                dropping into [ShizukuState.Denied].
+     */
+    data class PermissionReconciled(val granted: Boolean) : ShizukuEvent()
 }
 
 /**
@@ -183,5 +198,70 @@ object ShizukuStateReducer {
                         else -> ShizukuState.Denied
                     }
                 }
+
+            is ShizukuEvent.PermissionReconciled ->
+                if (event.granted) {
+                    when (current) {
+                        // Normal fail-safe path: binder live + an
+                        // authoritative check (official API or API_V23
+                        // fallback) confirms the grant — reach Ready
+                        // without a new permission-result callback.
+                        ShizukuState.BinderLivePermissionRequired -> ShizukuState.Ready
+                        // Idempotent: repeated reconciliation stays put.
+                        ShizukuState.Ready -> current
+                        // A now-granted permission supersedes a stale
+                        // explicit denial (the user granted in SUI's
+                        // settings path); the check is authoritative.
+                        ShizukuState.Denied -> ShizukuState.Ready
+                        // Never fabricate Ready without a live binder
+                        // observation, or on a device without Shizuku —
+                        // a checked grant alone must not resurrect
+                        // Missing / Dead / Unknown.
+                        else -> current
+                    }
+                } else {
+                    // A reconciliation miss is NOT a denial: no dialog was
+                    // refused. Keep the requestable state so the grant CTA
+                    // stays up instead of collapsing to Denied.
+                    current
+                }
         }
+}
+
+/**
+ * Pure permission-reconciliation policy. The Android-touching bridge
+ * collapses the raw checks into booleans; this object decides what event
+ * to raise, so the entire fail-safe decision is JVM-testable without
+ * booting Shizuku or Android.
+ *
+ * Semantics (kept strict — never a weaker check):
+ *  - [MANAGER_PERMISSION_API_V23] is the legacy Android permission Shizuku
+ *    Manager grants to allowed packages (the live phone shows it granted).
+ *  - The official `Shizuku.checkSelfPermission()` is the modern path.
+ *  - Either authoritative channel proving the grant is enough — but a
+ *    grant without a live binder is never [ShizukuState.Ready].
+ */
+object ShizukuPermissionReconciler {
+
+    /** Legacy Android permission name Shizuku Manager grants to allowed apps. */
+    const val MANAGER_PERMISSION_API_V23 = "moe.shizuku.manager.permission.API_V23"
+
+    /** Model of android.content.pm.PackageManager.PERMISSION_GRANTED (0). */
+    const val PERMISSION_GRANTED = 0
+
+    /**
+     * @param binderLive binder observed (`Shizuku.getBinder() != null`)
+     * @param officialGranted official `Shizuku.checkSelfPermission()`
+     *                        reported PERMISSION_GRANTED
+     * @param legacyGranted PackageManager check of `API_V23` reported
+     *                      PERMISSION_GRANTED
+     */
+    fun event(
+        binderLive: Boolean,
+        officialGranted: Boolean,
+        legacyGranted: Boolean,
+    ): ShizukuEvent {
+        val granted = binderLive && (officialGranted || legacyGranted)
+        return ShizukuEvent.PermissionReconciled(granted = granted)
+    }
 }

@@ -127,6 +127,242 @@ class ShizukuStateReducerTest {
         assertEquals(ShizukuState.Ready, state)
     }
 
+    // ---------- fail-safe reconciliation (0.4.18) ----------
+    // The shield: HUD 0.4.17 got stuck at BinderLivePermissionRequired
+    // after a process restart because the grant already recorded in SUI
+    // only surfaces via a NEW permission-result callback, which never
+    // fires again. The reducer must reach Ready from a reconciliation
+    // event without weakening any permission check.
+
+    @Test fun restartWithPreGrantedPermissionReconcilesToReady() {
+        // Process restart: packages reinstall, SUI already lists us.
+        // BinderReceived alone used to strand us at
+        // BinderLivePermissionRequired — the reconciliation check is the
+        // only way back to Ready without a new permission-result callback.
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Unknown,
+            event = ShizukuEvent.InstallCheck(present = true),
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderReceived,
+        )
+        assertEquals(ShizukuState.BinderLivePermissionRequired, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = true),
+        )
+        assertEquals(ShizukuState.Ready, state)
+    }
+
+    @Test fun startWithAlreadyLiveBinderReconcilesToReady() {
+        // The bridge start() path: process entry with the binder already
+        // live. The bridge raises BinderReceived + PermissionReconciled
+        // and must land in Ready (pre-granted permission case).
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Unknown,
+            event = ShizukuEvent.InstallCheck(present = true),
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderReceived,
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = true),
+        )
+        assertEquals(ShizukuState.Ready, state)
+    }
+
+    @Test fun reconciliationMissIsNotDenial() {
+        // A reconcile that finds NO grant (e.g. binder arrived before the
+        // user ever granted) must stay requestable — NOT collapse to
+        // Denied, which would hide the grant CTA.
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Unknown,
+            event = ShizukuEvent.InstallCheck(present = true),
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderReceived,
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = false),
+        )
+        assertEquals(ShizukuState.BinderLivePermissionRequired, state)
+    }
+
+    @Test fun explicitDenialIsNotOverriddenByReconciliationFalse() {
+        // User refused the grant dialog — Denied is terminal-ish for the
+        // dialog path. A later asymmetric reconciliation (binder rebind
+        // while still not granted) must NOT flip Denied back to
+        // requestable, nor to Ready.
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.BinderLivePermissionRequired,
+            event = ShizukuEvent.PermissionResult(granted = false),
+        )
+        assertEquals(ShizukuState.Denied, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderReceived,
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = false),
+        )
+        assertEquals(ShizukuState.Denied, state)
+    }
+
+    @Test fun nowGrantedPermissionResolvesStaleDenial() {
+        // If the user later grants in SUI's settings path, an
+        // authoritative reconciliation proves Ready — Denied is only
+        // sticky against a still-grant-less reconcile.
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.BinderLivePermissionRequired,
+            event = ShizukuEvent.PermissionResult(granted = false),
+        )
+        assertEquals(ShizukuState.Denied, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = true),
+        )
+        assertEquals(ShizukuState.Ready, state)
+    }
+
+    @Test fun binderDeathThenRebindWithPregrantedPermissionReturnsToReady() {
+        // Full lifecycle: Ready -> binder death -> Dead -> install check
+        // -> ServerStarting -> binder rebind -> reconcile pre-grant ->
+        // Ready. The permission survived the binder death (SUI grant is
+        // process-independent).
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Ready,
+            event = ShizukuEvent.PermissionResult(granted = true),
+        )
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderDied,
+        )
+        assertEquals(ShizukuState.Dead, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.InstallCheck(present = true),
+        )
+        assertEquals(ShizukuState.ServerStarting, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.BinderReceived,
+        )
+        assertEquals(ShizukuState.BinderLivePermissionRequired, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = true),
+        )
+        assertEquals(ShizukuState.Ready, state)
+    }
+
+    @Test fun binderRebindWithoutGrantStaysRequestable() {
+        // Rebind after death with NO grant: must not fabricate Ready;
+        // the user still has to grant.
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Dead,
+            event = ShizukuEvent.BinderReceived,
+        )
+        assertEquals(ShizukuState.BinderLivePermissionRequired, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = false),
+        )
+        assertEquals(ShizukuState.BinderLivePermissionRequired, state)
+    }
+
+    @Test fun reconciliationCannotFabricateReadyWithoutLiveBinder() {
+        // The pure reconciler only reports granted=true when the binder
+        // is live; the reducer is equally strict: a Reconciliation(true)
+        // from Dead / Missing / Unknown must never fabricate Ready —
+        // Ready means we can actually run IPC.
+        assertEquals(
+            ShizukuState.Dead,
+            ShizukuStateReducer.reduce(
+                current = ShizukuState.Dead,
+                event = ShizukuEvent.PermissionReconciled(granted = true),
+            ),
+        )
+        assertEquals(
+            ShizukuState.Missing,
+            ShizukuStateReducer.reduce(
+                current = ShizukuState.Missing,
+                event = ShizukuEvent.PermissionReconciled(granted = true),
+            ),
+        )
+        assertEquals(
+            ShizukuState.Unknown,
+            ShizukuStateReducer.reduce(
+                current = ShizukuState.Unknown,
+                event = ShizukuEvent.PermissionReconciled(granted = true),
+            ),
+        )
+    }
+
+    @Test fun reconciliationFromReadyIsIdempotent() {
+        var state = ShizukuStateReducer.reduce(
+            current = ShizukuState.Ready,
+            event = ShizukuEvent.PermissionReconciled(granted = true),
+        )
+        assertEquals(ShizukuState.Ready, state)
+        state = ShizukuStateReducer.reduce(
+            current = state,
+            event = ShizukuEvent.PermissionReconciled(granted = false),
+        )
+        assertEquals(ShizukuState.Ready, state)
+    }
+
+    // ---------- fail-safe bridge wiring (source lint) ----------
+
+    @Test fun bridgeReconcilesPermissionOnBinderReceived() {
+        // Regression guard for the restart stall: the binder-received
+        // path must feed a reconciliation event into the reducer.
+        val source = readBridgeSource()
+        assertTrue(
+            "ShizukuBridge must reconcile the grant on binder receipt",
+            source.contains("reconcilePermission()"),
+        )
+        assertTrue(
+            "ShizukuBridge must raise PermissionReconciled after binder receipt",
+            source.contains("ShizukuEvent.PermissionReconciled") ||
+                source.contains("ShizukuPermissionReconciler.event"),
+        )
+    }
+
+    @Test fun bridgeReconcilesAtStartWhenBinderAlreadyLive() {
+        // Process restart may find the binder already live before the
+        // listener fires; start() must reconcile too.
+        val source = readBridgeSource()
+        assertTrue(
+            "ShizukuBridge start() must reconcile when the binder is already live",
+            source.contains("Shizuku.getBinder()") && source.contains("reconcilePermission()"),
+        )
+    }
+
+    @Test fun bridgeUsesOfficialCheckSelfPermissionAndApiV23Fallback() {
+        // The two authoritative channels: official Shizuku API +
+        // PackageManager API_V23 (live-phone observed). Neither may be
+        // removed; removing the official call weakens the check.
+        val source = readBridgeSource()
+        assertTrue(
+            "ShizukuBridge must use the official Shizuku.checkSelfPermission()",
+            source.contains("Shizuku.checkSelfPermission()"),
+        )
+        assertTrue(
+            "ShizukuBridge must fall back to moe.shizuku.manager.permission.API_V23",
+            source.contains("moe.shizuku.manager.permission.API_V23"),
+        )
+        assertTrue(
+            "ShizukuBridge must gate reconciliation on a live binder",
+            source.contains("Shizuku.getBinder() != null"),
+        )
+    }
+
     // ---------- source lint ----------
 
     @Test fun adapterDoesNotCallActivityRequestPermissionsForShizuku() {

@@ -89,10 +89,12 @@ class ShizukuAdapter(private val context: Context) {
      * True if the user has accepted our package in Shizuku's permission
      * dialog. SUI 13.5+ uses the runtime permission
      * `moe.shizuku.api.permission.PERMISSION` which is also surfaced by
-     * the AAR's `Shizuku.checkSelfPermission`. We try both: the AAR
+     * the AAR's `Shizuku.checkSelfPermission`. We try in order: the AAR
      * call first (canonical for SUI 13.5+), then the raw Android check
-     * (fallback for older SUI versions that exposed the same perm
-     * through a different code path).
+     * of the modern permission, then the legacy manager-granted
+     * `moe.shizuku.manager.permission.API_V23` permission — the exact
+     * path observed live on the phone, where the grant is recorded at
+     * the PackageManager level after a process restart.
      */
     fun isAuthorized(): Boolean {
         if (!isInstalled()) return false
@@ -110,7 +112,10 @@ class ShizukuAdapter(private val context: Context) {
         if (aarCheck) return true
         return try {
             context.checkSelfPermission("moe.shizuku.api.permission.PERMISSION") ==
-                PackageManager.PERMISSION_GRANTED
+                PackageManager.PERMISSION_GRANTED ||
+                context.checkSelfPermission(
+                    ShizukuPermissionReconciler.MANAGER_PERMISSION_API_V23,
+                ) == PackageManager.PERMISSION_GRANTED
         } catch (_: Throwable) {
             false
         }

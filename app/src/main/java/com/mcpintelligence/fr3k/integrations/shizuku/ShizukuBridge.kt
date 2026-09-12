@@ -58,6 +58,15 @@ class ShizukuBridge private constructor() {
         // Kick off the first install check so the UI can react quickly
         // when the activity is created.
         observeInstallState()
+        // Fail-safe start reconciliation: when the binder is already live
+        // at process entry (restart while SUI is running), the binder
+        // callback may never fire again — reconcile the pre-granted
+        // permission now so the app reaches Ready without waiting for a
+        // permission-result callback.
+        if (runCatching { Shizuku.getBinder() != null }.getOrDefault(false)) {
+            applyEvent(ShizukuEvent.BinderReceived)
+            reconcilePermission()
+        }
     }
 
     /**
@@ -111,10 +120,62 @@ class ShizukuBridge private constructor() {
         applyEvent(ShizukuEvent.OsProcessSeen(running = osRunning))
     }
 
+    /**
+     * Fail-safe reconciliation of an already-granted Shizuku permission.
+     *
+     * The grant survives process restarts but the
+     * `OnRequestPermissionResultListener` only fires when the user answers
+     * a NEW grant dialog — after a restart it never fires again, so the
+     * bridge would sit at [ShizukuState.BinderLivePermissionRequired]
+     * forever despite SUI already listing our package. This re-checks the
+     * authoritative grant through the official Shizuku API first, then the
+     * legacy `moe.shizuku.manager.permission.API_V23` Android permission
+     * (which Shizuku Manager grants to allowed packages — observed live on
+     * the phone), and raises [ShizukuEvent.PermissionReconciled].
+     *
+     * The checks are deliberately strict: Ready is only ever reached when
+     * the binder is live AND an authoritative channel reports the grant.
+     * A failed reconciliation never collapses to Denied (that state means
+     * the user refused a dialog — the grant CTA must stay visible).
+     * The whole decision is delegated to [ShizukuPermissionReconciler] so
+     * it is deterministic and JVM-testable.
+     */
+    private fun reconcilePermission() {
+        val app = application ?: return
+        val binderLive = runCatching { Shizuku.getBinder() != null }.getOrDefault(false)
+        // Official path: requires the Shizuku service, throws when the
+        // binder is gone — collapse to denied on any failure.
+        val officialGranted = runCatching {
+            Shizuku.checkSelfPermission() == ShizukuPermissionReconciler.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        // Legacy Android path: the manager-granted signature-level
+        // permission. minSdk 31 so Context.checkSelfPermission is safe.
+        val legacyGranted = runCatching {
+            app.checkSelfPermission(ShizukuPermissionReconciler.MANAGER_PERMISSION_API_V23) ==
+                ShizukuPermissionReconciler.PERMISSION_GRANTED
+        }.getOrDefault(false)
+        Log.i(
+            TAG,
+            "reconcile binder=$binderLive official=$officialGranted legacyV23=$legacyGranted",
+        )
+        applyEvent(
+            ShizukuPermissionReconciler.event(
+                binderLive = binderLive,
+                officialGranted = officialGranted,
+                legacyGranted = legacyGranted,
+            ),
+        )
+    }
+
     private val binderReceivedListener =
         Shizuku.OnBinderReceivedListener {
             Log.i(TAG, "binder received")
             applyEvent(ShizukuEvent.BinderReceived)
+            // Fail-safe: reconcile an already-granted permission so a
+            // process restart reaches Ready without a new
+            // permission-result callback. The reducer never regresses a
+            // Ready / Denied state from this.
+            reconcilePermission()
         }
 
     private val binderDeadListener =
