@@ -38,10 +38,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
+import com.mcpintelligence.fr3k.core.AppSettings
 import com.mcpintelligence.fr3k.core.ConsentLevel
+import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveBridgeClient
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Settings screen. Live surface over [AppSettings].
@@ -138,17 +142,16 @@ private fun SettingsScreen(onClose: () -> Unit) {
                     ) {
                         Text("SAVE ENDPOINT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "auth token: ${if (app.secureStore.get(settings.hermesAuthTokenKey) != null) "stored (encrypted)" else "not set"}",
-                        color = Fr3kPalette.TextDim,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
-                    )
+                    Spacer(Modifier.height(8.dp))
+                    HermesTokenEditor(app, settings)
                 }
             }
 
             Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "BLACKWAVE") {
+                BlackwaveSettingsEditor(app, settings)
+            }
 
             com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "OpenRouter") {
                 val scope = rememberCoroutineScope()
@@ -303,6 +306,200 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 Text("CLOSE", fontFamily = FontFamily.Monospace)
             }
         }
+    }
+}
+
+@Composable
+private fun HermesTokenEditor(app: Fr3kApplication, settings: com.mcpintelligence.fr3k.core.AppSettings.Settings) {
+    val scope = rememberCoroutineScope()
+    var tokenInput by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf<String?>(null) }
+    val stored = remember(settings.hermesAuthTokenKey) {
+        app.secureStore.get(settings.hermesAuthTokenKey)
+    }
+    Column {
+        Text(
+            text = "auth token: ${if (stored != null) "stored (encrypted) — ${maskKey(stored)}" else "not set"}",
+            color = if (stored != null) Fr3kPalette.Ok else Fr3kPalette.Warn,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+        )
+        androidx.compose.material3.OutlinedTextField(
+            value = tokenInput,
+            onValueChange = { tokenInput = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+            placeholder = { Text("bearer token…", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Button(
+                onClick = {
+                    val trimmed = tokenInput.trim()
+                    if (trimmed.isNotEmpty()) {
+                        app.secureStore.put(settings.hermesAuthTokenKey, trimmed)
+                        tokenInput = ""
+                        status = "token saved (encrypted)"
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
+            ) { Text("SAVE TOKEN", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            Button(
+                onClick = { app.secureStore.remove(settings.hermesAuthTokenKey); tokenInput = ""; status = "token removed" },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+            ) { Text("REMOVE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+            Button(
+                onClick = {
+                    scope.launch {
+                        status = "testing…"
+                        val result = withContext(Dispatchers.IO) {
+                            hermesReachability(
+                                endpoint = app.settings.settings.value.hermesEndpoint,
+                                token = app.secureStore.get(settings.hermesAuthTokenKey),
+                            )
+                        }
+                        status = if (result.startsWith("reachable")) "ONLINE — $result" else result
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+            ) { Text("TEST", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+        }
+        status?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = if (it.startsWith("ONLINE") || it.startsWith("reachable") || it == "token saved") Fr3kPalette.Ok else Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun BlackwaveSettingsEditor(app: Fr3kApplication, settings: com.mcpintelligence.fr3k.core.AppSettings.Settings) {
+    val scope = rememberCoroutineScope()
+    var endpoint by remember(settings.blackwaveEndpoint) { mutableStateOf(settings.blackwaveEndpoint) }
+    var clientId by remember(settings.blackwaveClientId) { mutableStateOf(settings.blackwaveClientId) }
+    var credentialInput by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf<String?>(null) }
+    val storedCred = remember(settings.blackwaveCredentialKey) {
+        app.secureStore.get(settings.blackwaveCredentialKey)
+    }
+    Column {
+        Text("endpoint (envelope POST root):", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        androidx.compose.material3.OutlinedTextField(
+            value = endpoint,
+            onValueChange = { endpoint = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text("client id:", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        androidx.compose.material3.OutlinedTextField(
+            value = clientId,
+            onValueChange = { clientId = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = "credential: ${if (storedCred != null) "stored (encrypted) — ${maskKey(storedCred)}" else "not set"}",
+            color = if (storedCred != null) Fr3kPalette.Ok else Fr3kPalette.Warn,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+        )
+        androidx.compose.material3.OutlinedTextField(
+            value = credentialInput,
+            onValueChange = { credentialInput = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+            placeholder = { Text("bwcm_…", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Button(
+                onClick = {
+                    val ep = endpoint.trim().ifBlank { AppSettings.DEFAULT_BLACKWAVE_ENDPOINT }
+                    val cid = clientId.trim().ifBlank { AppSettings.DEFAULT_BLACKWAVE_CLIENT_ID }
+                    app.settings.update { it.copy(blackwaveEndpoint = ep, blackwaveClientId = cid) }
+                    val cred = credentialInput.trim()
+                    if (cred.isNotEmpty()) {
+                        app.secureStore.put(settings.blackwaveCredentialKey, cred)
+                        credentialInput = ""
+                    }
+                    status = "saved"
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
+            ) { Text("SAVE", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            Button(
+                onClick = { app.secureStore.remove(settings.blackwaveCredentialKey); credentialInput = ""; status = "credential removed" },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+            ) { Text("REMOVE CRED", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+            Button(
+                onClick = {
+                    scope.launch {
+                        status = "testing…"
+                        val result = withContext(Dispatchers.IO) {
+                            blackwaveReachability(
+                                endpoint = endpoint.trim().ifBlank { AppSettings.DEFAULT_BLACKWAVE_ENDPOINT },
+                                credential = app.secureStore.get(settings.blackwaveCredentialKey),
+                                clientId = clientId.trim().ifBlank { AppSettings.DEFAULT_BLACKWAVE_CLIENT_ID },
+                            )
+                        }
+                        status = if (result.startsWith("reachable")) "ONLINE — $result" else result
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+            ) { Text("TEST", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+        }
+        status?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, color = if (it.startsWith("ONLINE") || it.startsWith("reachable") || it == "saved" || it == "credential removed") Fr3kPalette.Ok else Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        }
+    }
+}
+
+/**
+ * Lightweight reachability probe for the Hermes envelope endpoint. Returns a
+ * human-readable result; does not leak the token in the response text.
+ */
+private fun hermesReachability(endpoint: String, token: String?): String {
+    return try {
+        val url = com.mcpintelligence.fr3k.transport.HttpsTransport.buildEnvelopeUrl(endpoint)
+        val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+            connectTimeout = 5_000
+            readTimeout = 8_000
+            requestMethod = "GET"
+            token?.let { setRequestProperty("Authorization", "Bearer $it") }
+            instanceFollowRedirects = false
+        }
+        val code = conn.responseCode
+        conn.disconnect()
+        // Any HTTP response (even 404/405) means the server is reachable.
+        "reachable — HTTP $code"
+    } catch (e: java.net.ConnectException) {
+        "unreachable — connection refused"
+    } catch (e: Exception) {
+        "unreachable — ${e.message}"
+    }
+}
+
+/**
+ * Reachability probe for the BLACKWAVE mobile gateway. A successful read on
+ * the health route means the endpoint + credential + client id are wired.
+ */
+private suspend fun blackwaveReachability(endpoint: String, credential: String?, clientId: String): String {
+    return try {
+        val client = BlackwaveBridgeClient(
+            endpointProvider = { endpoint },
+            credentialProvider = { credential },
+            clientIdProvider = { clientId },
+        )
+        val available = client.isAvailable()
+        if (!available) "unreachable — health check failed (check endpoint / TLS) "
+        else {
+            val role = client.fetchRole()
+            if (role.isSuccess) "reachable — role=${role.getOrNull()?.role_id ?: "?"}"
+            else "reachable (health ok) — role not served: ${role.exceptionOrNull()?.message?.take(80)}"
+        }
+    } catch (e: java.net.ConnectException) {
+        "unreachable — connection refused"
+    } catch (e: Exception) {
+        "unreachable — ${e.message}"
     }
 }
 

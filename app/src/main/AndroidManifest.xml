@@ -62,9 +62,11 @@
          app can call checkSelfPermission. -->
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
 
-    <!-- Shizuku Tier-2 — optional, only used if installed. We don't depend
-         on the Shizuku AAR (keeps the APK slim); we talk to the running
-         Shizuku service via reflection-style Intent when present. -->
+    <!-- Shizuku Tier-2 — optional, only used if installed. We use the
+         official dev.rikka.shizuku:api + :provider AARs (API 13.1.5) and the
+         modern unified permission below; the reflection-style path was removed
+         because it silently failed. The :provider module merges the
+         moe.shizuku.manager.permission.API_V23 grant permission. -->
     <uses-permission android:name="moe.shizuku.api.permission.PERMISSION" />
 
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
@@ -382,5 +384,17 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Required by dev.rikka.shizuku:provider for binder acquisition on
+             Shizuku (and auto-inits Sui from v12+). Must be exported so the
+             Shizuku server process can query it; the INTERACT_ACROSS_USERS_FULL
+             permission restricts access to system/signature holders only. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

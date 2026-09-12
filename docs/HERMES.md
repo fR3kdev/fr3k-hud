@@ -5,9 +5,15 @@ an envelope envelope of type `agent.ask`.
 
 ## Endpoint
 
-The default endpoint is `https://hermes.local/api/v1/agent` and is configurable
-in `AppSettings.hermesEndpoint`. The user can override to a LAN address, a
-custom domain, or a private Ollama-style server.
+The default endpoint is `http://127.0.0.1:8082` (loopback — the phone's own
+Termux-side Hermes server, standalone phone-local) and is configurable in
+`AppSettings.hermesEndpoint`. The value is the envelope POST **root**: the
+transport always sends `POST <root>/envelope` with exactly one `/` separator
+(see `HttpsTransport.buildEnvelopeUrl`), so a trailing slash or an embedded
+`/api/v1/agent` root is joined without producing `//envelope`. The user can
+override to a LAN address, a custom domain, or a private Ollama-style server.
+A legacy `https://hermes.local/api/v1/agent` default is migrated to the
+loopback default on read.
 
 ## Authentication
 

@@ -26,6 +26,19 @@ class AppSettings(
     }
 
     companion object {
+        /**
+         * Standalone-phone defaults. Hermes and BLACKWAVE both run on-loopback
+         * on the phone itself (Termux/BLACKWAVE local server), so there is no
+         * desktop or mDNS name dependency. `LEGACY_*` values are migrated to
+         * the loopback defaults on read so an old install does not keep pointing
+         * at a `.local` name that no longer resolves on the phone.
+         */
+        const val DEFAULT_HERMES_ENDPOINT = "http://127.0.0.1:8082"
+        const val LEGACY_HERMES_ENDPOINT = "https://hermes.local/api/v1/agent"
+        const val DEFAULT_BLACKWAVE_ENDPOINT = "https://127.0.0.1:8878"
+        const val LEGACY_BLACKWAVE_ENDPOINT = "https://blackwave.local:8878"
+        const val DEFAULT_BLACKWAVE_CLIENT_ID = "fr3k-hud"
+
         /** Missing storage is a new installation; malformed storage fails closed for consent. */
         fun open(read: () -> String?, write: (String) -> Unit): AppSettings {
             val restored = try {
@@ -43,11 +56,11 @@ class AppSettings(
         val hudEdgeMarginDp: Int = 16,
         val hudPosition: Int = 0,
         val consentProfile: ConsentLevel = ConsentLevel.NORMAL,
-        val hermesEndpoint: String = "https://hermes.local/api/v1/agent",
+        val hermesEndpoint: String = DEFAULT_HERMES_ENDPOINT,
         val hermesAuthTokenKey: String = "hermes.auth.token",
-        val blackwaveEndpoint: String = "https://blackwave.local:8878",
+        val blackwaveEndpoint: String = DEFAULT_BLACKWAVE_ENDPOINT,
         val blackwaveCredentialKey: String = "blackwave.credential",
-        val blackwaveClientId: String = "fr3k-hud",
+        val blackwaveClientId: String = DEFAULT_BLACKWAVE_CLIENT_ID,
         val openrouterApiKeyKey: String = "openrouter.api.key",
         val openrouterModel: String = "openrouter/free",
         val termuxPackage: String = "com.termux",
@@ -95,9 +108,13 @@ class AppSettings(
                     hudEdgeMarginDp = json.optInt("hudEdgeMarginDp", defaults.hudEdgeMarginDp).coerceIn(0, 48),
                     hudPosition = json.optInt("hudPosition", defaults.hudPosition),
                     consentProfile = consent,
-                    hermesEndpoint = json.optString("hermesEndpoint", defaults.hermesEndpoint),
+                    hermesEndpoint = json.optString("hermesEndpoint", defaults.hermesEndpoint).let {
+                        if (it == LEGACY_HERMES_ENDPOINT) DEFAULT_HERMES_ENDPOINT else it
+                    },
                     hermesAuthTokenKey = json.optString("hermesAuthTokenKey", defaults.hermesAuthTokenKey),
-                    blackwaveEndpoint = json.optString("blackwaveEndpoint", defaults.blackwaveEndpoint),
+                    blackwaveEndpoint = json.optString("blackwaveEndpoint", defaults.blackwaveEndpoint).let {
+                        if (it == LEGACY_BLACKWAVE_ENDPOINT) DEFAULT_BLACKWAVE_ENDPOINT else it
+                    },
                     blackwaveCredentialKey = json.optString("blackwaveCredentialKey", defaults.blackwaveCredentialKey),
                     blackwaveClientId = json.optString("blackwaveClientId", defaults.blackwaveClientId),
                     openrouterApiKeyKey = json.optString("openrouterApiKeyKey", defaults.openrouterApiKeyKey),

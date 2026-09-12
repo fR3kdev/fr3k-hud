@@ -13,8 +13,8 @@ android {
         applicationId = "com.mcpintelligence.fr3k.hud"
         minSdk = 31
         targetSdk = 35
-        versionCode = 416
-        versionName = "0.4.16"
+        versionCode = 417
+        versionName = "0.4.17"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -82,12 +82,16 @@ dependencies {
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 
-    // Shizuku AAR — gives us the real `Shizuku.requestPermission()` and
-    // `ShizukuService` classes. The reflection-only path silently fails
-    // because the AAR isn't on the classpath, so SUI never sees us in
-    // its "apps that can use this" list. With the AAR, requestPermission
-    // pops the SUI grant dialog and our package gets registered.
+    // Shizuku integration. We use the official AAR surface (`Shizuku`,
+    // `ShizukuProvider`, `ShizukuBinderWrapper`) at API 13.1.5 rather than
+    // reflection: the reflective calls silently failed because the classes
+    // weren't on the classpath, so SUI never saw us in its "apps that can use
+    // this" list. `:provider` registers `ShizukuProvider` (binder acquisition)
+    // and carries the `moe.shizuku.manager.permission.API_V23` grant permission
+    // via manifest merge; the modern unified `moe.shizuku.api.permission.PERMISSION`
+    // stays declared in the app manifest.
     implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

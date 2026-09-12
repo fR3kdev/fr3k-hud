@@ -57,4 +57,52 @@ class AppSettingsTest {
         assertTrue(reopened.settings.value.hudEnabled)
         assertEquals(ConsentLevel.PRIVATE, reopened.settings.value.consentProfile)
     }
+
+    @Test fun newInstallationDefaultsArePhoneLoopback() {
+        val settings = AppSettings.open({ null }, {})
+        val defaults = AppSettings.Settings()
+        // Standalone-phone: no desktop / mDNS name dependency.
+        assertEquals("http://127.0.0.1:8082", settings.settings.value.hermesEndpoint)
+        assertEquals("https://127.0.0.1:8878", settings.settings.value.blackwaveEndpoint)
+        assertEquals(AppSettings.DEFAULT_HERMES_ENDPOINT, defaults.hermesEndpoint)
+        assertEquals(AppSettings.DEFAULT_BLACKWAVE_ENDPOINT, defaults.blackwaveEndpoint)
+        assertEquals("fr3k-hud", defaults.blackwaveClientId)
+    }
+
+    @Test fun legacyHermesDefaultMigratesToLoopback() {
+        val settings = AppSettings.open(
+            { "{\"hermesEndpoint\":\"https://hermes.local/api/v1/agent\"}" },
+            {},
+        )
+        assertEquals(AppSettings.DEFAULT_HERMES_ENDPOINT, settings.settings.value.hermesEndpoint)
+    }
+
+    @Test fun legacyBlackwaveDefaultMigratesToLoopback() {
+        val settings = AppSettings.open(
+            { "{\"blackwaveEndpoint\":\"https://blackwave.local:8878\"}" },
+            {},
+        )
+        assertEquals(AppSettings.DEFAULT_BLACKWAVE_ENDPOINT, settings.settings.value.blackwaveEndpoint)
+    }
+
+    @Test fun explicitCustomEndpointsArePreservedNotMigrated() {
+        val settings = AppSettings.open(
+            {
+                "{\"hermesEndpoint\":\"https://fleet.example/agent\"," +
+                    "\"blackwaveEndpoint\":\"https://fleet.example:8878\"}"
+            },
+            {},
+        )
+        assertEquals("https://fleet.example/agent", settings.settings.value.hermesEndpoint)
+        assertEquals("https://fleet.example:8878", settings.settings.value.blackwaveEndpoint)
+    }
+
+    @Test fun loopbackDefaultsRoundTripThroughPersistence() {
+        var storage: String? = null
+        val original = AppSettings.open({ storage }, { storage = it })
+        original.update { it.copy(hermesEndpoint = "http://127.0.0.1:8082", blackwaveEndpoint = "https://127.0.0.1:8878") }
+        val reopened = AppSettings.open({ storage }, {})
+        assertEquals("http://127.0.0.1:8082", reopened.settings.value.hermesEndpoint)
+        assertEquals("https://127.0.0.1:8878", reopened.settings.value.blackwaveEndpoint)
+    }
 }

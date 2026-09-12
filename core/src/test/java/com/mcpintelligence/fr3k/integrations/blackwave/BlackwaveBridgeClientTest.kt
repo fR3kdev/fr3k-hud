@@ -55,4 +55,62 @@ class BlackwaveBridgeClientTest {
             assertTrue(client(server).fetchRole().isFailure)
         }
     }
+
+    @Test fun selfSignedTrustRelaxationIsStrictlyLoopbackOnly() {
+        // Only loopback hostnames/IPs are eligible for the relaxed cert-chain
+        // trust used for the standalone-phone Termux BLACKWAVE server. Remote
+        // endpoints keep normal Android TLS trust (fail-closed against a
+        // self-signed remote cert).
+        assertTrue(BlackwaveBridgeClient.isLoopbackHost("127.0.0.1"))
+        assertTrue(BlackwaveBridgeClient.isLoopbackHost("localhost"))
+        assertTrue(BlackwaveBridgeClient.isLoopbackHost("LOCALHOST"))
+        assertTrue(BlackwaveBridgeClient.isLoopbackHost("::1"))
+        assertFalse(BlackwaveBridgeClient.isLoopbackHost("192.168.1.117"))
+        assertFalse(BlackwaveBridgeClient.isLoopbackHost("blackwave.local"))
+        assertFalse(BlackwaveBridgeClient.isLoopbackHost("fleet.example.com"))
+        assertFalse(BlackwaveBridgeClient.isLoopbackHost(""))
+    }
+
+    @Test fun roleContractPinsMobileRouteWithClientHeaders() = runTest {
+        // The role route is the contract between HUD and the blackwave mobile
+        // gateway: GET /mobile/v1/role with X-Blackwave-Client + Bearer auth.
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse().setBody(
+                    """
+                    {"role_id":"bw:role:observer","identity":"fixture-client",
+                     "trust_tier":"observer","allowed_scopes":["fleet.view","ota.view"],
+                     "device_access":"readonly","delegation_depth":0,
+                     "capabilities_map":{"fleet.view":"bw.cap.fleet"}}
+                    """.trimIndent(),
+                ),
+            )
+            val role = client(server).fetchRole().getOrThrow()
+            assertEquals("bw:role:observer", role.role_id)
+            assertEquals("fixture-client", role.identity)
+            assertEquals("observer", role.trust_tier)
+            assertTrue(role.allowed_scopes.contains("ota.view"))
+            assertEquals("bw.cap.fleet", role.capabilityIdForScope("fleet.view"))
+            val request = server.takeRequest()
+            assertEquals("/mobile/v1/role", request.path)
+            assertEquals("fixture-client", request.getHeader("X-Blackwave-Client"))
+            assertEquals("Bearer fixture-only", request.getHeader("Authorization"))
+        }
+    }
+
+    @Test fun roleRouteJoinsTrailingSlashEndpointWithoutDoublePath() = runTest {
+        // A configured endpoint root with a trailing slash must still produce
+        // /mobile/v1/role (not //mobile/v1/role) when the client joins a route.
+        MockWebServer().use { server ->
+            val url = server.url("/").toString().trimEnd('/')
+            val trailingSlashClient = BlackwaveBridgeClient(
+                { "$url/" }, { "tk" }, { "cid" },
+            )
+            server.enqueue(MockResponse().setBody("""{"role_id":"bw:role:observer"}"""))
+            val role = trailingSlashClient.fetchRole().getOrThrow()
+            assertEquals("bw:role:observer", role.role_id)
+            // The path seen by the server must be exactly one slash.
+            assertEquals("/mobile/v1/role", server.takeRequest().path)
+        }
+    }
 }

@@ -34,8 +34,7 @@ class HttpsTransport(
 
     override suspend fun send(envelope: Fr3kEnvelope): Result<Fr3kEnvelope> = withContext(Dispatchers.IO) {
         runCatching {
-            val endpoint = endpointProvider()
-            val url = URL("$endpoint/envelope")
+            val url = buildEnvelopeUrl(endpointProvider())
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
                 readTimeout = 30_000
@@ -71,7 +70,27 @@ class HttpsTransport(
         Result.failure(UnsupportedOperationException("HTTPS receive is server-driven"))
 
     override fun isAvailable(): Boolean = runCatching {
-        val ep = endpointProvider()
-        ep.startsWith("http://") || ep.startsWith("https://")
+        buildEnvelopeUrl(endpointProvider())
+        true
     }.getOrDefault(false)
+
+    companion object {
+        /**
+         * Normalise the configured endpoint root and join `/envelope` on it
+         * without producing a double path or a path-less URL.
+         *
+         * Semantic contract of the configured value: it is the envelope POST
+         * **root** — the server must route `POST /envelope` at or under it. So
+         * `http://127.0.0.1:8082` (default) → `http://127.0.0.1:8082/envelope`,
+         * and a trailing-slash or embedded `/api/v1/agent` root is joined with
+         * exactly one `/` separator (never `//envelope`).
+         */
+        fun buildEnvelopeUrl(endpoint: String): URL {
+            val trimmed = endpoint.trim('.', '/')
+            require(trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                "Hermes endpoint must start with http:// or https:// (got '$endpoint')"
+            }
+            return URL("$trimmed/envelope")
+        }
+    }
 }

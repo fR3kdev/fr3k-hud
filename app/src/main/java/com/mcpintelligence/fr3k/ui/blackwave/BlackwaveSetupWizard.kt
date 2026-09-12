@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
+import com.mcpintelligence.fr3k.core.AppSettings
 import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveBridgeClient
 import com.mcpintelligence.fr3k.integrations.blackwave.DeviceStatusResponse
 import com.mcpintelligence.fr3k.integrations.blackwave.FleetDeviceCard
@@ -175,7 +176,7 @@ private fun SetupWizard(
     fun probeEntered() {
         scope.launch {
             session.probing = true
-            val endpoint = session.endpoint.trim().ifBlank { "https://blackwave.local:8878" }
+            val endpoint = session.endpoint.trim().ifBlank { AppSettings.DEFAULT_BLACKWAVE_ENDPOINT }
             val temp = BlackwaveBridgeClient(
                 endpointProvider = { endpoint },
                 credentialProvider = { session.credential.ifBlank { null } },

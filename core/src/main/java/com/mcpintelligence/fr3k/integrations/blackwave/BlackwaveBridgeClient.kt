@@ -8,7 +8,12 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.X509TrustManager
 
 /**
  * HTTP client that talks to the blackwave fleet bridge.
@@ -23,12 +28,18 @@ class BlackwaveBridgeClient(
     private val credentialProvider: () -> String?,
     private val clientIdProvider: () -> String,
 ) {
+    /** Join a `/mobile/v1/...` path onto the (possibly trailing-slash) endpoint root. */
+    private fun route(path: String): String {
+        val root = endpointProvider().trimEnd('/')
+        return if (path.startsWith("/")) "$root$path" else "$root/$path"
+    }
+
     /**
      * Fetch the role manifest for this client identity.
      * @return Result with [BlackwaveRoleManifest] on success, failure on error/status <200..
      */
     suspend fun fetchRole(): Result<BlackwaveRoleManifest> {
-        val response = get("${endpointProvider()}/mobile/v1/role")
+        val response = get(route("mobile/v1/role"))
         return if (response.code in 200..299) {
             try {
                 Result.success(json.decodeFromString(response.body))
@@ -44,7 +55,7 @@ class BlackwaveBridgeClient(
      * Fetch fleet status: list of all devices in the fleet.
      */
     suspend fun fetchFleetStatus(): Result<FleetStatusResponse> {
-        val response = get("${endpointProvider()}/mobile/v1/fleet")
+        val response = get(route("mobile/v1/fleet"))
         return if (response.code in 200..299) {
             try {
                 Result.success(json.decodeFromString(response.body))
@@ -60,7 +71,7 @@ class BlackwaveBridgeClient(
      * Fetch detailed status for a specific device by model_id.
      */
     suspend fun fetchDeviceStatus(deviceId: String): Result<DeviceStatusResponse> {
-        val response = get("${endpointProvider()}/mobile/v1/devices/${java.net.URLEncoder.encode(deviceId, "UTF-8")}")
+        val response = get(route("mobile/v1/devices/${java.net.URLEncoder.encode(deviceId, "UTF-8")}"))
         return if (response.code in 200..299) {
             try {
                 Result.success(json.decodeFromString(response.body))
@@ -75,7 +86,7 @@ class BlackwaveBridgeClient(
     /** True if the endpoint resolves and returns a valid response. */
     fun isAvailable(): Boolean {
         return try {
-            val response = get("${endpointProvider()}/mobile/v1/health")
+            val response = get(route("mobile/v1/health"))
             response.code in 200..299
         } catch (_: Exception) {
             false
@@ -89,6 +100,14 @@ class BlackwaveBridgeClient(
     private fun get(urlString: String): HttpResponse {
         val url = URL(urlString)
         val conn = (url.openConnection() as HttpURLConnection).apply {
+            if (this is HttpsURLConnection && isLoopbackHost(url.host)) {
+                // Standalone phone mode: BLACKWAVE runs inside Termux on loopback
+                // with its own self-signed certificate. Relax certificate-chain trust
+                // only for loopback; the platform hostname verifier still requires
+                // the certificate SAN to match 127.0.0.1/localhost. Remote endpoints
+                // continue to use normal Android TLS trust (fail-closed).
+                sslSocketFactory = loopbackSslSocketFactory
+            }
             connectTimeout = CONNECT_TIMEOUT_MS
             readTimeout = READ_TIMEOUT_MS
             requestMethod = "GET"
@@ -126,6 +145,27 @@ class BlackwaveBridgeClient(
         private const val TAG = "FR3K.blackwave"
         private const val CONNECT_TIMEOUT_MS = 5_000
         private const val READ_TIMEOUT_MS = 10_000
+
+        /** True only for loopback hostnames/IPs (standalone-phone BLACKWAVE). */
+        internal fun isLoopbackHost(host: String): Boolean =
+            host.equals("localhost", ignoreCase = true) || host == "127.0.0.1" || host == "::1"
+
+        /**
+         * Trust-any-cert chain for the loopback BLACKWAVE server only. Never
+         * installed on a remote endpoint's connection — remote TLS uses Android's
+         * normal trust anchors (fail-closed against self-signed remote certs).
+         * The platform hostname verifier still enforces SAN == 127.0.0.1/localhost.
+         */
+        private val loopbackSslSocketFactory: SSLSocketFactory by lazy {
+            val trustLoopbackCertificate = object : X509TrustManager {
+                override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            }
+            SSLContext.getInstance("TLS").apply {
+                init(null, arrayOf(trustLoopbackCertificate), SecureRandom())
+            }.socketFactory
+        }
 
         val json = Json {
             ignoreUnknownKeys = true
