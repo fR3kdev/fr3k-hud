@@ -73,6 +73,17 @@ class Fr3kApplication : Application() {
         )
     }
 
+    val blackwaveUsbRecoveryLink by lazy {
+        com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveUsbRecoveryLink(this)
+    }
+
+    val blackwaveTransportSupervisor by lazy {
+        com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveTransportSupervisor(
+            bridge = blackwaveBridgeClient,
+            usb = blackwaveUsbRecoveryLink,
+        )
+    }
+
     val fr3kCore: Fr3kCore by lazy {
         val pluginManager = PluginManager(
             capabilityRegistry = capabilityRegistryImpl,
@@ -106,6 +117,7 @@ class Fr3kApplication : Application() {
         super.onCreate()
         instance = this
         bootstrap()
+        blackwaveTransportSupervisor.start()
         // Register the Shizuku listeners at process scope so the binder /
         // permission state is tracked once, not per Activity. Without this
         // the Integrations panel's Shizuku section renders "manager not

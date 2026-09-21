@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,11 +39,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
+import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveLinkState
 import com.mcpintelligence.fr3k.integrations.blackwave.FleetDeviceCard
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kPanel
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -66,6 +69,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
     val app = Fr3kApplication.get()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val transport by app.blackwaveTransportSupervisor.state.collectAsState()
     var probe by remember { mutableStateOf<BridgeProbe?>(null) }
     var probing by remember { mutableStateOf(false) }
 
@@ -113,6 +117,42 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
 
             val current = probe
             Fr3kPanel(title = "bridge") {
+                val usbStatus = app.blackwaveTransportSupervisor.usbStatus()
+                val transportLevel = when (transport.state) {
+                    BlackwaveLinkState.WIRELESS_ACTIVE -> BwLevel.PASS
+                    BlackwaveLinkState.WIRELESS_DEGRADED,
+                    BlackwaveLinkState.USB_CONNECTING,
+                    BlackwaveLinkState.USB_FALLBACK,
+                    BlackwaveLinkState.WIRELESS_RECOVERING -> BwLevel.WARN
+                    else -> BwLevel.FAIL
+                }
+                StatusRow(
+                    "transport",
+                    transportLevel,
+                    "${transport.activeTransport} · ${transport.state.name.lowercase()} · ${transport.reason}",
+                )
+                StatusRow(
+                    "usb",
+                    when {
+                        usbStatus.ready -> BwLevel.PASS
+                        usbStatus.devicePresent -> BwLevel.WARN
+                        else -> BwLevel.WARN
+                    },
+                    usbStatus.detail,
+                )
+                if (usbStatus.devicePresent && !usbStatus.permissionGranted) {
+                    OutlinedButton(
+                        onClick = {
+                            app.blackwaveTransportSupervisor.requestUsbPermission()
+                            scope.launch {
+                                delay(1_500)
+                                app.blackwaveTransportSupervisor.tick()
+                            }
+                        },
+                    ) {
+                        Text("GRANT USB RECOVERY", fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                    }
+                }
                 StatusRow(
                     "endpoint",
                     if (current?.reachable == true) BwLevel.PASS else BwLevel.FAIL,
