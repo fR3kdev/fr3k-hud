@@ -6,11 +6,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.net.URL
 import java.security.SecureRandom
+import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocketFactory
 import javax.net.ssl.X509TrustManager
@@ -83,15 +90,22 @@ class BlackwaveBridgeClient(
         }
     }
 
-    /** True if the endpoint resolves and returns a valid response. */
-    fun isAvailable(): Boolean {
-        return try {
-            val response = get(route("mobile/v1/health"))
-            response.code in 200..299
-        } catch (_: Exception) {
-            false
+    /**
+     * Classify wireless health without turning policy failures into transport
+     * failures. USB fallback is permitted only for [WirelessHealth.UNREACHABLE].
+     */
+    fun probeHealth(): WirelessHealth {
+        val response = get(route("mobile/v1/health"))
+        return when {
+            response.code in 200..299 -> WirelessHealth.HEALTHY
+            response.code == 401 || response.code == 403 -> WirelessHealth.AUTH_FAILED
+            response.failure != null -> response.failure
+            else -> WirelessHealth.REMOTE_FAILED
         }
     }
+
+    /** True only when the authenticated BLACKWAVE health endpoint is healthy. */
+    fun isAvailable(): Boolean = probeHealth() == WirelessHealth.HEALTHY
 
     /**
      * Synchronous GET request. Uses [HttpURLConnection] with no
@@ -127,8 +141,18 @@ class BlackwaveBridgeClient(
             }
             HttpResponse(code, body)
         } catch (e: Exception) {
-            Log.w(TAG, "GET $urlString failed: ${e.message}")
-            HttpResponse(0, e.message ?: "unknown error")
+            val failure = when (e) {
+                is SSLHandshakeException,
+                is SSLPeerUnverifiedException,
+                is CertificateException -> WirelessHealth.TRUST_FAILED
+                is ConnectException,
+                is SocketTimeoutException,
+                is UnknownHostException,
+                is NoRouteToHostException -> WirelessHealth.UNREACHABLE
+                else -> WirelessHealth.REMOTE_FAILED
+            }
+            Log.w(TAG, "GET $urlString failed [$failure]: ${e.message}")
+            HttpResponse(0, e.message ?: "unknown error", failure)
         } finally {
             conn.disconnect()
         }
@@ -239,4 +263,5 @@ data class FleetDeviceCard(
 internal data class HttpResponse(
     val code: Int,
     val body: String,
+    val failure: WirelessHealth? = null,
 )
