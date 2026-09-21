@@ -76,7 +76,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation("com.github.mik3y:usb-serial-for-android:3.11.0")
+    implementation("com.github.mik3y:usb-serial-for-android:3.11.0") {
+        // Library code is Java; keep this project's Kotlin 2.0.21 stdlib.
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
