@@ -39,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
+import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveDeviceHorizon
 import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveLinkState
 import com.mcpintelligence.fr3k.integrations.blackwave.FleetDeviceCard
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
@@ -274,6 +275,43 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                             }
                         }
                     }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+
+            Fr3kPanel(title = "device horizons (${BlackwaveDeviceHorizon.entries.size})") {
+                Text(
+                    "planning only — does not enroll devices, grant authority, or prove hardware presence",
+                    color = Fr3kPalette.TextDim,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 9.sp,
+                )
+                Column(modifier = Modifier.padding(top = 6.dp)) {
+                    BlackwaveDeviceHorizon.entries
+                        .sortedWith(compareBy({ it.tier }, { it.priority }, { it.displayName }))
+                        .forEach { item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        item.displayName,
+                                        color = Fr3kPalette.Text,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        "${item.id} · ${item.mode} · ${item.role}",
+                                        color = Fr3kPalette.TextDim,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 8.sp,
+                                    )
+                                }
+                                Fr3kBadge(text = "T${item.tier} ${item.priority}", color = Fr3kPalette.AccentDim)
+                            }
+                        }
                 }
             }
 
