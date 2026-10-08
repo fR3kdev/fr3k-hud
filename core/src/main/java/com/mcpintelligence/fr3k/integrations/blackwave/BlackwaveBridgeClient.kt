@@ -72,6 +72,48 @@ class BlackwaveBridgeClient(
         }
     }
 
+    /**
+     * Stage a signed A/B wireless (OTA) update on the gateway for one device.
+     *
+     * This is client-side staging only: the gateway owns download, verification,
+     * candidate boot, health check and commit/rollback. A job id is returned in
+     * [OtaProgress.jobId] for polling via [pollOta].
+     */
+    suspend fun stageOta(
+        deviceId: String,
+        modelId: String,
+        otaStrategy: String = "ab",
+        flashBackend: String = "gateway",
+    ): Result<OtaProgress> {
+        val response = post(
+            "${endpointProvider()}${BlackwaveOta.STAGE_PATH}",
+            BlackwaveOta.stageBody(deviceId, modelId, otaStrategy, flashBackend),
+        )
+        return if (response.code in 200..299) {
+            try {
+                Result.success(BlackwaveOta.parse(response.body, deviceId, modelId))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        } else {
+            Result.failure(RuntimeException("HTTP ${response.code}: ${response.body.take(200)}"))
+        }
+    }
+
+    /** Poll a staged OTA job. Never reports success unless the gateway committed the pipeline. */
+    suspend fun pollOta(jobId: String, deviceId: String, modelId: String): Result<OtaProgress> {
+        val response = get("${endpointProvider()}${BlackwaveOta.jobPath(jobId)}")
+        return if (response.code in 200..299) {
+            try {
+                Result.success(BlackwaveOta.parse(response.body, deviceId, modelId))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        } else {
+            Result.failure(RuntimeException("HTTP ${response.code}: ${response.body.take(200)}"))
+        }
+    }
+
     /** True if the endpoint resolves and returns a valid response. */
     fun isAvailable(): Boolean {
         return try {
@@ -109,6 +151,36 @@ class BlackwaveBridgeClient(
             HttpResponse(code, body)
         } catch (e: Exception) {
             Log.w(TAG, "GET $urlString failed: ${e.message}")
+            HttpResponse(0, e.message ?: "unknown error")
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    private fun post(urlString: String, body: String): HttpResponse {
+        val url = URL(urlString)
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            requestMethod = "POST"
+            doOutput = true
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Content-Type", "application/json")
+            credentialProvider()?.let { setRequestProperty("Authorization", "Bearer $it") }
+            setRequestProperty("X-Blackwave-Client", clientIdProvider())
+            instanceFollowRedirects = false
+        }
+        return try {
+            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            val code = conn.responseCode
+            val responseBody = if (code in 200..299) {
+                readStream(conn.inputStream)
+            } else {
+                readStream(conn.errorStream)
+            }
+            HttpResponse(code, responseBody)
+        } catch (e: Exception) {
+            Log.w(TAG, "POST $urlString failed: ${e.message}")
             HttpResponse(0, e.message ?: "unknown error")
         } finally {
             conn.disconnect()
@@ -155,6 +227,10 @@ data class DeviceStatusResponse(
     val observation_status: String = "unknown",
     val live: Boolean = false,
     val cached: Boolean = true,
+    val identity_evidence: String = "unknown",
+    val device_identity_verified: Boolean = false,
+    val capability_evidence: String = "none",
+    val catalog_capabilities: List<String> = emptyList(),
 )
 
 /**
@@ -184,6 +260,9 @@ data class FleetDeviceCard(
     val enrollment: String = "",
     val device_class: String = "",
     val blackwave_authority: Boolean = false,
+    val device_id: String? = null,
+    val capabilities: List<String> = emptyList(),
+    val capability_evidence: String = "none",
 )
 
 /**
