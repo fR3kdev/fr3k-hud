@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,8 +37,15 @@ import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.integrations.blackwave.FleetDeviceCard
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
+import com.mcpintelligence.fr3k.ui.Fr3kButton
+import com.mcpintelligence.fr3k.ui.Fr3kDimens
+import com.mcpintelligence.fr3k.ui.Fr3kDivider
+import com.mcpintelligence.fr3k.ui.Fr3kGhostButton
+import com.mcpintelligence.fr3k.ui.Fr3kGradientText
+import com.mcpintelligence.fr3k.ui.Fr3kOutlineButton
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kPanel
+import com.mcpintelligence.fr3k.ui.Fr3kRowItem
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import kotlinx.coroutines.launch
 
@@ -84,20 +88,21 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Fr3kDimens.SpacingLg),
+            verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(
+                Column(modifier = Modifier.weight(1f)) {
+                    Fr3kGradientText(
                         text = "▰ BLACKWAVE",
-                        color = Fr3kPalette.Accent,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
+                        colors = listOf(Fr3kPalette.Accent, Fr3kPalette.Magenta),
                     )
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = "§6 setup · §7 add device",
                         color = Fr3kPalette.TextDim,
@@ -105,14 +110,22 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         fontSize = 10.sp,
                     )
                 }
-                OutlinedButton(onClick = onClose) {
-                    Text("BACK", fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-                }
+                Fr3kOutlineButton(text = "BACK", onClick = onClose)
             }
-            Spacer(Modifier.height(12.dp))
 
             val current = probe
-            Fr3kPanel(title = "bridge") {
+            Fr3kPanel(
+                title = "bridge",
+                subtitle = when {
+                    probing -> "probing…"
+                    current?.reachable == true -> "reachable"
+                    else -> "offline"
+                },
+                accent = when {
+                    current?.reachable == true -> Fr3kPalette.Ok
+                    else -> Fr3kPalette.Accent
+                },
+            ) {
                 StatusRow(
                     "endpoint",
                     if (current?.reachable == true) BwLevel.PASS else BwLevel.FAIL,
@@ -145,47 +158,39 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                     else "${current.fleetOnline}/${current.fleetAccounted} online" +
                         if (current.fleet?.stale == true) " · stale cache" else "",
                 )
-                Spacer(Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
+                Spacer(Modifier.height(Fr3kDimens.SpacingSm))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Fr3kButton(
+                        text = if (probing) "PROBING…" else "REPROBE",
                         onClick = { runProbe() },
                         enabled = !probing,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                    ) {
-                        Text(if (probing) "PROBING…" else "REPROBE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
-            Spacer(Modifier.height(12.dp))
 
             Fr3kPanel(title = "actions") {
-                Button(
-                    onClick = { context.startActivity(Intent(app, BlackwaveSetupActivity::class.java)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                ) {
-                    Text("SET UP BLACKWAVE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { context.startActivity(Intent(app, BlackwaveAddDeviceActivity::class.java)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                ) {
-                    Text("ADD DEVICE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                    Fr3kButton(
+                        text = "SET UP BLACKWAVE",
+                        onClick = { context.startActivity(Intent(app, BlackwaveSetupActivity::class.java)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Fr3kGhostButton(
+                        text = "ADD DEVICE",
+                        onClick = { context.startActivity(Intent(app, BlackwaveAddDeviceActivity::class.java)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
-            Spacer(Modifier.height(12.dp))
 
             FeatureAccessPanel(app, current, onConfigure = { step ->
                 val intent = Intent(app, BlackwaveSetupActivity::class.java)
                     .putExtra(BlackwaveSetupActivity.EXTRA_INITIAL_STEP, step.ordinal)
                 context.startActivity(intent)
             })
-            Spacer(Modifier.height(12.dp))
 
-            Fr3kPanel(title = "enabled scopes (${app.settings.settings.value.blackwaveEnabledScopes.size})") {
+            Fr3kPanel(title = "enabled scopes", subtitle = "${app.settings.settings.value.blackwaveEnabledScopes.size} granted") {
                 val enabled = app.settings.settings.value.blackwaveEnabledScopes
                 if (enabled.isEmpty()) {
                     Text(
@@ -195,10 +200,18 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         fontSize = 10.sp,
                     )
                 } else {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingXs)) {
                         enabled.sorted().forEach { s ->
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 6.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(Fr3kDimens.RadiusChip))
+                                    .background(Fr3kPalette.SurfaceLow, RoundedCornerShape(Fr3kDimens.RadiusChip))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace)
                                 Text(
                                     text = BwScopes.label(s),
                                     color = Fr3kPalette.Text,
@@ -212,9 +225,8 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
 
-            Fr3kPanel(title = "fleet (${current?.fleet?.devices?.size ?: 0})") {
+            Fr3kPanel(title = "fleet", subtitle = "${current?.fleet?.devices?.size ?: 0} devices") {
                 val devices = current?.fleet?.devices.orEmpty()
                 if (devices.isEmpty()) {
                     Text(
@@ -224,7 +236,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         fontSize = 10.sp,
                     )
                 } else {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                         devices.sortedBy { it.display_name }.forEach { card ->
                             FleetRow(card) {
                                 context.startActivity(
@@ -237,7 +249,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(Fr3kDimens.SpacingLg))
         }
     }
 }
@@ -253,9 +265,17 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
     val hasOta = probe?.hasScope("ota.apply") == true
     val hasLive = probe?.hasScope("profile.apply") == true
 
-    Fr3kPanel(title = "feature access") {
+    Fr3kPanel(
+        title = "feature access",
+        subtitle = if (online > 0) "$online online" else "no devices",
+        accent = if (online > 0 && (hasOta || hasLive)) Fr3kPalette.Ok else Fr3kPalette.Accent,
+    ) {
         // OTA
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Fr3kDimens.SpacingXs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("OTA FIRMWARE", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(
@@ -272,13 +292,16 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
             if (hasOta && online > 0) {
                 Fr3kBadge(text = "available", color = Fr3kPalette.Ok)
             } else {
-                OutlinedButton(onClick = { onConfigure(WizardStep.OTA_CONFIG) }) {
-                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                }
+                Fr3kOutlineButton(text = "CONFIGURE →", onClick = { onConfigure(WizardStep.OTA_CONFIG) })
             }
         }
+        Fr3kDivider(Modifier.padding(vertical = Fr3kDimens.SpacingSm))
         // Live Apply
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = Fr3kDimens.SpacingXs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+        ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("LIVE APPLY", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text(
@@ -295,9 +318,7 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
             if (hasLive && online > 0) {
                 Fr3kBadge(text = "available", color = Fr3kPalette.Ok)
             } else {
-                OutlinedButton(onClick = { onConfigure(WizardStep.LIVE_APPLY_CONFIG) }) {
-                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 9.sp)
-                }
+                Fr3kOutlineButton(text = "CONFIGURE →", onClick = { onConfigure(WizardStep.LIVE_APPLY_CONFIG) })
             }
         }
     }
@@ -305,32 +326,21 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
 
 @Composable
 private fun FleetRow(card: FleetDeviceCard, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-            Text(
-                text = listOf(card.model_id, card.device_class, if (card.firmware_version.isNotBlank()) "fw ${card.firmware_version}" else null)
-                    .filterNotNull().joinToString(" · "),
-                color = Fr3kPalette.TextDim,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
+    Fr3kRowItem(
+        label = card.display_name.ifBlank { card.model_id },
+        detail = listOf(card.model_id, card.device_class, if (card.firmware_version.isNotBlank()) "fw ${card.firmware_version}" else null)
+            .filterNotNull().joinToString(" · "),
+        accent = Fr3kPalette.Text,
+        onClick = onClick,
+        trailing = {
+            Fr3kBadge(
+                text = card.online,
+                color = when (card.online) {
+                    "online" -> Fr3kPalette.Ok
+                    "offline" -> Fr3kPalette.Err
+                    else -> Fr3kPalette.TextDim
+                },
             )
-        }
-        Fr3kBadge(
-            text = card.online,
-            color = when (card.online) {
-                "online" -> Fr3kPalette.Ok
-                "offline" -> Fr3kPalette.Err
-                else -> Fr3kPalette.TextDim
-            },
-        )
-    }
+        },
+    )
 }

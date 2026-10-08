@@ -6,7 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,11 +25,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -34,8 +39,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,7 +52,15 @@ import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.ConsentLevel
 import com.mcpintelligence.fr3k.hud.OrbAppearance
+import com.mcpintelligence.fr3k.ui.Fr3kBadge
+import com.mcpintelligence.fr3k.ui.Fr3kButton
+import com.mcpintelligence.fr3k.ui.Fr3kDimens
+import com.mcpintelligence.fr3k.ui.Fr3kGhostButton
+import com.mcpintelligence.fr3k.ui.Fr3kGradientText
+import com.mcpintelligence.fr3k.ui.Fr3kOutlineButton
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
+import com.mcpintelligence.fr3k.ui.Fr3kPanel
+import com.mcpintelligence.fr3k.ui.Fr3kRowItem
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import kotlinx.coroutines.launch
 
@@ -53,10 +70,11 @@ import kotlinx.coroutines.launch
  * Controls:
  *   - HUD enabled
  *   - HUD edge margin
+ *   - Orb appearance (image/GIF picker, size slider, reset)
  *   - Consent profile (LOCAL_ONLY / PRIVATE / NORMAL / RESEARCH)
  *   - Hermes endpoint
+ *   - OpenRouter key/model
  *   - Telemetry enabled
- *   - Experimental features
  */
 class SettingsActivity : ComponentActivity() {
 
@@ -65,6 +83,19 @@ class SettingsActivity : ComponentActivity() {
         setContent { Fr3kTheme { SettingsScreen(onClose = { finish() }) } }
     }
 }
+
+private val Fr3kFieldShape = RoundedCornerShape(Fr3kDimens.RadiusRow)
+
+@Composable
+private fun fr3kFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Fr3kPalette.Accent,
+    unfocusedBorderColor = Fr3kPalette.Border,
+    focusedTextColor = Fr3kPalette.Text,
+    unfocusedTextColor = Fr3kPalette.Text,
+    cursorColor = Fr3kPalette.Ok,
+    focusedContainerColor = Fr3kPalette.SurfaceLow,
+    unfocusedContainerColor = Fr3kPalette.SurfaceLow,
+)
 
 @Composable
 private fun SettingsScreen(onClose: () -> Unit) {
@@ -82,35 +113,37 @@ private fun SettingsScreen(onClose: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Fr3kDimens.SpacingLg),
+            verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
         ) {
-            Text(
-                text = "SETTINGS",
-                color = Fr3kPalette.Accent,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
+            Column {
+                Fr3kGradientText(text = "SETTINGS", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "system · orb · providers · consent",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = Fr3kPalette.TextDim,
+                )
+            }
 
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "HUD") {
+            Fr3kPanel(title = "HUD") {
                 Column {
                     Toggle("HUD overlay enabled", settings.hudEnabled) { v ->
                         app.settings.update { it.copy(hudEnabled = v) }
                     }
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Fr3kDimens.SpacingSm))
                     Text("edge margin: ${settings.hudEdgeMarginDp} dp", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                     Slider(
                         value = settings.hudEdgeMarginDp.toFloat(),
                         onValueChange = { v -> app.settings.update { it.copy(hudEdgeMarginDp = v.toInt()) } },
                         valueRange = 0f..48f,
                         steps = 16,
+                        colors = fr3kSliderColors(),
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "orb appearance") {
+            Fr3kPanel(title = "orb appearance", subtitle = "custom button") {
                 val orbStore = remember { com.mcpintelligence.fr3k.hud.OrbAppearanceStore(context) }
                 var orbApp by remember { mutableStateOf(orbStore.read()) }
                 val picker = rememberLauncherForActivityResult(
@@ -134,33 +167,45 @@ private fun SettingsScreen(onClose: () -> Unit) {
                     }
                 }
                 Column {
-                    Text(
-                        text = when (orbApp.mode) {
-                            OrbAppearance.Mode.BUILTIN -> "button: built-in glyph"
-                            OrbAppearance.Mode.IMAGE -> "button: custom image"
-                            OrbAppearance.Mode.GIF -> "button: animated GIF"
-                        },
-                        color = Fr3kPalette.Text,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Button(
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Fr3kBadge(
+                            text = when (orbApp.mode) {
+                                OrbAppearance.Mode.BUILTIN -> "built-in glyph"
+                                OrbAppearance.Mode.IMAGE -> "custom image"
+                                OrbAppearance.Mode.GIF -> "animated gif"
+                            },
+                            color = if (orbApp.mode == OrbAppearance.Mode.BUILTIN) Fr3kPalette.TextDim else Fr3kPalette.Ok,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            text = "size ${orbApp.clampedSizeDp} dp",
+                            color = Fr3kPalette.TextDim,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                        )
+                    }
+                    Spacer(Modifier.height(Fr3kDimens.SpacingMd))
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = "PICK IMAGE / GIF",
                             onClick = { picker.launch(arrayOf("image/*")) },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                        ) { Text("PICK IMAGE / GIF", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                        Button(
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kGhostButton(
+                            text = "RESET",
                             onClick = {
                                 orbStore.resetImage()
                                 orbApp = orbStore.read()
                                 refreshOrb(context)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                        ) { Text("RESET", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                            modifier = Modifier.weight(1f),
+                        )
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text("size: ${orbApp.clampedSizeDp} dp", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    Spacer(Modifier.height(Fr3kDimens.SpacingSm))
                     Slider(
                         value = orbApp.clampedSizeDp.toFloat(),
                         onValueChange = { v -> orbApp = orbApp.copy(sizeDp = v.toInt()) },
@@ -170,14 +215,13 @@ private fun SettingsScreen(onClose: () -> Unit) {
                         },
                         valueRange = OrbAppearance.MIN_SIZE_DP.toFloat()..OrbAppearance.MAX_SIZE_DP.toFloat(),
                         steps = 25,
+                        colors = fr3kSliderColors(),
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "consent profile") {
-                Column {
+            Fr3kPanel(title = "consent profile") {
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     listOf(
                         ConsentLevel.LOCAL_ONLY to "LOCAL ONLY · no data leaves the device",
                         ConsentLevel.PRIVATE to "PRIVATE · PII stripped",
@@ -191,25 +235,23 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "Hermes") {
-                Column {
+            Fr3kPanel(title = "Hermes") {
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     Text("endpoint:", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = endpoint,
                         onValueChange = { endpoint = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Button(
+                    Fr3kButton(
+                        text = "SAVE ENDPOINT",
                         onClick = { app.settings.update { it.copy(hermesEndpoint = endpoint) } },
-                        colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("SAVE ENDPOINT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.height(4.dp))
+                    )
                     Text(
                         text = "auth token: ${if (app.secureStore.get(settings.hermesAuthTokenKey) != null) "stored (encrypted)" else "not set"}",
                         color = Fr3kPalette.TextDim,
@@ -219,9 +261,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "OpenRouter") {
+            Fr3kPanel(title = "OpenRouter") {
                 val scope = rememberCoroutineScope()
                 val provider = app.openRouterProvider
                 val storedKey = app.secureStore.get(settings.openrouterApiKeyKey)
@@ -229,22 +269,37 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 var modelInput by remember(provider.selectedModel()) { mutableStateOf(provider.selectedModel()) }
                 var status by remember { mutableStateOf<String?>(null) }
                 var freeModels by remember { mutableStateOf<List<com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterModel>>(emptyList()) }
-                Column {
-                    Text(
-                        text = "key: ${if (storedKey != null) "stored (encrypted) — ${maskKey(storedKey)}" else "not set"}",
-                        color = if (storedKey != null) Fr3kPalette.Ok else Fr3kPalette.Warn,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
-                    )
-                    androidx.compose.material3.OutlinedTextField(
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Fr3kBadge(
+                            text = if (storedKey != null) "key stored" else "key missing",
+                            color = if (storedKey != null) Fr3kPalette.Ok else Fr3kPalette.Warn,
+                        )
+                        Text(
+                            text = if (storedKey != null) maskKey(storedKey) else "add an sk-or-… key",
+                            color = Fr3kPalette.TextDim,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    OutlinedTextField(
                         value = keyInput,
                         onValueChange = { keyInput = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
                         placeholder = { Text("sk-or-…", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Button(
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = "SAVE KEY",
                             onClick = {
                                 val trimmed = keyInput.trim()
                                 if (trimmed.isNotEmpty()) {
@@ -253,13 +308,15 @@ private fun SettingsScreen(onClose: () -> Unit) {
                                     status = "key saved"
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                        ) { Text("SAVE KEY", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                        Button(
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kGhostButton(
+                            text = "REMOVE",
                             onClick = { app.secureStore.remove(settings.openrouterApiKeyKey); status = "key removed" },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                        ) { Text("REMOVE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
-                        Button(
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kOutlineButton(
+                            text = "VALIDATE",
                             onClick = {
                                 scope.launch {
                                     status = "validating…"
@@ -270,23 +327,25 @@ private fun SettingsScreen(onClose: () -> Unit) {
                                     }
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                        ) { Text("VALIDATE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                     status?.let {
-                        Spacer(Modifier.height(4.dp))
                         Text(it, color = if (it.startsWith("ONLINE") || it == "key saved") Fr3kPalette.Ok else Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                     }
-                    Spacer(Modifier.height(8.dp))
                     Text("model: ${provider.selectedModel()}", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = modelInput,
                         onValueChange = { modelInput = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Button(
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = "USE MODEL",
                             onClick = {
                                 val m = modelInput.trim()
                                 if (m.isNotEmpty()) {
@@ -295,18 +354,20 @@ private fun SettingsScreen(onClose: () -> Unit) {
                                     status = "model set"
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                        ) { Text("USE MODEL", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-                        Button(
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kGhostButton(
+                            text = "USE FREE",
                             onClick = {
                                 provider.setModel(com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterProvider.DEFAULT_MODEL)
                                 app.settings.update { it.copy(openrouterModel = com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterProvider.DEFAULT_MODEL) }
                                 modelInput = com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterProvider.DEFAULT_MODEL
                                 status = "free model selected"
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                        ) { Text("USE FREE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
-                        Button(
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kOutlineButton(
+                            text = "REFRESH",
                             onClick = {
                                 scope.launch {
                                     status = "refreshing…"
@@ -314,98 +375,119 @@ private fun SettingsScreen(onClose: () -> Unit) {
                                     status = "${freeModels.size} free models cached"
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                        ) { Text("REFRESH", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                     if (freeModels.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
                         freeModels.take(6).forEach { m ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 1.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Fr3kPalette.Surface)
-                                    .clickable {
-                                        provider.setModel(m.id)
-                                        app.settings.update { it.copy(openrouterModel = m.id) }
-                                        modelInput = m.id
-                                        status = "model selected"
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            ) {
-                                Text(m.id, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-                            }
+                            Fr3kRowItem(
+                                label = m.id,
+                                accent = Fr3kPalette.Text,
+                                onClick = {
+                                    provider.setModel(m.id)
+                                    app.settings.update { it.copy(openrouterModel = m.id) }
+                                    modelInput = m.id
+                                    status = "model selected"
+                                },
+                                trailing = { Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 14.sp) },
+                            )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "telemetry") {
-                Column {
-                    Toggle("telemetry enabled (crash-free only)", telemetry) { v -> telemetry = v; app.settings.update { it.copy(telemetryEnabled = v) } }
-                }
+            Fr3kPanel(title = "telemetry") {
+                Toggle("telemetry enabled (crash-free only)", telemetry) { v -> telemetry = v; app.settings.update { it.copy(telemetryEnabled = v) } }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "current context") {
-                Column {
+            Fr3kPanel(title = "current context") {
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     Text(ctx.summary(), color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-                    Spacer(Modifier.height(4.dp))
-                    Button(
+                    Fr3kGhostButton(
+                        text = "CLEAR CONTEXT",
                         onClick = { contextEngine.clear() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
                         modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("CLEAR CONTEXT", fontFamily = FontFamily.Monospace)
-                    }
+                    )
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-            Button(
+            Fr3kOutlineButton(
+                text = "CLOSE",
                 onClick = onClose,
-                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("CLOSE", fontFamily = FontFamily.Monospace)
-            }
+                accent = Fr3kPalette.TextDim,
+            )
         }
     }
 }
 
 @Composable
+private fun fr3kSliderColors() = SliderDefaults.colors(
+    thumbColor = Fr3kPalette.Accent,
+    activeTrackColor = Fr3kPalette.Accent,
+    inactiveTrackColor = Fr3kPalette.Border,
+    activeTickColor = Fr3kPalette.Bg,
+    inactiveTickColor = Fr3kPalette.SurfaceHigh,
+)
+
+@Composable
 private fun Toggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
+    val trackColor by animateColorAsState(
+        if (value) Fr3kPalette.Ok else Fr3kPalette.SurfaceHigh,
+        tween(220),
+        label = "toggleTrack",
+    )
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-        Switch(checked = value, onCheckedChange = onChange)
+        Switch(
+            checked = value,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = trackColor,
+                checkedThumbColor = Fr3kPalette.Bg,
+                checkedBorderColor = trackColor,
+                uncheckedTrackColor = Fr3kPalette.Surface,
+                uncheckedThumbColor = Fr3kPalette.TextDim,
+                uncheckedBorderColor = Fr3kPalette.Border,
+            ),
+        )
     }
 }
 
 @Composable
 private fun RadioRow(active: Boolean, label: String, onClick: () -> Unit) {
-    val bg = if (active) Fr3kPalette.AccentDim else Fr3kPalette.Surface
+    val shape = RoundedCornerShape(Fr3kDimens.RadiusRow)
+    val bg by animateColorAsState(
+        if (active) Fr3kPalette.AccentDim.copy(alpha = 0.55f) else Fr3kPalette.SurfaceLow,
+        tween(200),
+        label = "radioBg",
+    )
+    val brd by animateColorAsState(
+        if (active) Fr3kPalette.Accent else Fr3kPalette.Border.copy(alpha = 0.45f),
+        tween(200),
+        label = "radioBrd",
+    )
+    val scale by animateFloatAsState(if (active) 1.015f else 1f, tween(180), label = "radioScale")
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(bg)
+            .scale(scale)
+            .clip(shape)
+            .background(bg, shape)
+            .border(1.dp, brd, shape)
             .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Text(
-            text = (if (active) "● " else "○ ") + label,
-            color = if (active) Fr3kPalette.Bg else Fr3kPalette.Text,
+            text = (if (active) "◉ " else "○ ") + label,
+            color = if (active) Fr3kPalette.Text else Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
         )
     }
 }

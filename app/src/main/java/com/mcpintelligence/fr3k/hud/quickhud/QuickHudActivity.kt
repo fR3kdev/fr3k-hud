@@ -3,8 +3,9 @@ package com.mcpintelligence.fr3k.hud.quickhud
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,25 +24,30 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color as GraphicsColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
-import com.mcpintelligence.fr3k.hud.R
 import com.mcpintelligence.fr3k.integrations.IntegrationState
 import com.mcpintelligence.fr3k.integrations.termux.TermuxHealth
 import com.mcpintelligence.fr3k.protocol.DeviceStatus as ProtoDeviceStatus
+import com.mcpintelligence.fr3k.ui.Fr3kBadge
+import com.mcpintelligence.fr3k.ui.Fr3kDimens
+import com.mcpintelligence.fr3k.ui.Fr3kDivider
+import com.mcpintelligence.fr3k.ui.Fr3kGradientText
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
+import com.mcpintelligence.fr3k.ui.Fr3kPanel
+import com.mcpintelligence.fr3k.ui.Fr3kRowItem
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import com.mcpintelligence.fr3k.ui.StatusDot
 import android.content.Intent
+import androidx.compose.material3.MaterialTheme
 import com.mcpintelligence.fr3k.ui.palette.CommandPaletteActivity
-import androidx.compose.ui.graphics.Color as GraphicsColor
 
 /**
  * The quick HUD panel (§8). A compact overlay launched from the HUD orb (tap),
@@ -83,43 +86,42 @@ private fun QuickHudScreen(onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GraphicsColor.Black.copy(alpha = 0.55f)),
+            .background(
+                Brush.verticalGradient(
+                    listOf(GraphicsColor.Black.copy(alpha = 0.72f), GraphicsColor.Black.copy(alpha = 0.48f)),
+                ),
+            ),
     ) {
         Column(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(Fr3kDimens.SpacingLg),
+            verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
         ) {
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(modifier = Modifier.fillMaxWidth(), title = "FR3K") {
+            Fr3kPanel(modifier = Modifier.fillMaxWidth(), title = "FR3K", subtitle = "profile: $profile") {
                 Column {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
+                        Fr3kGradientText(
                             text = app.fr3kCore.identity.deviceId.take(20),
-                            color = Fr3kPalette.Text,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 12.sp,
+                            style = MaterialTheme.typography.titleSmall,
                         )
-                        Text(
-                            text = "profile: $profile",
-                            color = Fr3kPalette.TextDim,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp,
+                        Fr3kBadge(
+                            text = if (caps.isNotEmpty()) "${caps.size} caps" else "0 caps",
+                            color = if (caps.isNotEmpty()) Fr3kPalette.Ok else Fr3kPalette.TextDim,
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    HorizontalDivider(color = Fr3kPalette.Border)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Fr3kDimens.SpacingSm))
+                    Fr3kDivider()
+                    Spacer(Modifier.height(Fr3kDimens.SpacingSm))
                     AdapterRows(caps = caps.keys, termuxState = termuxState)
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(modifier = Modifier.fillMaxWidth(), title = "ACTIONS") {
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                Column {
+            Fr3kPanel(modifier = Modifier.fillMaxWidth(), title = "ACTIONS") {
+                val ctx = LocalContext.current
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     QuickAction("OPEN COMMAND PALETTE") {
                         ctx.startActivity(Intent(ctx, CommandPaletteActivity::class.java)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -135,7 +137,7 @@ private fun QuickHudScreen(onClose: () -> Unit) {
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         onClose()
                     }
-                    QuickAction("CLOSE") { onClose() }
+                    QuickAction("CLOSE", accent = Fr3kPalette.TextDim) { onClose() }
                 }
             }
         }
@@ -170,12 +172,13 @@ private fun AdapterRows(caps: Set<String>, termuxState: IntegrationState) {
 
 @Composable
 private fun AdapterStatusRow(name: String, statusText: String, color: GraphicsColor, status: ProtoDeviceStatus) {
+    val animatedColor by animateColorAsState(color, tween(350), label = "adapterColor")
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = name,
@@ -183,14 +186,16 @@ private fun AdapterStatusRow(name: String, statusText: String, color: GraphicsCo
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
         )
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+        ) {
             Text(
                 text = statusText,
-                color = color,
+                color = animatedColor,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
             )
-            Spacer(Modifier.width(8.dp))
             StatusDot(
                 status = status,
                 size = 6.dp,
@@ -206,22 +211,13 @@ private fun TermuxHealth.TermuxStatusLevel.asColor(): GraphicsColor = when (this
 }
 
 @Composable
-private fun QuickAction(label: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Fr3kPalette.Surface)
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-    ) {
-        Text(
-            text = label,
-            color = Fr3kPalette.Accent,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+private fun QuickAction(label: String, accent: GraphicsColor = Fr3kPalette.Accent, onClick: () -> Unit) {
+    Fr3kRowItem(
+        label = label,
+        accent = accent,
+        onClick = onClick,
+        trailing = {
+            Text("›", color = accent, fontFamily = FontFamily.Monospace, fontSize = 15.sp)
+        },
+    )
 }

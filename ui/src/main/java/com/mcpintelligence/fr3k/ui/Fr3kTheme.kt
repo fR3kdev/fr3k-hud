@@ -5,10 +5,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Typography
 
@@ -24,23 +26,87 @@ object Fr3kPalette {
     val Warn = Color(0xFFFFAA33)
     val Err = Color(0xFFFF5577)
     val Magenta = Color(0xFFFF3FA4)
+
+    // Derived elevation tiers (additive — never replace the brand colors).
+    val SurfaceLow = Color(0xFF0A0C14)
+    val SurfaceHigh = Color(0xFF161B2B)
+    val OkDim = Color(0xFF0B3B31)
+    val ErrDim = Color(0xFF431522)
+    val WarnDim = Color(0xFF43300F)
+}
+
+/**
+ * Design tokens — the single source of truth for radii, spacing and elevation
+ * so every panel/row/button in the app shares one rhythm. Use these instead
+ * of hardcoded dp values in screens.
+ */
+object Fr3kDimens {
+    val RadiusPanel = 16.dp
+    val RadiusRow = 12.dp
+    val RadiusChip = 8.dp
+
+    val SpacingXs = 4.dp
+    val SpacingSm = 8.dp
+    val SpacingMd = 12.dp
+    val SpacingLg = 16.dp
+    val SpacingXl = 24.dp
+
+    val PanelPadding = 16.dp
+    val PanelBorder = 1.dp
+    val PanelElevation = 10.dp
+}
+
+/** Shared gradient brushes — the HUD's "glow" identity. */
+object Fr3kGradients {
+    val PanelFill: Brush = Brush.linearGradient(listOf(Fr3kPalette.Surface, Fr3kPalette.SurfaceLow))
+    val AccentFill: Brush = Brush.horizontalGradient(listOf(Fr3kPalette.Accent, Fr3kPalette.Magenta))
+    val HeroTitle: Brush = Brush.linearGradient(listOf(Fr3kPalette.Accent, Fr3kPalette.Ok))
+    val Divider: Brush = Brush.horizontalGradient(
+        listOf(Fr3kPalette.Accent.copy(alpha = 0.55f), Fr3kPalette.Ok.copy(alpha = 0.30f), Fr3kPalette.Border.copy(alpha = 0.15f)),
+    )
+
+    fun panelBorder(accent: Color): Brush = Brush.linearGradient(
+        listOf(
+            accent.copy(alpha = 0.60f),
+            Fr3kPalette.Ok.copy(alpha = 0.28f),
+            Fr3kPalette.Border.copy(alpha = 0.90f),
+        ),
+    )
+
+    fun titleBrush(colors: List<Color>): Brush = Brush.linearGradient(colors)
 }
 
 private val Fr3kDarkColors = darkColorScheme(
     primary = Fr3kPalette.Accent,
-    onPrimary = Color.Black,
+    onPrimary = Fr3kPalette.Bg,
+    primaryContainer = Fr3kPalette.AccentDim,
+    onPrimaryContainer = Fr3kPalette.Text,
     secondary = Fr3kPalette.Ok,
-    onSecondary = Color.Black,
+    onSecondary = Fr3kPalette.Bg,
+    secondaryContainer = Fr3kPalette.OkDim,
+    onSecondaryContainer = Fr3kPalette.Text,
+    tertiary = Fr3kPalette.Magenta,
+    onTertiary = Fr3kPalette.Bg,
     background = Fr3kPalette.Bg,
     onBackground = Fr3kPalette.Text,
     surface = Fr3kPalette.Surface,
     onSurface = Fr3kPalette.Text,
-    surfaceVariant = Fr3kPalette.Surface,
+    surfaceVariant = Fr3kPalette.SurfaceHigh,
     onSurfaceVariant = Fr3kPalette.TextDim,
+    surfaceContainerLowest = Fr3kPalette.Bg,
+    surfaceContainerLow = Fr3kPalette.SurfaceLow,
+    surfaceContainer = Fr3kPalette.Surface,
+    surfaceContainerHigh = Fr3kPalette.SurfaceHigh,
+    surfaceContainerHighest = Fr3kPalette.SurfaceHigh,
+    surfaceTint = Fr3kPalette.Accent,
     outline = Fr3kPalette.Border,
-    outlineVariant = Fr3kPalette.Border,
+    outlineVariant = Fr3kPalette.Border.copy(alpha = 0.5f),
+    inverseSurface = Fr3kPalette.SurfaceHigh,
+    inverseOnSurface = Fr3kPalette.Text,
     error = Fr3kPalette.Err,
-    onError = Color.Black,
+    onError = Fr3kPalette.Bg,
+    errorContainer = Fr3kPalette.ErrDim,
+    onErrorContainer = Fr3kPalette.Text,
 )
 
 private val Fr3kLightColors = lightColorScheme(
@@ -50,14 +116,22 @@ private val Fr3kLightColors = lightColorScheme(
     surface = Fr3kPalette.Surface,
 )
 
+/**
+ * Monospace type scale — the HUD identity. Sizes step on a consistent ladder:
+ * hero 24 → section 11 bold tracked → body 13/12 → meta 10.
+ */
 private val Fr3kTypography = Typography(
-    displaySmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 22.sp, letterSpacing = 1.sp),
-    titleLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 18.sp, letterSpacing = 1.sp),
-    titleMedium = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.5.sp),
-    bodyLarge = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp),
-    bodyMedium = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
-    labelLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.5.sp),
-    labelSmall = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp, letterSpacing = 1.sp),
+    displaySmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = 2.sp),
+    headlineSmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = 1.2.sp),
+    titleLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 23.sp, letterSpacing = 0.8.sp),
+    titleMedium = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, letterSpacing = 0.4.sp),
+    titleSmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 17.sp, letterSpacing = 0.3.sp),
+    bodyLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 19.sp, letterSpacing = 0.2.sp),
+    bodyMedium = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 17.sp),
+    bodySmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Normal, fontSize = 10.sp, lineHeight = 14.sp, letterSpacing = 0.2.sp),
+    labelLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 15.sp, letterSpacing = 1.6.sp),
+    labelMedium = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 14.sp, letterSpacing = 1.2.sp),
+    labelSmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 10.sp, lineHeight = 13.sp, letterSpacing = 0.8.sp),
 )
 
 @Composable
