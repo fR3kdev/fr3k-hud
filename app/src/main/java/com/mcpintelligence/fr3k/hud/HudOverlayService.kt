@@ -53,6 +53,7 @@ class HudOverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var orb: Fr3kHudOrb
     private lateinit var overlays: OverlayManager
+    private val orbAppearanceStore by lazy { OrbAppearanceStore(this) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var radialOpen = false
     private var edgeHidden = false
@@ -60,8 +61,15 @@ class HudOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        overlays = OverlayManager(this) { restoreOrbFromEdge() }
         orb = Fr3kHudOrb(this, windowManager)
+        orb.applyAppearance(orbAppearanceStore.read())
+        overlays = OverlayManager(
+            context = this,
+            onEdgeRestoreRequested = { restoreOrbFromEdge() },
+            orbAnchor = { orb.currentPosition() },
+            orbSizePx = { orb.viewWidthPx() },
+            onOpenAppearance = { openOrbAppearance() },
+        )
         // CRITICAL: on API 34+ (Android 14), TYPE_APPLICATION_OVERLAY windows
         // from a service are KILLED if startForeground() has not been called
         // yet. So we must promote the service to foreground BEFORE we attach
@@ -87,6 +95,7 @@ class HudOverlayService : Service() {
             ACTION_HIDE_BROWSER -> overlays.miniBrowser.hide()
             ACTION_HIDE_TERMINAL -> overlays.terminal.hide()
             ACTION_HIDE_ALL -> overlays.hideAll()
+            ACTION_REFRESH_APPEARANCE -> orb.applyAppearance(orbAppearanceStore.read())
             ACTION_STOP -> stopSelf()
         }
         return START_STICKY
@@ -168,9 +177,7 @@ class HudOverlayService : Service() {
     private val gestureListener = object : Fr3kHudOrb.GestureListener {
         override fun onTap() {
             Log.i("FR3K", "orb tap")
-            val i = Intent(this@HudOverlayService, QuickHudActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(i)
+            if (overlays.quickMenu.isAttached) overlays.quickMenu.hide() else overlays.quickMenu.show()
         }
         override fun onDoubleTap() {
             Log.i("FR3K", "orb double tap")
@@ -261,6 +268,13 @@ class HudOverlayService : Service() {
         orb.attach()
     }
 
+    private fun openOrbAppearance() {
+        startActivity(
+            Intent(this, com.mcpintelligence.fr3k.ui.settings.SettingsActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    }
+
     /** §3 — populates the app-wide AgentToolBus with the real overlay tools. */
     private fun wireAgentTools() {
         val app = Fr3kApplication.get()
@@ -289,6 +303,7 @@ class HudOverlayService : Service() {
         const val ACTION_HIDE_BROWSER = "com.mcpintelligence.fr3k.hud.HIDE_BROWSER"
         const val ACTION_HIDE_TERMINAL = "com.mcpintelligence.fr3k.hud.HIDE_TERMINAL"
         const val ACTION_HIDE_ALL = "com.mcpintelligence.fr3k.hud.HIDE_ALL"
+        const val ACTION_REFRESH_APPEARANCE = "com.mcpintelligence.fr3k.hud.REFRESH_APPEARANCE"
         const val ACTION_STOP = "com.mcpintelligence.fr3k.hud.STOP"
         const val EXTRA_URL = "url"
         private const val NID = 101

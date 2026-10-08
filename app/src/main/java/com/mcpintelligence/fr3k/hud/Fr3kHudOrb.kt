@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.mcpintelligence.fr3k.Fr3kApplication
@@ -45,7 +46,7 @@ class Fr3kHudOrb(
         fun onSwipeDown()
     }
 
-    private val orbView: View
+    private val orbView: FrameLayout
     private val params: WindowManager.LayoutParams
     private var listener: GestureListener? = null
 
@@ -62,42 +63,28 @@ class Fr3kHudOrb(
     private val doubleTapMs = 250L
     private val swipeMinDistPx = (80 * context.resources.displayMetrics.density).toInt()
 
+    private var appearance: OrbAppearance = OrbAppearance()
+
     init {
         orbView = FrameLayout(context).apply {
-            setBackgroundResource(R.drawable.fr3k_orb)
             contentDescription = "FR3K HUD orb"
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             isClickable = true
             isFocusable = true
-            minimumWidth = (36 * context.resources.displayMetrics.density).toInt()
-            minimumHeight = (36 * context.resources.displayMetrics.density).toInt()
-            layoutParams = android.view.ViewGroup.LayoutParams(
-                (36 * context.resources.displayMetrics.density).toInt(),
-                (36 * context.resources.displayMetrics.density).toInt(),
-            )
         }
-        val label = TextView(context).apply {
-            text = "F3K"
-            setTextColor(0xFF05060A.toInt())
-            textSize = 11f
-            gravity = Gravity.CENTER
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-        orbView.addView(label)
 
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
 
         params = WindowManager.LayoutParams(
-            (36 * context.resources.displayMetrics.density).toInt(),
-            (36 * context.resources.displayMetrics.density).toInt(),
+            sizePx(),
+            sizePx(),
             type,
             // NOT_FOCUSABLE    — never steal focus from the activity below.
             // LAYOUT_NO_LIMITS — can extend past screen edges.
-            // No WATCH_OUTSIDE_TOUCH — touches outside the orb's 36dp
-            // bounds go to the underlying window automatically, so the
-            // radial menu and any other UI stay interactive.
+            // No WATCH_OUTSIDE_TOUCH — touches outside the orb bounds pass to
+            // the underlying window, so the radial/quick-menu stay interactive.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
@@ -106,7 +93,71 @@ class Fr3kHudOrb(
             x = 80
             y = 200
         }
-        android.util.Log.i("FR3K", "orb constructed, view=$orbView, params=${params.width}x${params.height}")
+        renderContent()
+        android.util.Log.i("FR3K", "orb constructed, params=${params.width}x${params.height}")
+    }
+
+    private fun sizePx(): Int =
+        (appearance.clampedSizeDp * context.resources.displayMetrics.density).toInt()
+
+    fun applyAppearance(next: OrbAppearance) {
+        appearance = next
+        val s = sizePx()
+        params.width = s
+        params.height = s
+        orbView.layoutParams = android.view.ViewGroup.LayoutParams(s, s)
+        renderContent()
+        runCatching { windowManager.updateViewLayout(orbView, params) }
+    }
+
+    private fun loadOrbImage(target: ImageView, uri: android.net.Uri) {
+        Thread {
+            val drawable = runCatching {
+                val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+                android.graphics.ImageDecoder.decodeDrawable(source)
+            }.getOrNull()
+            if (drawable != null) {
+                target.post {
+                    target.setImageDrawable(drawable)
+                    if (drawable is android.graphics.drawable.AnimatedImageDrawable) drawable.start()
+                }
+            }
+        }.start()
+    }
+
+    private fun renderContent() {
+        orbView.removeAllViews()
+        if (appearance.hasCustomImage) {
+            orbView.background = null
+            orbView.clipToOutline = true
+            orbView.outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setOval(0, 0, view.width, view.height)
+                }
+            }
+            val iv = ImageView(context).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                )
+            }
+            orbView.addView(iv)
+            appearance.imageUri?.takeIf { it.isNotBlank() }?.let { loadOrbImage(iv, android.net.Uri.parse(it)) }
+        } else {
+            orbView.clipToOutline = false
+            orbView.outlineProvider = null
+            orbView.setBackgroundResource(R.drawable.fr3k_orb)
+            val label = TextView(context).apply {
+                text = "F3K"
+                setTextColor(0xFF05060A.toInt())
+                textSize = 11f * (appearance.clampedSizeDp / 36f)
+                gravity = Gravity.CENTER
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            orbView.addView(label)
+        }
     }
 
     fun setGestureListener(l: GestureListener) {

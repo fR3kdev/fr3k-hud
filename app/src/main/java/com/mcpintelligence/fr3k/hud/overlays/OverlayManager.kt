@@ -13,6 +13,9 @@ import com.mcpintelligence.fr3k.hud.overlays.FrappeOverlayRegistry
 class OverlayManager(
     context: Context,
     private val onEdgeRestoreRequested: () -> Unit,
+    private val orbAnchor: () -> Pair<Int, Int> = { 0 to 0 },
+    private val orbSizePx: () -> Int = { 48 },
+    private val onOpenAppearance: () -> Unit = {},
 ) {
 
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -26,8 +29,9 @@ class OverlayManager(
     val edgeArc by lazy { Fr3kEdgeArc(host) { onEdgeRestoreRequested() } }
     val particle by lazy { Fr3kParticleLink(host) }
     val radial by lazy { RadialMenuOverlay(host) }
+    val quickMenu by lazy { Fr3kOrbQuickMenu(host, orbAnchor, orbSizePx, onOpenAppearance) }
 
-    private val registry = FrappeOverlayRegistry(chatBubble, browser, terminal, exitTarget, edgeArc, particle, radial)
+    private val registry = FrappeOverlayRegistry(chatBubble, browser, terminal, exitTarget, edgeArc, particle, radial, quickMenu)
 
     fun openChat() {
         try {

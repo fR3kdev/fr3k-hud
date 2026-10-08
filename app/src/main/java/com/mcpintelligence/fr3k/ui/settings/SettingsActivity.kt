@@ -1,8 +1,11 @@
 package com.mcpintelligence.fr3k.ui.settings
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.ConsentLevel
+import com.mcpintelligence.fr3k.hud.OrbAppearance
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import kotlinx.coroutines.launch
@@ -65,6 +69,7 @@ class SettingsActivity : ComponentActivity() {
 @Composable
 private fun SettingsScreen(onClose: () -> Unit) {
     val app = Fr3kApplication.get()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val settings by app.settings.settings.collectAsState()
     val contextEngine = app.fr3kCore.contextEngine
     val ctx by contextEngine.current.collectAsState()
@@ -99,6 +104,72 @@ private fun SettingsScreen(onClose: () -> Unit) {
                         onValueChange = { v -> app.settings.update { it.copy(hudEdgeMarginDp = v.toInt()) } },
                         valueRange = 0f..48f,
                         steps = 16,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "orb appearance") {
+                val orbStore = remember { com.mcpintelligence.fr3k.hud.OrbAppearanceStore(context) }
+                var orbApp by remember { mutableStateOf(orbStore.read()) }
+                val picker = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument(),
+                ) { uri ->
+                    if (uri != null) {
+                        runCatching {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                            )
+                        }
+                        val isGif = (context.contentResolver.getType(uri) ?: "").contains("gif") ||
+                            uri.toString().lowercase().endsWith(".gif")
+                        orbApp = orbApp.copy(
+                            mode = if (isGif) OrbAppearance.Mode.GIF else OrbAppearance.Mode.IMAGE,
+                            imageUri = uri.toString(),
+                        )
+                        orbStore.write(orbApp)
+                        refreshOrb(context)
+                    }
+                }
+                Column {
+                    Text(
+                        text = when (orbApp.mode) {
+                            OrbAppearance.Mode.BUILTIN -> "button: built-in glyph"
+                            OrbAppearance.Mode.IMAGE -> "button: custom image"
+                            OrbAppearance.Mode.GIF -> "button: animated GIF"
+                        },
+                        color = Fr3kPalette.Text,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Button(
+                            onClick = { picker.launch(arrayOf("image/*")) },
+                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
+                        ) { Text("PICK IMAGE / GIF", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = {
+                                orbStore.resetImage()
+                                orbApp = orbStore.read()
+                                refreshOrb(context)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+                        ) { Text("RESET", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("size: ${orbApp.clampedSizeDp} dp", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    Slider(
+                        value = orbApp.clampedSizeDp.toFloat(),
+                        onValueChange = { v -> orbApp = orbApp.copy(sizeDp = v.toInt()) },
+                        onValueChangeFinished = {
+                            orbStore.write(orbApp)
+                            refreshOrb(context)
+                        },
+                        valueRange = OrbAppearance.MIN_SIZE_DP.toFloat()..OrbAppearance.MAX_SIZE_DP.toFloat(),
+                        steps = 25,
                     )
                 }
             }
@@ -346,4 +417,13 @@ private fun RadioRow(active: Boolean, label: String, onClick: () -> Unit) {
 private fun maskKey(key: String): String {
     if (key.length <= 8) return "••••"
     return key.takeLast(4).let { tail -> "${key.take(6)}…$tail" }
+}
+
+private fun refreshOrb(context: Context) {
+    runCatching {
+        context.startService(
+            android.content.Intent(context, com.mcpintelligence.fr3k.hud.HudOverlayService::class.java)
+                .setAction(com.mcpintelligence.fr3k.hud.HudOverlayService.ACTION_REFRESH_APPEARANCE),
+        )
+    }
 }
