@@ -84,6 +84,15 @@ class IntegrationsActivity : ComponentActivity() {
             shizuku.onRequestPermissionsResult(requestCode, grantResults)
             showToast(if (shizuku.isAuthorized()) "Shizuku permission granted" else "Shizuku permission still denied")
             setContentView(buildContent())
+        } else if (requestCode == REQ_LSPATCH_STORAGE || requestCode == REQ_MORPHE_MEDIA) {
+            // Previously these codes were never handled, so the panel looked
+            // frozen after a grant/deny. Refresh + report the outcome.
+            val granted = grantResults.count { it == android.content.pm.PackageManager.PERMISSION_GRANTED }
+            showToast(
+                if (grantResults.isNotEmpty() && granted == grantResults.size) "Permissions granted"
+                else "Granted $granted of ${permissions.size} — restore access from system Settings to grant the rest",
+            )
+            setContentView(buildContent())
         }
     }
 
@@ -289,7 +298,7 @@ class IntegrationsActivity : ComponentActivity() {
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (!shIn) {
                     addView(makeButton("OPEN PLAY STORE → SHIZUKU") { _ ->
-                        openPlayStore("moe.shizuku.api")
+                        openPlayStore("moe.shizuku.privileged.api")
                     })
                 } else if (!shManager) {
                     // Manager is installed but not running. On rooted
@@ -305,11 +314,15 @@ class IntegrationsActivity : ComponentActivity() {
                     ))
                     addView(this@IntegrationsActivity.spacer(density, 4))
                     addView(makeButton("OPEN SHIZUKU APP") { _ ->
-                        shizuku.openGrantScreen(this@IntegrationsActivity)
+                        if (!shizuku.openGrantScreen(this@IntegrationsActivity)) {
+                            showToast("Open Shizuku, tap \"Start\", then return here to grant permission")
+                        }
                     })
                 } else if (!shAuth) {
                     addView(makeButton("GRANT SHIZUKU PERMISSION") { _ ->
-                        shizuku.openGrantScreen(this@IntegrationsActivity)
+                        if (!shizuku.openGrantScreen(this@IntegrationsActivity)) {
+                            showToast("Shizuku service is not running yet — start it in the Shizuku app, then retry")
+                        }
                     })
                 } else {
                     addView(makeButton("PING SHIZUKU BINDER") { btn ->
@@ -377,11 +390,14 @@ class IntegrationsActivity : ComponentActivity() {
                 if (PermissionRegistry.firstMissing(this@IntegrationsActivity, PermissionRegistry.Feature.LSPATCH) != null) {
                     addView(this@IntegrationsActivity.spacer(density, 6))
                     addView(makeButton("GRANT STORAGE PERMISSION") { _ ->
-                        PermissionRegistry.requestRuntime(
+                        val requested = PermissionRegistry.requestRuntime(
                             this@IntegrationsActivity,
                             PermissionRegistry.Feature.LSPATCH,
-                            9001,
+                            REQ_LSPATCH_STORAGE,
                         )
+                        if (requested.isEmpty()) {
+                            showToast("No storage runtime permission is required on this Android version — repackage modules in the LSPatch manager")
+                        }
                     })
                 }
             }
@@ -401,11 +417,14 @@ class IntegrationsActivity : ComponentActivity() {
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (PermissionRegistry.firstMissing(this@IntegrationsActivity, PermissionRegistry.Feature.MORPHE) != null) {
                     addView(makeButton("GRANT MEDIA PERMISSIONS") { _ ->
-                        PermissionRegistry.requestRuntime(
+                        val requested = PermissionRegistry.requestRuntime(
                             this@IntegrationsActivity,
                             PermissionRegistry.Feature.MORPHE,
-                            9002,
+                            REQ_MORPHE_MEDIA,
                         )
+                        if (requested.isEmpty()) {
+                            showToast("No media runtime permission is required on this Android version")
+                        }
                     })
                 }
             }
@@ -619,5 +638,7 @@ class IntegrationsActivity : ComponentActivity() {
 
     companion object {
         const val REQ_ALL_PERMS = 8001
+        const val REQ_LSPATCH_STORAGE = 9001
+        const val REQ_MORPHE_MEDIA = 9002
     }
 }

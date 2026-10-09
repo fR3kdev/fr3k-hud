@@ -70,11 +70,19 @@ class ShizukuBridge private constructor() {
      * refused (e.g. Shizuku not installed, no binder yet).
      */
     fun requestPermission(requestCode: Int): Boolean {
-        val s = _state.value
-        if (s !is ShizukuState.BinderLivePermissionRequired &&
-            s !is ShizukuState.ServerStarting
-        ) {
-            Log.w(TAG, "requestPermission refused in state=$s")
+        // The AAR's Shizuku.requestPermission() throws if the binder is not
+        // live. Gate on the binder itself rather than purely on the reducer
+        // state: the state can lag the binder callback, and refusing on
+        // Unknown/ServerStarting silently turns "GRANT" into a dead button.
+        val binderLive = runCatching { Shizuku.getBinder() != null }.getOrDefault(false)
+        if (!binderLive) {
+            Log.w(TAG, "requestPermission refused — no live binder (state=${_state.value})")
+            return false
+        }
+        // Never re-fire the dialog after an explicit deny — SUI will not
+        // show it again and the user sees nothing happen.
+        if (_state.value is ShizukuState.Denied) {
+            Log.w(TAG, "requestPermission refused — previously denied")
             return false
         }
         return try {

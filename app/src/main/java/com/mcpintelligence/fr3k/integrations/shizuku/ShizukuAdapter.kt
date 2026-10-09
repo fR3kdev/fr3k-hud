@@ -46,9 +46,6 @@ class ShizukuAdapter(private val context: Context) {
         val provenance: String = "",
     )
 
-    private val pkg = "moe.shizuku.api.permission"
-    private val grantPkg = "moe.shizuku.api"
-
     fun isInstalled(): Boolean {
         // Shizuku ships as one of two packages: the public-facing
         // "moe.shizuku.api" (the user installs from Play / F-Droid) or
@@ -255,34 +252,40 @@ class ShizukuAdapter(private val context: Context) {
      * accept our package appears in the SUI admin list ("apps that can
      * use this"). Delegates to [ShizukuBridge.requestPermission] which
      * is the ONLY Shizuku grant path — it calls
-     * `Shizuku.requestPermission(code)` after the binder is live and
+     * `Shizuku.requestPermission(code)` once the binder is live and
      * never falls through to the OS `Activity.requestPermissions()`
      * dialog (that path does not register us in SUI's admin list).
      *
-     * If the bridge refuses (no binder yet) or the grant can't fire,
-     * falls back to launching the Shizuku app so the user can grant
-     * manually inside SUI.
+     * Returns true when the SUI grant request was dispatched. When it was
+     * not (no live binder yet) this opens the Shizuku manager so the user
+     * can start the service, or the Shizuku download page if the manager
+     * is not installed at all — never a silent no-op.
      */
-    fun openGrantScreen(activity: android.app.Activity? = null) {
+    fun openGrantScreen(activity: android.app.Activity? = null): Boolean {
         // Invalidate any cached binder state so the next status read
         // re-queries SUI after the user toggles the grant.
         cachedBinder = null
         backgroundBindStarted = false
 
-        // Ask the bridge to fire the AAR grant request. It refuses
-        // unless the binder is live, keeping us from a silent no-op.
-        val dispatched = ShizukuBridge.get().requestPermission(REQ_SHIZUKU_PERMISSION)
+        if (ShizukuBridge.get().requestPermission(REQ_SHIZUKU_PERMISSION)) return true
 
-        // Last-resort: launch the Shizuku app so the user can grant
-        // from inside SUI manually.
-        if (!dispatched) {
-            Log.i(TAG, "Shizuku.requestPermission not dispatched — launching ${grantPkg}")
-            val i = context.packageManager.getLaunchIntentForPackage(grantPkg)
+        // No live binder. "moe.shizuku.api" is only the permission
+        // namespace; the installable manager app is
+        // "moe.shizuku.privileged.api" (also where Sui/SIZUKU hooks live).
+        for (p in MANAGER_PACKAGES) {
+            val i = context.packageManager.getLaunchIntentForPackage(p)
             if (i != null) {
+                Log.i(TAG, "Shizuku grant not dispatched — opening manager ${p}")
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(i)
+                runCatching { context.startActivity(i) }
+                return false
             }
         }
+        Log.i(TAG, "Shizuku manager not installed — opening download page")
+        val web = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://shizuku.rikka.app/download/"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(web) }
+        return false
     }
 
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray): Boolean {
@@ -309,5 +312,13 @@ class ShizukuAdapter(private val context: Context) {
     companion object {
         private const val TAG = "FR3K.shizuku"
         const val REQ_SHIZUKU_PERMISSION = 0x5F31
+
+        // Candidate launcher packages for the Shizuku manager. The real
+        // app is "moe.shizuku.privileged.api"; the others cover Sui forks
+        // and older naming so we never dead-end.
+        internal val MANAGER_PACKAGES = listOf(
+            "moe.shizuku.privileged.api",
+            "moe.shizuku.api",
+        )
     }
 }

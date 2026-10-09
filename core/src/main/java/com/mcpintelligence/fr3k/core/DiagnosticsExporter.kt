@@ -1,10 +1,14 @@
 package com.mcpintelligence.fr3k.core
 
+import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.os.Process
 import android.os.StatFs
+import android.provider.Settings
 import java.io.File
 import java.security.MessageDigest
 
@@ -170,12 +174,36 @@ object DiagnosticsExporter {
             "android.permission.PACKAGE_USAGE_STATS",
             "android.permission.QUERY_ALL_PACKAGES",
         )
-        return permissions.associateWith { perm ->
-            try {
-                context.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
-            } catch (_: Throwable) { false }
-        }
+        return permissions.associateWith { perm -> isPermissionGranted(context, perm) }
     }
+
+    /**
+     * Special ("appop"-backed) permissions are NOT reported by
+     * `checkSelfPermission` — it returns DENIED for SYSTEM_ALERT_WINDOW and
+     * PACKAGE_USAGE_STATS even after the user grants them, which is why the
+     * diagnostics panel kept showing a GRANT button. Each special permission
+     * has an authoritative query.
+     */
+    private fun isPermissionGranted(context: Context, perm: String): Boolean = try {
+        when (perm) {
+            "android.permission.SYSTEM_ALERT_WINDOW" -> Settings.canDrawOverlays(context)
+            "android.permission.PACKAGE_USAGE_STATS" -> {
+                val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+                @Suppress("DEPRECATION")
+                val mode = appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    Process.myUid(),
+                    context.packageName,
+                )
+                mode == AppOpsManager.MODE_ALLOWED
+            }
+            "android.permission.POST_NOTIFICATIONS" -> {
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                nm.areNotificationsEnabled()
+            }
+            else -> context.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
+        }
+    } catch (_: Throwable) { false }
 
     private fun readableStorage(context: Context): String {
         return try {

@@ -67,9 +67,33 @@ import java.io.File
  */
 class DiagnosticsActivity : ComponentActivity() {
 
+    // Bumped on every onResume / permission-result so the permission map is
+    // re-read after the user returns from a system Settings page. Without it
+    // the memoised bundle kept the pre-grant values and the GRANT button
+    // stayed on screen after the permission was actually granted.
+    private val refreshTick = kotlinx.coroutines.flow.MutableStateFlow(0L)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { Fr3kTheme { DiagnosticsScreen(onClose = { finish() }) } }
+        setContent {
+            Fr3kTheme {
+                DiagnosticsScreen(refreshTick = refreshTick, onClose = { finish() })
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshTick.value = System.currentTimeMillis()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        refreshTick.value = System.currentTimeMillis()
     }
 
     /**
@@ -111,20 +135,56 @@ class DiagnosticsActivity : ComponentActivity() {
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }
+            "android.permission.POST_NOTIFICATIONS" -> requestNotificationsPermission()
             else -> {
                 // Regular runtime permission — fire the standard dialog.
                 androidx.core.app.ActivityCompat.requestPermissions(
-                    this, arrayOf(permission), 9300,
+                    this, arrayOf(permission), REQ_RUNTIME,
                 )
             }
         }
     }
+
+    /**
+     * Android only shows the POST_NOTIFICATIONS dialog a couple of times;
+     * after that `requestPermissions` silently no-ops, which is the exact
+     * "button does nothing" report. First tap asks; later taps jump to the
+     * app notification settings so the action is always actionable.
+     */
+    private fun requestNotificationsPermission() {
+        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+        val alreadyAsked = prefs.getBoolean(KEY_POST_NOTIF_ASKED, false)
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !alreadyAsked) {
+            prefs.edit().putBoolean(KEY_POST_NOTIF_ASKED, true).apply()
+            androidx.core.app.ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                REQ_POST_NOTIFICATIONS,
+            )
+        } else {
+            startActivity(
+                android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+
+    companion object {
+        private const val PREFS = "fr3k.perms"
+        private const val KEY_POST_NOTIF_ASKED = "post_notifications_asked"
+        private const val REQ_RUNTIME = 9300
+        private const val REQ_POST_NOTIFICATIONS = 9301
+    }
 }
 
 @Composable
-private fun DiagnosticsScreen(onClose: () -> Unit) {
+private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Long>, onClose: () -> Unit) {
     val app = Fr3kApplication.get()
     val context = app.applicationContext
+    // Re-read permission state when the activity resumes (e.g. after the
+    // user grants overlay/usage-access in a Settings page and comes back).
+    val refreshVersion by refreshTick.collectAsState()
     // Pull the activity out of LocalContext so the per-row GRANT button
     // can fire `requestPermission(...)` directly. We keep this scoped to
     // the @Composable so a ContextServiceLocator isn't needed.
@@ -139,7 +199,7 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
     val automations by remember { mutableStateOf(app.fr3kCore.automationEngine.all()) }
     val logs = remember { app.fr3kCore.automationEngine.logs().take(15) }
 
-    val bundle = remember(caps, plugins, automations, logs) {
+    val bundle = remember(caps, plugins, automations, logs, refreshVersion) {
         DiagnosticsExporter.collect(
             context = context,
             fr3kCore = app.fr3kCore,
