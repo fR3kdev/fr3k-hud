@@ -4,6 +4,7 @@
     </queries>
     <application android:label="fR3k Patch Fixture" android:allowBackup="false"
         android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity android:name=".AdSkipDemoActivity" android:exported="true" />
         <activity android:name=".FixtureActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
