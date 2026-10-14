@@ -1,0 +1,41 @@
+{
+  "versionName": "0.4.21",
+  "versionCode": 421,
+  "sha256": "9c78189671d7163c5bfbeee2d69851c07dd69ed1a23b0fcc35fe461f30ed947a",
+  "bytes": 105188326,
+  "source_commit": "612ee56b9e4bcba90579e08a89ef61c63c194216",
+  "source_tree": "Local uncommitted redesign, accessibility fixes and release-surface cleanup; see docs/design/CONTINUATION.md for the checkpoint.",
+  "signature": "APK_V2_VERIFIED_DEBUG",
+  "jvm_tests": {
+    "app": {
+      "tests": 103,
+      "failures": 0,
+      "errors": 0
+    },
+    "capability": {
+      "tests": 45,
+      "failures": 0,
+      "errors": 0
+    },
+    "core": {
+      "tests": 155,
+      "failures": 0,
+      "errors": 0
+    },
+    "patch-fixture": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0
+    },
+    "protocol": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    "transport": {
+      "tests": 14,
+      "failures": 0,
+      "errors": 0
+    }
+  }
+}

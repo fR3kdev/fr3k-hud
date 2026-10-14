@@ -26,9 +26,23 @@ object CapabilityCatalogue {
         textRegex = "(?i)^CONTENT_PLAYING$",
     )
 
+    /** Fixture catalogue is enabled only by instrumentation, never by a production entry point. */
+    fun labMode(context: Context): Boolean = com.mcpintelligence.fr3k.hud.BuildConfig.DEBUG &&
+        context.getSharedPreferences("capability-lab", Context.MODE_PRIVATE).getBoolean("fixtures", false)
+
+    fun selectedPackages(context: Context): Set<String> =
+        context.getSharedPreferences("controlled-apps", Context.MODE_PRIVATE).getStringSet("packages", emptySet())!!.toSet()
+
+    fun select(context: Context, pkg: String, enabled: Boolean) {
+        AndroidIdentityReader.of(context, pkg) // Must be installed and have a verifiable identity.
+        val selected = selectedPackages(context).toMutableSet()
+        if (enabled) selected.add(pkg) else selected.remove(pkg)
+        check(context.getSharedPreferences("controlled-apps", Context.MODE_PRIVATE).edit().putStringSet("packages", selected).commit())
+    }
+
     fun installed(context: Context): Map<String, AppIdentity> {
         val pm = context.packageManager
-        val wanted = listOf(FIXTURE, FIXTURE_TWO, HUD)
+        val wanted = ((if (labMode(context)) listOf(FIXTURE, FIXTURE_TWO, HUD) else listOf(HUD)) + selectedPackages(context)).distinct()
         return wanted.mapNotNull { pkg ->
             runCatching { AndroidIdentityReader.of(context, pkg) }.getOrNull()?.let { pkg to it }
         }.toMap()
@@ -70,6 +84,22 @@ object CapabilityCatalogue {
                     listOf(Step.Launch("fr3ktwo://open"), Step.WaitFor(SelectorFingerprint(contentDescRegex = "target-two-ack")), Step.Click(SelectorFingerprint(contentDescRegex = "target-two-ack")), Step.Observe(400), Step.AssertPresent(SelectorFingerprint(className = "android.widget.TextView", textRegex = "(?i)acknowledged")))),
             ).forEach { store.put(RegistryEntry(it, "fr3k.builtin.targettwo", "builtin", verdict)) }
         }
+        selectedPackages(context).forEach { pkg ->
+            val identity = installed[pkg] ?: return@forEach
+            val actions = mutableListOf(descriptor("app.$pkg.open", identity, RiskClass.OBSERVE,
+                "Open $pkg", listOf(Step.Launch(pkg), Step.Observe(300))))
+            PrivilegedOps.ALLOWED.forEach { op ->
+                listOf("read", "allow", "ignore", "deny", "default").forEach { mode ->
+                    actions.add(descriptor("app.$pkg.${op.lowercase()}.$mode", identity,
+                        if (mode == "read") RiskClass.OBSERVE else RiskClass.PRIVILEGED,
+                        "$mode $op for $pkg", listOf(Step.PrivilegedOp(pkg, op, mode))))
+                }
+            }
+            actions.forEach { store.put(RegistryEntry(it, "fr3k.user.selected", "builtin", verdict)) }
+        }
+        UserAppMaps.descriptors(context, installed.filterKeys { it in selectedPackages(context) }).forEach {
+            store.put(RegistryEntry(it, "fr3k.user.map", "local", verdict))
+        }
         return store
     }
 
@@ -81,7 +111,7 @@ object CapabilityCatalogue {
         steps: List<Step>,
     ) = CapabilityDescriptor(
         id = id,
-        plane = if (risk == RiskClass.PRIVILEGED) Plane.PRIVILEGED else Plane.BRIDGE,
+        plane = if (steps.any { it is Step.PrivilegedOp }) Plane.PRIVILEGED else Plane.BRIDGE,
         risk = risk,
         summary = summary,
         identity = identity,

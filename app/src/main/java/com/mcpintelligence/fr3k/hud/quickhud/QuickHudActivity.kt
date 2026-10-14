@@ -45,6 +45,8 @@ import com.mcpintelligence.fr3k.ui.StatusDot
 import android.content.Intent
 import com.mcpintelligence.fr3k.ui.palette.CommandPaletteActivity
 import androidx.compose.ui.graphics.Color as GraphicsColor
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * The quick HUD panel (§8). A compact overlay launched from the HUD orb (tap),
@@ -64,6 +66,7 @@ class QuickHudActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { Fr3kTheme { QuickHudScreen(onClose = { finish() }) } }
+        com.mcpintelligence.fr3k.ui.makeActivityFloating(this, "Quick HUD")
     }
 }
 
@@ -89,6 +92,8 @@ private fun QuickHudScreen(onClose: () -> Unit) {
             modifier = Modifier
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Quick HUD")
+
             com.mcpintelligence.fr3k.ui.Fr3kPanel(modifier = Modifier.fillMaxWidth(), title = "FR3K") {
                 Column {
                     Row(
@@ -105,7 +110,7 @@ private fun QuickHudScreen(onClose: () -> Unit) {
                             text = "profile: $profile",
                             color = Fr3kPalette.TextDim,
                             fontFamily = FontFamily.Monospace,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -188,7 +193,7 @@ private fun AdapterStatusRow(name: String, statusText: String, color: GraphicsCo
                 text = statusText,
                 color = color,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
             )
             Spacer(Modifier.width(8.dp))
             StatusDot(
@@ -214,6 +219,7 @@ private fun QuickAction(label: String, onClick: () -> Unit) {
             .clip(RoundedCornerShape(4.dp))
             .background(Fr3kPalette.Surface)
             .clickable { onClick() }
+            .semantics { contentDescription = label }
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Text(

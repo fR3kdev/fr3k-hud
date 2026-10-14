@@ -69,12 +69,13 @@ object OverlayParams {
         // FLAG_NOT_FOCUSABLE must be off, and FLAG_LAYOUT_NO_LIMITS lets us
         // position without being clipped to the safe area.
         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
         PixelFormat.TRANSLUCENT,
     ).also {
         it.gravity = android.view.Gravity.TOP or android.view.Gravity.START
         it.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED
     }
 
     fun forChat(width: Int, height: Int) = forInput(width, height)
@@ -82,8 +83,8 @@ object OverlayParams {
      * Browser overlay params: input-aware (so the address bar EditText
      * can take focus and pop the soft keyboard) plus an ACTION bar with
      * back / forward / go / dismiss buttons, the WebView, and a status
-     * row. Resize is intentionally not wired — the user wanted a small
-     * fixed-size popup.
+     * row. A bounded window allows outside taps to reach the app beneath it.
+     * Geometry is controlled by the draggable title and corner grip.
      */
     fun forBrowser(width: Int, height: Int) = forInput(width, height)
     fun forTerminal(width: Int, height: Int) = forInput(width, height)
@@ -109,6 +110,7 @@ class OverlayHost(val context: Context, val windowManager: WindowManager) {
         if (params.height == WindowManager.LayoutParams.WRAP_CONTENT) {
             params.height = view.measuredHeight.coerceAtLeast(1)
         }
+        params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
         windowManager.addView(view, params)
     }
     fun update(view: View, params: WindowManager.LayoutParams) =

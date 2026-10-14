@@ -10,6 +10,7 @@ import com.mcpintelligence.fr3k.protocol.Capabilities
 class ShareCommandsPlugin(
     private val contextEngineProvider: () -> ContextEngine,
     private val deviceRegistryProvider: () -> DeviceRegistry,
+    private val transform: (suspend (String, String) -> String)? = null,
 ) : Fr3kPlugin {
 
     override val pluginId: String = "fr3k.integrations.share.commands"
@@ -45,10 +46,10 @@ class ShareCommandsPlugin(
 
     override fun commands(): List<Fr3kCommand> = listOf(
         SmartClipboardCommand(contextEngineProvider),
-        RewriteTextCommand(),
-        TranslateTextCommand(),
-        SummariseTextCommand(),
-        ExplainTextCommand(),
+        RewriteTextCommand(transform),
+        TranslateTextCommand(transform),
+        SummariseTextCommand(transform),
+        ExplainTextCommand(transform),
         SendToMeshCommand(),
         OpenOnDeviceCommand { deviceRegistryProvider() },
     )
@@ -103,7 +104,7 @@ class SmartClipboardCommand(
 }
 
 /** Generic AI-backed text rewriter (uses Hermes if available). */
-class RewriteTextCommand : Fr3kCommand {
+class RewriteTextCommand(private val transform: (suspend (String, String) -> String)? = null) : Fr3kCommand {
     override val id = "share.text.rewrite"
     override val title = "Rewrite text"
     override val description = "Rewrite the selected text with tone control"
@@ -111,51 +112,44 @@ class RewriteTextCommand : Fr3kCommand {
     override val keywords = setOf("rewrite", "tone", "polish", "improve")
     override val pluginId = "fr3k.integrations.share.commands"
 
-    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(
-            message = "rewrite queued (Hermes available locally)",
-            data = mapOf("input_len" to (context.selectedText?.length ?: 0).toString()),
-        )
-    }
+    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult =
+        transformText(context, args, requiredCapabilities, transform, "Rewrite clearly, preserving meaning")
 }
 
-class TranslateTextCommand : Fr3kCommand {
+class TranslateTextCommand(private val transform: (suspend (String, String) -> String)? = null) : Fr3kCommand {
     override val id = "share.text.translate"
     override val title = "Translate"
-    override val description = "Translate selected text via Hermes"
+    override val description = "Translate selected text via the selected AI provider"
     override val requiredCapabilities = setOf(Capabilities.AGENT_TRANSLATE)
     override val keywords = setOf("translate", "language")
     override val pluginId = "fr3k.integrations.share.commands"
 
-    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "translate queued (placeholder)")
-    }
+    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult =
+        transformText(context, args, requiredCapabilities, transform, "Translate to the requested language (English unless specified)")
 }
 
-class SummariseTextCommand : Fr3kCommand {
+class SummariseTextCommand(private val transform: (suspend (String, String) -> String)? = null) : Fr3kCommand {
     override val id = "share.text.summarise"
     override val title = "Summarise"
-    override val description = "Summarise selected text via Hermes"
+    override val description = "Summarise selected text via the selected AI provider"
     override val requiredCapabilities = setOf(Capabilities.AGENT_SUMMARISE)
     override val keywords = setOf("summarise", "tldr")
     override val pluginId = "fr3k.integrations.share.commands"
 
-    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "summarise queued (placeholder)")
-    }
+    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult =
+        transformText(context, args, requiredCapabilities, transform, "Summarise concisely")
 }
 
-class ExplainTextCommand : Fr3kCommand {
+class ExplainTextCommand(private val transform: (suspend (String, String) -> String)? = null) : Fr3kCommand {
     override val id = "share.text.explain"
     override val title = "Explain text"
-    override val description = "Explain selected text via Hermes"
+    override val description = "Explain selected text via the selected AI provider"
     override val requiredCapabilities = setOf(Capabilities.AGENT_ASK)
     override val keywords = setOf("explain")
     override val pluginId = "fr3k.integrations.share.commands"
 
-    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "explain queued (placeholder)")
-    }
+    override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult =
+        transformText(context, args, requiredCapabilities, transform, "Explain in plain language")
 }
 
 class SendToMeshCommand : Fr3kCommand {
@@ -167,9 +161,25 @@ class SendToMeshCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.share.commands"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(
-            message = "mesh send queued (no adapter yet — V2)",
-            data = mapOf("len" to (context.selectedText?.length ?: 0).toString()),
-        )
+        return CommandResult.Failed("No active mesh-send adapter is connected in this build. Nothing sent.")
     }
+}
+
+private suspend fun transformText(
+    context: Fr3kContext,
+    args: Map<String, String>,
+    required: Set<String>,
+    transform: (suspend (String, String) -> String)?,
+    operation: String,
+): CommandResult {
+    if (!context.hasAll(required)) return CommandResult.Failed("Missing capability: ${required - context.enabledCapabilities}")
+    if (context.consentLevel == ConsentLevel.LOCAL_ONLY) return CommandResult.Failed("Remote text processing is disabled by local-only consent. Nothing sent.")
+    val text = (args["text"] ?: context.selectedText ?: context.fullText).orEmpty().trim()
+    if (text.isEmpty()) return CommandResult.Failed("Select or share text first. Nothing sent.")
+    val backend = transform ?: return CommandResult.Failed("No AI text-processing backend configured. Nothing sent.")
+    return try {
+        val response = backend(operation + (args["language"]?.let { "; language: $it" } ?: ""), text)
+        if (response.isBlank()) CommandResult.Failed("The provider returned no text.") else CommandResult.Ok(response)
+    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+      catch (error: Exception) { CommandResult.Failed("Text processing failed: ${error.message ?: error.javaClass.simpleName}") }
 }

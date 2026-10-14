@@ -104,14 +104,14 @@ class Fr3kTerminalOverlay(
         // it's visible on a dark wallpaper but does not read as a box.
         val bg = GradientDrawable().apply {
             cornerRadius = 10f.dp()
-            setColor(0xF20A0F0C.toInt())
-            setStroke((0).dp(), 0x00000000.toInt()) // only a hint, no visible border
+            setColor(0xFF151B30.toInt())
+            setStroke(1.dp(), 0xFF343E60.toInt()) // only a hint, no visible border
         }
 
         header = TextView(ctx).apply {
             text = "TERMUX"
-            setTextColor(0xFF39ff14.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            setTextColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             letterSpacing = 0.16f
             setPadding(10.dp(), 6.dp(), 6.dp(), 2.dp())
@@ -137,7 +137,7 @@ class Fr3kTerminalOverlay(
         maxBtn = TextView(ctx).apply {
             text = "▢"
             setTextColor(0xFF9ca3af.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             gravity = Gravity.CENTER
             contentDescription = "Maximise window"
             setPadding(0, 0, 6.dp(), 0)
@@ -147,9 +147,9 @@ class Fr3kTerminalOverlay(
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(header, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            addView(minBtn, LinearLayout.LayoutParams((24).dp(), (28).dp()))
-            addView(maxBtn, LinearLayout.LayoutParams((24).dp(), (28).dp()))
-            addView(closeBtn, LinearLayout.LayoutParams((36).dp(), (28).dp()))
+            addView(minBtn, LinearLayout.LayoutParams(48.dp(), 48.dp()))
+            addView(maxBtn, LinearLayout.LayoutParams(48.dp(), 48.dp()))
+            addView(closeBtn, LinearLayout.LayoutParams(48.dp(), 48.dp()))
         }
 
         transcript = TextView(ctx).apply {
@@ -157,8 +157,8 @@ class Fr3kTerminalOverlay(
                 cornerRadius = 6f.dp()
                 setColor(0x00000000.toInt()) // transparent — the root bg shows through
             }
-            setTextColor(0xFF39ff14.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
             maxLines = 16
@@ -173,10 +173,10 @@ class Fr3kTerminalOverlay(
         input = EditText(ctx).apply {
             hint = "$"
             setHintTextColor(0xFF1f7a36.toInt())
-            setTextColor(0xFF39ff14.toInt())
+            setTextColor(0xFFC5A0FF.toInt())
             setBackgroundColor(0x1A04150a.toInt()) // slightly raised input field
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             isSingleLine = true
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_GO
@@ -199,10 +199,10 @@ class Fr3kTerminalOverlay(
         val runBtn = TextView(ctx).apply {
             text = "RUN"
             setTextColor(0xFF000604.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setBackgroundColor(0xFF39ff14.toInt())
+            setBackgroundColor(0xFFC5A0FF.toInt())
             contentDescription = "Run command"
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
             setOnClickListener { onRun() }
@@ -216,7 +216,7 @@ class Fr3kTerminalOverlay(
 
         // Resize grip — a small green square, bottom-right corner.
         resizeGrip = View(ctx).apply {
-            background = GradientDrawable().apply { setColor(0xFF39ff14.toInt()) }
+            background = GradientDrawable().apply { setColor(0xFFC5A0FF.toInt()) }
             contentDescription = "Drag to resize"
             alpha = 0.7f
         }
@@ -231,7 +231,7 @@ class Fr3kTerminalOverlay(
                 ViewGroup.LayoutParams.MATCH_PARENT,
             ))
             addView(resizeGrip, FrameLayout.LayoutParams(
-                (18).dp(), (18).dp(),
+                48.dp(), 48.dp(),
                 Gravity.END or Gravity.BOTTOM,
             ))
         }
@@ -251,6 +251,7 @@ class Fr3kTerminalOverlay(
         params.y = viewY
         installTouch()
         installResizeTouch()
+        FloatingWindowControls.install(host, root, params, header, resizeGrip)
     }
 
     override fun show() {
@@ -358,7 +359,7 @@ class Fr3kTerminalOverlay(
         if (!isAttached || minimised) return
         saveGeometry()
         val v = pill ?: buildPill().also { pill = it }
-        val pp = pillParams ?: OverlayParams.make((132).dp(), (34).dp()).also { pillParams = it }
+        val pp = pillParams ?: OverlayParams.make(160.dp(), 48.dp()).also { pillParams = it }
         pp.x = params.x
         pp.y = params.y
         host.remove(root)
@@ -379,8 +380,8 @@ class Fr3kTerminalOverlay(
     private fun buildPill(): View {
         val label = TextView(ctx).apply {
             text = "▸ TERMUX"
-            setTextColor(0xFF39ff14.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
         }
@@ -389,8 +390,8 @@ class Fr3kTerminalOverlay(
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 cornerRadius = 8f.dp()
-                setColor(0xF20A0F0C.toInt())
-                setStroke((1).dp(), 0xFF39ff14.toInt())
+                setColor(0xFF151B30.toInt())
+                setStroke((1).dp(), 0xFFC5A0FF.toInt())
             }
             addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
             contentDescription = "Terminal minimized — tap to restore"

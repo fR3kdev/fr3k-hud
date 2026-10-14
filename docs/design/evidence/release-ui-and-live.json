@@ -1,0 +1,47 @@
+{
+  "results": {
+    "com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest": {
+      "ok": true,
+      "tests": 6,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 295.5
+    },
+    "com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest": {
+      "ok": true,
+      "tests": 1,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 5.9
+    },
+    "com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest": {
+      "ok": true,
+      "tests": 2,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 12.1
+    },
+    "com.mcpintelligence.fr3k.VisibleToolsDeviceTest": {
+      "ok": true,
+      "tests": 6,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 3.7
+    },
+    "com.mcpintelligence.fr3k.ui.LocationAndTextDeviceTest": {
+      "ok": true,
+      "tests": 3,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 53.5
+    },
+    "com.mcpintelligence.fr3k.integrations.opencode.OpenCodeGoLiveDeviceTest": {
+      "ok": true,
+      "tests": 2,
+      "failures": 0,
+      "crashed": false,
+      "seconds": 9.1
+    }
+  },
+  "failed": []
+}

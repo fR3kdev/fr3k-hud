@@ -9,7 +9,7 @@ import com.mcpintelligence.fr3k.protocol.CapabilityTier
  * filters them out when the location plugin isn't running. The plugin registers
  * the capabilities at start.
  */
-class GpsPlugin : Fr3kPlugin {
+class GpsPlugin(private val action: (suspend (String) -> CommandResult)? = null) : Fr3kPlugin {
 
     override val pluginId: String = "fr3k.integrations.gps"
     override val displayName: String = "GPS"
@@ -38,9 +38,9 @@ class GpsPlugin : Fr3kPlugin {
     )
 
     override fun commands(): List<Fr3kCommand> = listOf(
-        CopyLocationCommand(),
-        WaypointCommand(),
-        ShareLocationCommand(),
+        CopyLocationCommand(action),
+        WaypointCommand(action),
+        ShareLocationCommand(action),
     )
 
     override suspend fun start() {}
@@ -48,7 +48,7 @@ class GpsPlugin : Fr3kPlugin {
 }
 
 /** Copy current coords to clipboard. V1 returns a synthetic string from context. */
-class CopyLocationCommand : Fr3kCommand {
+class CopyLocationCommand(private val action: (suspend (String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "location.copy"
     override val title = "Copy coordinates"
     override val description = "Copy current lat/lon as text"
@@ -57,14 +57,13 @@ class CopyLocationCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.gps"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        // V1 returns the canonical text; real values are injected by the GPS plugin in V2.
-        val text = args["text"] ?: "GPS placeholder — no fix yet"
-        return CommandResult.Ok(message = "copied: $text", data = mapOf("clipboard" to text))
+        if (!context.hasAll(requiredCapabilities)) return CommandResult.Failed("Missing location capability")
+        return action?.invoke("copy") ?: CommandResult.Failed("Location action unavailable; no GPS backend is configured. Nothing copied or sent.")
     }
 }
 
 /** Send a waypoint via the active transport (mesh first, else share). */
-class WaypointCommand : Fr3kCommand {
+class WaypointCommand(private val action: (suspend (String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "location.waypoint"
     override val title = "Send waypoint"
     override val description = "Dispatch current fix as a waypoint"
@@ -73,15 +72,13 @@ class WaypointCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.gps"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(
-            message = "waypoint queued (placeholder)",
-            data = mapOf("payload" to (args["text"] ?: "no fix")),
-        )
+        if (!context.hasAll(requiredCapabilities)) return CommandResult.Failed("Missing location capability")
+        return action?.invoke("waypoint") ?: CommandResult.Failed("Location action unavailable; no GPS backend is configured. Nothing copied or sent.")
     }
 }
 
 /** Share location via the system share sheet. */
-class ShareLocationCommand : Fr3kCommand {
+class ShareLocationCommand(private val action: (suspend (String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "location.share"
     override val title = "Share location"
     override val description = "Share current location via share sheet"
@@ -90,6 +87,7 @@ class ShareLocationCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.gps"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "share sheet opened (placeholder)")
+        if (!context.hasAll(requiredCapabilities)) return CommandResult.Failed("Missing location capability")
+        return action?.invoke("share") ?: CommandResult.Failed("Location action unavailable; no GPS backend is configured. Nothing copied or sent.")
     }
 }

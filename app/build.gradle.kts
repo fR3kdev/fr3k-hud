@@ -13,8 +13,8 @@ android {
         applicationId = "com.mcpintelligence.fr3k.hud"
         minSdk = 31
         targetSdk = 35
-        versionCode = 420
-        versionName = "0.4.20"
+        versionCode = 421
+        versionName = "0.4.21"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -59,14 +59,26 @@ configurations.configureEach {
     exclude(group = "com.google.guava", module = "listenablefuture")
 }
 
+// Use one current Bouncy Castle implementation for both the patch engine and ADB pairing.
+// Keep the pinned source jar intact; strip only its bundled duplicate crypto classes at build time.
+val patchEngineWithoutBundledCrypto by tasks.registering(Jar::class) {
+    from(zipTree("libs/lspatch-fixture-qualified.jar"))
+    exclude("org/bouncycastle/**")
+    archiveFileName.set("lspatch-engine.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("generated/patch-engine"))
+}
+
 dependencies {
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1")
+    implementation("org.bouncycastle:bcpkix-jdk15to18:1.81")
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation(project(":capability"))
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(project(":transport"))
     implementation(project(":ui"))
     // Private lab engine, source-built and pinned; limited to the owned fixture.
-    implementation(files("libs/lspatch-fixture-qualified.jar"))
+    implementation(files(patchEngineWithoutBundledCrypto))
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")

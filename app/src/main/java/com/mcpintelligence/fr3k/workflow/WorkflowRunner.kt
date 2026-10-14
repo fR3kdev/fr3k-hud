@@ -21,7 +21,7 @@ class WorkflowRunner(
         val journalIds: List<String> = emptyList(),
     )
 
-    suspend fun run(spec: WorkflowSpec): Report {
+    suspend fun run(spec: WorkflowSpec, onProgress: (Int, Int, String) -> Unit = { _, _, _ -> }): Report {
         val registry = host.registry()
         val installed = host.installed()
         val bound = try {
@@ -30,14 +30,22 @@ class WorkflowRunner(
             return Report(spec.id, false, emptyList(), refused.message ?: "binding failed")
         }
         val approved = bound.map { it.descriptor.identity.packageName }.toSet()
-        val executor = BridgeStepExecutor(Fr3kBridgeService.require(), approved, privileged)
+        val executor by lazy { BridgeStepExecutor(Fr3kBridgeService.require(), approved, privileged) }
         val allRecords = ArrayList<StepRecord>()
         val journalIds = ArrayList<String>()
-        bound.forEach { step ->
+        bound.forEachIndexed { index, step ->
+            onProgress(index + 1, bound.size, step.descriptor.id)
             val started = SystemClock.elapsedRealtime()
-            val before = runCatching { executor.foregroundPackage() }.getOrNull()
+            val before = Fr3kBridgeService.instanceOrNull()?.foregroundPackage()
             val records = try {
-                executor.execute(step.steps)
+                if (step.steps.all { it is Step.PrivilegedOp }) {
+                    step.steps.mapIndexed { ordinal, action ->
+                        action as Step.PrivilegedOp
+                        try { StepRecord(ordinal, "privileged_op", "OK", privileged(action.packageName, action.op, action.mode)) }
+                        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+                        catch (e: Exception) { throw com.mcpintelligence.fr3k.bridge.StepFailedException(StepRecord(ordinal,"privileged_op","FAILED",e.message ?: "Operation failed")) }
+                    }
+                } else executor.execute(step.steps)
             } catch (failed: com.mcpintelligence.fr3k.bridge.StepFailedException) {
                 allRecords.add(failed.record)
                 host.record(
@@ -58,7 +66,7 @@ class WorkflowRunner(
                 return Report(spec.id, false, allRecords, "step failed: ${failed.record.detail}")
             }
             allRecords.addAll(records)
-            val inverse = inverseFor(step.descriptor)
+            val inverse = inverseFor(step.descriptor, records)
             val operationId = java.util.UUID.randomUUID().toString()
             journalIds.add(operationId)
             host.record(
@@ -80,16 +88,21 @@ class WorkflowRunner(
         return Report(spec.id, true, allRecords, "completed ${bound.size} capability step(s)", journalIds)
     }
 
-    private fun inverseFor(descriptor: CapabilityDescriptor): InverseOp = when (descriptor.id) {
-        "fixture.banner.hide" -> InverseOp.RunCapability("fixture.banner.show")
-        "fixture.banner.show" -> InverseOp.RunCapability("fixture.banner.hide")
-        "fixture.ad.mask" -> InverseOp.RunCapability("fixture.ad.unmask")
-        "fixture.policy.deny_wake_lock" -> InverseOp.RestorePrivilegedOp(
-            descriptor.identity.packageName, "WAKE_LOCK", "allow",
-        )
-        "fixture.policy.allow_wake_lock" -> InverseOp.RestorePrivilegedOp(
-            descriptor.identity.packageName, "WAKE_LOCK", "deny",
-        )
-        else -> InverseOp.NoStateChange
+    fun inverseFor(descriptor: CapabilityDescriptor, records: List<StepRecord> = emptyList()): InverseOp {
+        val mutation = descriptor.steps.filterIsInstance<Step.PrivilegedOp>().singleOrNull { it.mode != "read" }
+        if (mutation != null) {
+            val before = records.asReversed().firstNotNullOfOrNull { record ->
+                Regex("op=" + Regex.escape(mutation.op) + " ([a-z_]+)->([a-z_]+)").find(record.detail)?.groupValues?.get(1)
+            }
+            if (before != null && runCatching { PrivilegedOps.requireMode(before) }.isSuccess)
+                return InverseOp.RestorePrivilegedOp(mutation.packageName, mutation.op, before)
+            return InverseOp.NoStateChange
+        }
+        return when (descriptor.id) {
+            "fixture.banner.hide" -> InverseOp.RunCapability("fixture.banner.show")
+            "fixture.banner.show" -> InverseOp.RunCapability("fixture.banner.hide")
+            "fixture.ad.mask" -> InverseOp.RunCapability("fixture.ad.unmask")
+            else -> InverseOp.NoStateChange
+        }
     }
 }

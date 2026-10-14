@@ -59,7 +59,7 @@ enum class ModRequirement(val label: String, val howTo: String) {
     ),
     ADB_BOOTSTRAP(
         "one-time ADB bootstrap",
-        "From an authorised computer, run the app_process command shown in APP CONTROL → 'SHOW AUTHORISED ADB BOOTSTRAP COMMAND' while HUD is running.",
+        "On Android 11+, open App Control → WIRELESS DEBUG to pair and start on this phone. Alternatively, from an authorised computer run the app_process command shown in APP CONTROL → 'SHOW AUTHORISED ADB BOOTSTRAP COMMAND' while HUD is running.",
     ),
     ROOT(
         "a root shell",

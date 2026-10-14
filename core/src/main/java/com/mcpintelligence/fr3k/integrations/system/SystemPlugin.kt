@@ -8,7 +8,7 @@ import com.mcpintelligence.fr3k.protocol.CapabilityTier
  * System commands (§25, §49) — read-only queries over Android state. Cheap
  * to run, useful in dashboards and the command palette.
  */
-class SystemPlugin : Fr3kPlugin {
+class SystemPlugin(private val read: ((String) -> CommandResult)? = null) : Fr3kPlugin {
 
     override val pluginId: String = "fr3k.integrations.system"
     override val displayName: String = "System"
@@ -22,17 +22,17 @@ class SystemPlugin : Fr3kPlugin {
     )
 
     override fun commands(): List<Fr3kCommand> = listOf(
-        BatteryStatusCommand(),
-        NetworkStatusCommand(),
-        BluetoothStatusCommand(),
-        StorageStatusCommand(),
+        BatteryStatusCommand(read),
+        NetworkStatusCommand(read),
+        BluetoothStatusCommand(read),
+        StorageStatusCommand(read),
     )
 
     override suspend fun start() {}
     override suspend fun stop() {}
 }
 
-class BatteryStatusCommand : Fr3kCommand {
+class BatteryStatusCommand(private val read: ((String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "system.battery"
     override val title = "Battery status"
     override val description = "Show battery level, charging state, temperature"
@@ -41,11 +41,11 @@ class BatteryStatusCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.system"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "battery: see Diagnostics activity")
+        return read?.invoke("battery") ?: CommandResult.Failed("No Android status reader configured. Open Diagnostics for observed state.")
     }
 }
 
-class NetworkStatusCommand : Fr3kCommand {
+class NetworkStatusCommand(private val read: ((String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "system.network"
     override val title = "Network status"
     override val description = "Show Wi-Fi / mobile / connectivity"
@@ -54,11 +54,11 @@ class NetworkStatusCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.system"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "network: see Diagnostics activity")
+        return read?.invoke("network") ?: CommandResult.Failed("No Android status reader configured. Open Diagnostics for observed state.")
     }
 }
 
-class BluetoothStatusCommand : Fr3kCommand {
+class BluetoothStatusCommand(private val read: ((String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "system.bluetooth"
     override val title = "Bluetooth status"
     override val description = "Show Bluetooth adapter state"
@@ -67,11 +67,11 @@ class BluetoothStatusCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.system"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "bluetooth: see Diagnostics activity")
+        return read?.invoke("bluetooth") ?: CommandResult.Failed("No Android status reader configured. Open Diagnostics for observed state.")
     }
 }
 
-class StorageStatusCommand : Fr3kCommand {
+class StorageStatusCommand(private val read: ((String) -> CommandResult)? = null) : Fr3kCommand {
     override val id = "system.storage"
     override val title = "Storage status"
     override val description = "Show free / total storage"
@@ -80,6 +80,6 @@ class StorageStatusCommand : Fr3kCommand {
     override val pluginId = "fr3k.integrations.system"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
-        return CommandResult.Ok(message = "storage: see Diagnostics activity")
+        return read?.invoke("storage") ?: CommandResult.Failed("No Android status reader configured. Open Diagnostics for observed state.")
     }
 }

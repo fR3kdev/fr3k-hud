@@ -44,6 +44,9 @@ class AppInspectionDeviceTest {
         val result = AtomicReference("")
         try {
             instrument.runOnMainSync {
+                views(activity.window.decorView).filterIsInstance<android.widget.EditText>()
+                    .single { it.contentDescription == "app-control-target-package" }
+                    .setText("com.mcpintelligence.fr3k.patchfixture")
                 views(activity.window.decorView).filterIsInstance<Button>()
                     .single { it.text.toString().startsWith("INSPECT SELECTED APP") }.performClick()
             }

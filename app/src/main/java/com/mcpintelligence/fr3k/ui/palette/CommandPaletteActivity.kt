@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +69,7 @@ class CommandPaletteActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { Fr3kTheme { PaletteScreen(onClose = { finish() }) } }
+        com.mcpintelligence.fr3k.ui.makeActivityFloating(this, "Commands")
     }
 }
 
@@ -99,6 +103,8 @@ private fun PaletteScreen(onClose: () -> Unit) {
                 .fillMaxSize()
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Palette")
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -133,7 +139,7 @@ private fun PaletteScreen(onClose: () -> Unit) {
             Text(
                 text = "${filtered.size} command${if (filtered.size == 1) "" else "s"} · ${capIds.size} capabilities active",
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 color = Fr3kPalette.TextDim,
                 modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
             )
@@ -167,10 +173,10 @@ private fun PaletteScreen(onClose: () -> Unit) {
                             coroutine.launch {
                                 val ctx = Fr3kContext(
                                     deviceId = app.identity.deviceId,
-                                    consentLevel = ConsentLevel.NORMAL,
+                                    consentLevel = app.settings.settings.value.consentProfile,
                                     enabledCapabilities = capIds,
                                 )
-                                val result = cmd.execute(ctx, emptyMap())
+                                val result = com.mcpintelligence.fr3k.core.executeCommand(cmd, ctx, emptyMap())
                                 lastResult = when (result) {
                                     is CommandResult.Ok -> "✓ ${result.message}"
                                     is CommandResult.Failed -> "✗ ${result.reason}"
@@ -211,10 +217,10 @@ private fun CommandRow(cmd: Fr3kCommand, onClick: () -> Unit) {
                 fontSize = 14.sp,
             )
             Text(
-                text = "${cmd.id} · ${cmd.requiredCapabilities.size} req",
+                text = "${cmd.id}\n${cmd.description}\nRequires: ${cmd.requiredCapabilities.joinToString().ifBlank { "no additional capability" }}",
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
             )
         }
         androidx.compose.material3.TextButton(onClick = onClick) {

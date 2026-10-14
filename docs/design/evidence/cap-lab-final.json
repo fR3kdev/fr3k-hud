@@ -1,0 +1,58 @@
+{
+  "serial": "emulator-5582",
+  "results": {
+    "install artifacts": {
+      "ok": true,
+      "note": "hud + test apk + two owned fixtures"
+    },
+    "CapabilityLabModeDeviceTest#enableFixtures": {
+      "ok": true,
+      "note": "OK (1 test)"
+    },
+    "bridge-plane-via-mcp": {
+      "ok": true,
+      "note": "checks=19"
+    },
+    "EmbeddedFixturePatcherDeviceTest": {
+      "ok": true,
+      "note": "OK (1 test)"
+    },
+    "on-device prepared APK": {
+      "ok": true,
+      "note": "77d6a00778fc1c9b4af15772"
+    },
+    "OwnedFixtureControllerDeviceTest": {
+      "ok": true,
+      "note": "OK (1 test)"
+    },
+    "ProviderPreferenceDeviceTest": {
+      "ok": true,
+      "note": "OK (3 tests)"
+    },
+    "PatchPlaneDeviceTest": {
+      "ok": true,
+      "note": "OK (2 tests)"
+    },
+    "AppInspectionDeviceTest": {
+      "ok": true,
+      "note": "OK (2 tests)"
+    },
+    "FixtureAgentApprovalDeviceTest": {
+      "ok": true,
+      "note": "OK (1 test)"
+    },
+    "privileged-shell": {
+      "ok": true,
+      "note": "HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2"
+    },
+    "privileged-root": {
+      "ok": true,
+      "note": "HUD_PRIVILEGED_READY uid=0 tier=ROOT protocol=2"
+    },
+    "CapabilityLabModeDeviceTest#disableFixtures": {
+      "ok": true,
+      "note": "OK (1 test)"
+    }
+  },
+  "companion_packages": []
+}

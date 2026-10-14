@@ -320,6 +320,8 @@ private fun AddDeviceScreen(activity: ComponentActivity, session: AddDeviceState
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("BLACKWAVE")
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -331,11 +333,11 @@ private fun AddDeviceScreen(activity: ComponentActivity, session: AddDeviceState
                         "§7 transports · honest capability report",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                 }
                 OutlinedButton(onClick = { activity.finish() }) {
-                    Text("BACK", fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    Text("BACK", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -381,7 +383,7 @@ private fun AddDeviceScreen(activity: ComponentActivity, session: AddDeviceState
                     "tap a transport above to add a device",
                     color = Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                 )
             }
 
@@ -391,7 +393,7 @@ private fun AddDeviceScreen(activity: ComponentActivity, session: AddDeviceState
                     "fetching device status…",
                     color = Fr3kPalette.Accent,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             }
             session.detail?.let { detail ->
@@ -404,7 +406,7 @@ private fun AddDeviceScreen(activity: ComponentActivity, session: AddDeviceState
                     "detail error: $it",
                     color = Fr3kPalette.Err,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             }
 
@@ -435,14 +437,14 @@ private fun TransportRow(t: BwTransport, selected: Boolean, onClick: () -> Unit)
                 text = t.title,
                 color = if (selected) Fr3kPalette.Accent else Fr3kPalette.Text,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
                 text = t.desc,
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
             )
         }
         Fr3kBadge(text = t.tag, color = if (selected) Fr3kPalette.AccentDim else Fr3kPalette.TextDim)
@@ -485,7 +487,7 @@ private fun BleTransportBlock(
                     PermissionRegistry.request(activity, PermissionRegistry.Feature.BLUETOOTH, BlackwaveAddDeviceActivity.REQ_BW_ADD)
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text("REQUEST BLUETOOTH", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text("REQUEST BLUETOOTH", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             session.permRound // observe — recomposes after the OS dialog round-trip
             if (session.lastGranted.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
@@ -493,7 +495,7 @@ private fun BleTransportBlock(
                     "last grant: ${session.lastGranted.joinToString(", ")}",
                     color = Fr3kPalette.Ok,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             }
         } else {
@@ -501,10 +503,10 @@ private fun BleTransportBlock(
             Button(
                 onClick = { if (scanner.scanning.value) scanner.stop() else scanner.start() },
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (scanner.scanning.value) "STOP SCAN" else "START SCAN", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (scanner.scanning.value) "STOP SCAN" else "START SCAN", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             scanner.error.value?.let {
                 Spacer(Modifier.height(4.dp))
-                Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             }
             Spacer(Modifier.height(6.dp))
             if (scanner.results.value.isEmpty()) {
@@ -512,7 +514,7 @@ private fun BleTransportBlock(
                     "no advertisers seen yet — scanning is passive BLE discovery. Tap an advertiser to add it via its advertised model id.",
                     color = Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             } else {
                 Column {
@@ -541,8 +543,8 @@ private fun BleResultRow(result: BleResult, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(result.name, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-            Text(result.address, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(result.name, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            Text(result.address, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
         Fr3kBadge(text = "${result.rssi} dBm", color = Fr3kPalette.AccentDim)
     }
@@ -555,7 +557,7 @@ private fun LanTransportBlock(session: AddDeviceState, onProbe: () -> Unit, onOp
             "Discovery over the local network through the configured fleet bridge.",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
         Spacer(Modifier.height(6.dp))
         val probe = session.lanProbe
@@ -573,7 +575,7 @@ private fun LanTransportBlock(session: AddDeviceState, onProbe: () -> Unit, onOp
             onClick = onProbe,
             enabled = !session.lanProbing,
             colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-        ) { Text(if (session.lanProbing) "SCANNING…" else "SCAN LAN", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+        ) { Text(if (session.lanProbing) "SCANNING…" else "SCAN LAN", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         val devices = probe?.fleet?.devices.orEmpty()
         if (devices.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
@@ -597,10 +599,10 @@ private fun LanDeviceRow(card: FleetDeviceCard, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-            Text(card.model_id, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            Text(card.model_id, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
-        Text(card.online, color = if (card.online == "online") Fr3kPalette.Ok else Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+        Text(card.online, color = if (card.online == "online") Fr3kPalette.Ok else Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
     }
 }
 
@@ -611,7 +613,7 @@ private fun UsbTransportBlock(context: Context) {
             "USB-attached hardware enumeration. The bridge does not yet expose a USB provisioning transport.",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
         Spacer(Modifier.height(6.dp))
         val manager = context.getSystemService(Context.USB_SERVICE) as? UsbManager
@@ -634,7 +636,7 @@ private fun UsbTransportBlock(context: Context) {
                         "${d.deviceName} · ${String.format(java.util.Locale.US, "%04x:%04x", d.vendorId, d.productId)}",
                         color = Fr3kPalette.Text,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 9.sp,
+                        fontSize = 12.sp,
                     )
                 }
             }
@@ -644,7 +646,7 @@ private fun UsbTransportBlock(context: Context) {
             "USB devices are enumerated here, but BLACKWAVE provisioning over USB is not implemented in this build.",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
     }
 }
@@ -656,13 +658,13 @@ private fun ManualIpTransportBlock(session: AddDeviceState, onProbe: () -> Unit,
             "Probe a specific bridge endpoint (hostname or IP) before adding devices from it.",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = session.ipHost,
             onValueChange = { session.ipHost = it },
-            label = { Text("bridge host (e.g. 192.168.1.50 or https://host:8878)", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+            label = { Text("bridge host (e.g. 192.168.1.50 or https://host:8878)", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -671,10 +673,10 @@ private fun ManualIpTransportBlock(session: AddDeviceState, onProbe: () -> Unit,
             onClick = onProbe,
             enabled = session.ipHost.isNotBlank() && !session.ipProbing,
             colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-        ) { Text(if (session.ipProbing) "PROBING…" else "PROBE BRIDGE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+        ) { Text(if (session.ipProbing) "PROBING…" else "PROBE BRIDGE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         session.ipError?.let {
             Spacer(Modifier.height(4.dp))
-            Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
         val p = session.ipProbe
         if (p != null) {
@@ -695,12 +697,12 @@ private fun ManualIpTransportBlock(session: AddDeviceState, onProbe: () -> Unit,
                 Button(
                     onClick = { onSave(p.endpoint) },
                     colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                ) { Text("USE THIS BRIDGE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+                ) { Text("USE THIS BRIDGE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             }
         }
         session.savedBridgeMessage?.let {
             Spacer(Modifier.height(4.dp))
-            Text(it, color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(it, color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
     }
 }
@@ -712,13 +714,13 @@ private fun ManualIdTransportBlock(session: AddDeviceState, onLookUp: () -> Unit
             "Look up a device by its BLACKWAVE model id (e.g. bw-core-0007).",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
         Spacer(Modifier.height(6.dp))
         OutlinedTextField(
             value = session.manualId,
             onValueChange = { session.manualId = it },
-            label = { Text("model id", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+            label = { Text("model id", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -727,19 +729,19 @@ private fun ManualIdTransportBlock(session: AddDeviceState, onLookUp: () -> Unit
             onClick = onLookUp,
             enabled = session.manualId.isNotBlank() && !session.manualProbing,
             colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-        ) { Text(if (session.manualProbing) "LOOKING UP…" else "LOOK UP", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+        ) { Text(if (session.manualProbing) "LOOKING UP…" else "LOOK UP", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         session.manualLookup?.let {
             Spacer(Modifier.height(6.dp))
             Text(
                 "found: ${(it.identity["display_name"] as? JsonPrimitive)?.content ?: session.manualId} · ${it.observation_status}",
                 color = Fr3kPalette.Ok,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
             )
         }
         session.manualLookupError?.let {
             Spacer(Modifier.height(4.dp))
-            Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
     }
 }
@@ -751,7 +753,7 @@ private fun ManualIdTransportBlock(session: AddDeviceState, onLookUp: () -> Unit
 @Composable
 private fun UnavailableBlock(title: String, reason: String, wizardStep: WizardStep, context: Context) {
     Fr3kPanel(title = title) {
-        Text(reason, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+        Text(reason, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         Spacer(Modifier.height(6.dp))
         StatusRow("status", BwLevel.WARN, "not implemented in this build")
         Spacer(Modifier.height(6.dp))
@@ -762,7 +764,7 @@ private fun UnavailableBlock(title: String, reason: String, wizardStep: WizardSt
                         .putExtra(BlackwaveSetupActivity.EXTRA_INITIAL_STEP, wizardStep.ordinal)
                 )
             },
-        ) { Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 9.sp) }
+        ) { Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
     }
 }
 

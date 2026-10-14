@@ -1,0 +1,83 @@
+{
+  "results": [
+    {
+      "name": "target app is installed",
+      "ok": true,
+      "note": "/data/app/~~5aYRB-OKLw16M8Q15FjOXA==/com.termux-KqFdFzn25DxLCUgQ3vVnEQ==/base.apk"
+    },
+    {
+      "name": "target app is real and user-installed, not a HUD fixture or a system package",
+      "ok": true,
+      "note": "apk=/data/app/~~5aYRB-OKLw16M8Q15FjOXA==/com.termux-KqFdFzn25DxLCUgQ3vVnEQ==/base.apk"
+    },
+    {
+      "name": "APP CONTROL reached through the Deck, not by am start of a non-exported activity",
+      "ok": true,
+      "note": "target field present=True"
+    },
+    {
+      "name": "package typed into the product field",
+      "ok": true,
+      "note": "field='com.termux'"
+    },
+    {
+      "name": "product MAP SELECTED APP HOME control found",
+      "ok": true,
+      "note": "the same control an operator presses, found after scrolling"
+    },
+    {
+      "name": "mapping ran and reported its own outcome (never the untouched prompt)",
+      "ok": true,
+      "note": "Recorded 8 fingerprinted screen controls. Return to HUD \u2192 Workflows to review each tap. No control was pressed during mapping. Password fields, destructive labels and ambiguous matches are excluded. Custom canvas control"
+    },
+    {
+      "name": "capability surface available for read-back",
+      "ok": true,
+      "note": "{'port': 8791, 'token': '6d03bdfa901f48ae89763f3090a86a6f', 'pid': 16442}"
+    },
+    {
+      "name": "MCP reports real capabilities for the chosen app",
+      "ok": true,
+      "note": "count=49 ids=['app.com.termux.open', 'app.com.termux.wake_lock.read', 'app.com.termux.wake_lock.allow', 'app.com.termux.wake_lock.ignore']"
+    },
+    {
+      "name": "every reported capability is bound to the real installed identity",
+      "ok": true,
+      "note": "fingerprints present=49 of 49"
+    },
+    {
+      "name": "no fixture capability appears in the normal catalogue",
+      "ok": true,
+      "note": "packages=['com.termux']"
+    },
+    {
+      "name": "identity of a real third-party app reads back over MCP",
+      "ok": true,
+      "note": "com.android.deskclock versionCode=35 signer=a40da80a59d170ca"
+    },
+    {
+      "name": "journal holds records of the work",
+      "ok": true,
+      "note": "records=5"
+    },
+    {
+      "name": "selection can be removed again through the product UI",
+      "ok": true,
+      "note": "removed=True still_selected=False"
+    }
+  ],
+  "detail": {
+    "ime_after_back": false,
+    "backs_to_return": 2,
+    "map_result_text": "Recorded 8 fingerprinted screen controls. Return to HUD \u2192 Workflows to review each tap. No control was pressed during mapping. Password fields, destructive labels and ambiguous matches are excluded. Custom canvas controls may expose no accessibility nodes. APK changes invalidate this map. Screen actions may have no automatic inverse.",
+    "android_dialogs_declined": [],
+    "identity": {
+      "package": "com.android.deskclock",
+      "versionCode": 35,
+      "signerSha256": "a40da80a59d170caa950cf15c18c454d47a39b26989d8b640ecd745ba71bf5dc"
+    },
+    "journal_records": 5,
+    "remove_result": "Removed com.termux from the catalogue. Existing app-op modes are unchanged; restore them before removing controls."
+  },
+  "package": "com.termux"
+}

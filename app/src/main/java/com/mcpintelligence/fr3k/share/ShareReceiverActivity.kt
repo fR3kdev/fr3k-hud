@@ -61,6 +61,7 @@ class ShareReceiverActivity : ComponentActivity() {
                 ShareSheet(payload = payload, onDone = { finish() })
             }
         }
+        com.mcpintelligence.fr3k.ui.makeActivityFloating(this, "Share actions")
     }
 
     private fun extractPayload(intent: Intent?): SharePayload {
@@ -107,7 +108,7 @@ private fun ShareSheet(payload: SharePayload, onDone: () -> Unit) {
 
     val suggested = commands.filter { cmd ->
         (cmd.requiredCapabilities.all { cap -> cap in capIds }) &&
-            (cmd.id.startsWith("share.") || cmd.id == "agent.ask.hermes")
+            (cmd.id.startsWith("share.") || cmd.id == "agent.ask.${app.activeProviderId}")
     }
 
     var lastResult by remember { mutableStateOf<String?>(null) }
@@ -119,6 +120,7 @@ private fun ShareSheet(payload: SharePayload, onDone: () -> Unit) {
             .verticalScroll(androidx.compose.foundation.rememberScrollState())
             .padding(16.dp),
     ) {
+        com.mcpintelligence.fr3k.ui.FeatureGuide("Share actions")
         Text(
             text = "FR3K ▸ SHARED",
             color = Fr3kPalette.Accent,
@@ -158,13 +160,14 @@ private fun ShareSheet(payload: SharePayload, onDone: () -> Unit) {
                                 coroutine.launch {
                                     val ctx = Fr3kContext(
                                         deviceId = app.identity.deviceId,
+                                        consentLevel = app.settings.settings.value.consentProfile,
                                         foregroundPackage = app.applicationContext.packageName,
                                         currentUrl = if (payload is SharePayload.Url) payload.url else null,
                                         selectedText = if (payload is SharePayload.Text) payload.text else null,
                                         fullText = if (payload is SharePayload.Text) payload.text else null,
                                         enabledCapabilities = capIds,
                                     )
-                                    val result = cmd.execute(ctx, emptyMap())
+                                    val result = com.mcpintelligence.fr3k.core.executeCommand(cmd, ctx, emptyMap())
                                     lastResult = when (result) {
                                         is CommandResult.Ok -> "✓ ${result.message}"
                                         is CommandResult.Failed -> "✗ ${result.reason}"
@@ -176,10 +179,10 @@ private fun ShareSheet(payload: SharePayload, onDone: () -> Unit) {
                             .padding(8.dp),
                     ) {
                         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            StatusDot(status = com.mcpintelligence.fr3k.protocol.DeviceStatus.ONLINE, size = 6.dp)
+                            Text("→", color = Fr3kPalette.Accent)
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = cmd.title,
+                                text = "${cmd.title}\n${cmd.description}\nRequires: ${cmd.requiredCapabilities.joinToString()}",
                                 color = Fr3kPalette.Text,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 12.sp,
@@ -195,7 +198,7 @@ private fun ShareSheet(payload: SharePayload, onDone: () -> Unit) {
             com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "result") {
                 Text(
                     text = lastResult!!,
-                    color = Fr3kPalette.Ok,
+                    color = if (lastResult!!.startsWith("✗")) Fr3kPalette.Err else Fr3kPalette.Text,
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp,
                 )

@@ -73,13 +73,13 @@ class Fr3kChatBubble(
             4f.dp(), 4f.dp(),      // bottom-right (tighter so tail reads)
             18f.dp(), 18f.dp(),    // bottom-left (where the tail attaches)
         )
-        setColor(0xFF1a1a26.toInt())
-        setStroke(0.dp(), 0x13000000.toInt()) // hairline, barely visible
+        setColor(0xFF151B30.toInt())
+        setStroke(1.dp(), 0xFF343E60.toInt()) // hairline, barely visible
     }
 
     private val transcriptBg = GradientDrawable().apply {
         cornerRadius = 8f.dp()
-        setColor(0xFF11111c.toInt())
+        setColor(0xFF101527.toInt())
     }
 
     init {
@@ -97,15 +97,15 @@ class Fr3kChatBubble(
         tail = View(ctx).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                setColor(0xFF1a1a26.toInt())
-                setStroke(0.dp(), 0x13000000.toInt()) // hairline, barely visible
+                setColor(0xFF151B30.toInt())
+                setStroke(1.dp(), 0xFF343E60.toInt()) // hairline, barely visible
             }
         }
 
         header = TextView(ctx).apply {
-            text = "CHAT"
-            setTextColor(0xFF7d3cff.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            text = "CHAT · drag to move"
+            setTextColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             letterSpacing = 0.16f
             ellipsize = TextUtils.TruncateAt.END
@@ -115,14 +115,14 @@ class Fr3kChatBubble(
 
         dismiss = Button(ctx).apply {
             text = "×"
-            setTextColor(0xFF8e8a99.toInt())
+            setTextColor(0xFFB0BCD5.toInt())
             setBackgroundColor(0x00000000.toInt()) // transparent — the bubble bg shows through
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             contentDescription = "Dismiss bubble"
             // Compact square close — 28dp so it's a real target but slim.
             setPadding(0, 0, 0, 0)
-            layoutParams = android.widget.LinearLayout.LayoutParams(28.dp(), 28.dp())
+            layoutParams = android.widget.LinearLayout.LayoutParams(48.dp(), 48.dp())
             isAllCaps = false
             setOnClickListener {
                 hide()
@@ -135,12 +135,12 @@ class Fr3kChatBubble(
             text = "M"
             setTextColor(0xFFcdd1e0.toInt())
             setBackgroundColor(0x1A2b2b40.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             contentDescription = "Cycle AI model (long-press for picker)"
             setPadding(0, 0, 0, 0)
             isAllCaps = false
-            layoutParams = android.widget.LinearLayout.LayoutParams(24.dp(), 24.dp())
+            layoutParams = android.widget.LinearLayout.LayoutParams(48.dp(), 48.dp())
             setOnClickListener { cycleModel() }
             setOnLongClickListener { showModelPicker(); true }
         }
@@ -148,19 +148,19 @@ class Fr3kChatBubble(
         // Compact "TTS" toggle — 28dp wide, tap toggles.
         ttsButton = Button(ctx).apply {
             text = if (TtsPreference.isEnabled(ctx)) "TTS●" else "TTS"
-            setTextColor(if (TtsPreference.isEnabled(ctx)) 0xFF7d3cff.toInt() else 0xFF8e8a99.toInt())
+            setTextColor(if (TtsPreference.isEnabled(ctx)) 0xFFC5A0FF.toInt() else 0xFFB0BCD5.toInt())
             setBackgroundColor(0x1A2b2b40.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 8f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             contentDescription = "Toggle spoken responses"
             setPadding(0, 0, 0, 0)
             isAllCaps = false
-            layoutParams = android.widget.LinearLayout.LayoutParams(32.dp(), 24.dp())
+            layoutParams = android.widget.LinearLayout.LayoutParams(56.dp(), 48.dp())
             setOnClickListener {
                 val now = !TtsPreference.isEnabled(ctx)
                 TtsPreference.setEnabled(ctx, now)
                 text = if (now) "TTS●" else "TTS"
-                setTextColor(if (now) 0xFF7d3cff.toInt() else 0xFF8e8a99.toInt())
+                setTextColor(if (now) 0xFFC5A0FF.toInt() else 0xFFB0BCD5.toInt())
             }
         }
 
@@ -174,7 +174,7 @@ class Fr3kChatBubble(
         transcript = TextView(ctx).apply {
             background = transcriptBg
             setTextColor(0xFFcdd1e0.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
             maxLines = 6
@@ -189,7 +189,7 @@ class Fr3kChatBubble(
             setTextColor(0xFFe8eaf2.toInt())
             setBackgroundColor(0xFF0d0d18.toInt())
             setPadding(8.dp(), 6.dp(), 8.dp(), 6.dp())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             isSingleLine = true
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
@@ -212,11 +212,11 @@ class Fr3kChatBubble(
 
         send = Button(ctx).apply {
             text = "SEND"
-            setTextColor(0xFF11111c.toInt())
-            setBackgroundColor(0xFF7d3cff.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextColor(0xFF101527.toInt())
+            setBackgroundColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            contentDescription = "Send to Hermes"
+            contentDescription = "Send to active AI provider"
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
             setOnClickListener { onSend() }
         }
@@ -235,7 +235,7 @@ class Fr3kChatBubble(
         // accent-coloured so it doesn't look like a hitomi bottom X.
         resizeGrip = View(ctx).apply {
             background = GradientDrawable().apply {
-                setColor(0xFF7d3cff.toInt())
+                setColor(0xFFC5A0FF.toInt())
             }
             contentDescription = "Drag to resize"
             alpha = 0.7f
@@ -287,7 +287,7 @@ class Fr3kChatBubble(
             addView(sp2)
             // Resize grip — bottom-right so the user can drag to grow/shrink.
             val gripParams = LinearLayout.LayoutParams(
-                (14 * density).toInt(), (14 * density).toInt()
+                (48 * density).toInt(), (48 * density).toInt()
             ).apply { gravity = android.view.Gravity.END }
             addView(resizeGrip, gripParams)
         }
@@ -297,12 +297,13 @@ class Fr3kChatBubble(
         // grip, both width and height are persisted in [params] until next
         // resize. Use forChat() so the EditText inside can receive focus
         // and the soft keyboard appears on tap.
-        params = OverlayParams.forChat(300.dp(), ViewGroup.LayoutParams.WRAP_CONTENT)
+        params = OverlayParams.forChat(320.dp(), 480.dp())
         params.x = bubbleX
         params.y = bubbleY
 
         installTouch()
         installResizeTouch()
+        FloatingWindowControls.install(host, root, params, header, resizeGrip)
     }
 
     private val sessionObserver = scope.launch(Dispatchers.Main.immediate) {
@@ -322,7 +323,7 @@ class Fr3kChatBubble(
             params.x = cx; params.y = cy
             host.add(root, params)
             isAttached = true
-            android.util.Log.i("FR3K_HUD", "chat bubble shown at (${params.x}, ${params.y}) size ${params.width}x${params.height}")
+            android.util.Log.i("FR3KHUD", "chat bubble shown at (${params.x}, ${params.y}) size ${params.width}x${params.height}")
             // First-show welcome so the transcript isn't empty. We only
             // seed once per process so reopens don't spam the user.
             if (!hasSeededWelcome) {
@@ -336,7 +337,7 @@ class Fr3kChatBubble(
                 appendLine("fr3k: Browser and terminal actions appear here. Availability is checked when used.")
             }
         } catch (t: Throwable) {
-            android.util.Log.e("FR3K_HUD", "chat bubble addView failed", t)
+            android.util.Log.e("FR3KHUD", "chat bubble addView failed", t)
         }
     }
 
@@ -498,9 +499,9 @@ class Fr3kChatBubble(
 
     private fun resizeBounds(): ResizeBounds = ResizeBounds(
         minW = (180 * density).toInt(),
-        maxW = (580 * density).toInt(),
+        maxW = host.windowManager.currentWindowMetrics.bounds.width(),
         minH = (260 * density).toInt(),
-        maxH = (760 * density).toInt(),
+        maxH = (host.windowManager.currentWindowMetrics.bounds.height() - 48 * density).toInt(),
     )
 
     /**

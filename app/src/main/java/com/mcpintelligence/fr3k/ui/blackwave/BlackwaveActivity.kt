@@ -7,12 +7,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +41,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.integrations.blackwave.FleetDeviceCard
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
@@ -83,14 +89,14 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("BLACKWAVE")
+
+            // Stacked, not side by side: at a 200% font scale the title column squeezed the BACK button into
+            // a narrow slot and its label wrapped vertically until the button was clipped and unnamed.
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text(
                         text = "▰ BLACKWAVE",
@@ -102,11 +108,11 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         text = "§6 setup · §7 add device",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                 }
-                OutlinedButton(onClick = onClose) {
-                    Text("BACK", fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                OutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Text("BACK", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -153,7 +159,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                     ) {
-                        Text(if (probing) "PROBING…" else "REPROBE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(if (probing) "PROBING…" else "REPROBE", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -192,7 +198,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         "no scopes enabled yet — run SET UP BLACKWAVE",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                 } else {
                     Column {
@@ -203,7 +209,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                                     text = BwScopes.label(s),
                                     color = Fr3kPalette.Text,
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp,
+                                    fontSize = 12.sp,
                                     modifier = Modifier.weight(1f),
                                 )
                                 Fr3kBadge(text = s, color = Fr3kPalette.AccentDim)
@@ -221,7 +227,7 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
                         "no devices visible — probe the bridge or add one manually",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                 } else {
                     Column {
@@ -255,9 +261,11 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
 
     Fr3kPanel(title = "feature access") {
         // OTA
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("OTA FIRMWARE", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        // Stacked, not side by side: at a 200% font scale the description squeezed the neighbour button into
+        // a narrow slot and its label wrapped vertically until it was clipped and unnamed.
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Column {
+                Text("OTA FIRMWARE", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(
                     text = when {
                         hasOta && online > 0 -> "available on $online authenticated device(s)"
@@ -266,21 +274,21 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
                     },
                     color = if (hasOta && online > 0) Fr3kPalette.Ok else Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             }
             if (hasOta && online > 0) {
                 Fr3kBadge(text = "available", color = Fr3kPalette.Ok)
             } else {
-                OutlinedButton(onClick = { onConfigure(WizardStep.OTA_CONFIG) }) {
-                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                OutlinedButton(onClick = { onConfigure(WizardStep.OTA_CONFIG) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
         // Live Apply
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("LIVE APPLY", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Column {
+                Text("LIVE APPLY", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(
                     text = when {
                         hasLive && online > 0 -> "available on $online authenticated device(s)"
@@ -289,14 +297,14 @@ private fun FeatureAccessPanel(app: Fr3kApplication, probe: BridgeProbe?, onConf
                     },
                     color = if (hasLive && online > 0) Fr3kPalette.Ok else Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 9.sp,
+                    fontSize = 12.sp,
                 )
             }
             if (hasLive && online > 0) {
                 Fr3kBadge(text = "available", color = Fr3kPalette.Ok)
             } else {
-                OutlinedButton(onClick = { onConfigure(WizardStep.LIVE_APPLY_CONFIG) }) {
-                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                OutlinedButton(onClick = { onConfigure(WizardStep.LIVE_APPLY_CONFIG) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                    Text("CONFIGURE →", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
@@ -310,18 +318,19 @@ private fun FleetRow(card: FleetDeviceCard, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(RoundedCornerShape(4.dp))
-            .clickable { onClick() }
+            .heightIn(min = 48.dp).clickable { onClick() }
+            .semantics { contentDescription = card.display_name.ifBlank { card.model_id } }
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             Text(
                 text = listOf(card.model_id, card.device_class, if (card.firmware_version.isNotBlank()) "fw ${card.firmware_version}" else null)
                     .filterNotNull().joinToString(" · "),
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
             )
         }
         Fr3kBadge(

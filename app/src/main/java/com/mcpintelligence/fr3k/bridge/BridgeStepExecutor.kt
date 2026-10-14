@@ -142,8 +142,10 @@ class BridgeStepExecutor(
     private fun liveTarget(path: List<Int>): AccessibilityNodeInfo? =
         service.liveRoot()?.let { UiTreeReader.clickableTarget(it, path) }
 
-    private fun requireTree(): com.mcpintelligence.fr3k.capability.UiNode =
-        service.readTree() ?: throw StepFailedException(StepRecord(-1, "read", "FAILED", "no active window"))
+    private fun requireTree(): com.mcpintelligence.fr3k.capability.UiNode {
+        if (!packageAllowed()) throw StepFailedException(StepRecord(-1, "read", "REFUSED", "Foreground app is outside the reviewed target set"))
+        return service.readTree() ?: throw StepFailedException(StepRecord(-1, "read", "FAILED", "no active window"))
+    }
 
     private suspend fun awaitMatch(selector: SelectorFingerprint, timeoutMs: Long): MatchOutcome {
         val deadline = SystemClock.elapsedRealtime() + timeoutMs

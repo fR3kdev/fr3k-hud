@@ -10,6 +10,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -139,10 +142,12 @@ private fun OnboardingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Setup")
+
             Text(
                 text = step.title,
                 color = Fr3kPalette.Accent,
@@ -173,7 +178,7 @@ private fun OnboardingScreen(
                         text = "v${app.identity.appVersion} · ${app.identity.platform} · ${app.identity.deviceId.take(12)}…",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                     Spacer(Modifier.height(32.dp))
                     Button(
@@ -217,7 +222,7 @@ private fun OnboardingScreen(
                         text = "skip for now — permission state stays visible in diagnostics",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .clickable { onSkip() }
@@ -249,7 +254,7 @@ private fun OnboardingScreen(
                         text = "you can also manage everything from Settings",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .clickable {
@@ -293,15 +298,15 @@ private fun PermissionRow(
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(label, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(detail, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+            Text(detail, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
         if (granted) {
-            Text("GRANTED", color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text("GRANTED", color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         } else {
             Button(
                 onClick = onGrant,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text("GRANT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            ) { Text("GRANT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
     }
 }

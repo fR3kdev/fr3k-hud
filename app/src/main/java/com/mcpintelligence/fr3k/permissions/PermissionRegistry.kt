@@ -18,8 +18,6 @@ import androidx.core.content.ContextCompat
  *  - Screenshot        → MediaProjection (handled by user gesture, not runtime)
  *  - GPS               → ACCESS_FINE_LOCATION / ACCESS_COARSE_LOCATION
  *  - Termux bridge     → com.termux.permission.RUN_COMMAND
- *  - LSPatch module    → READ_EXTERNAL_STORAGE on <= 32, nothing on >= 33
- *  - Morphe patches    → READ_MEDIA_* on 33+
  *  - Clipboard         → no perm (read-on-invocation)
  *  - Notification ls   → BIND_NOTIFICATION_LISTENER
  *  - Bluetooth scan    → BLUETOOTH_CONNECT / BLUETOOTH_SCAN
@@ -52,12 +50,6 @@ object PermissionRegistry {
         Feature.MIC_PROJECTION -> emptyList() // MediaProjection is gesture-driven
         Feature.NOTIFICATION_LISTENER -> emptyList() // granted via Settings
         Feature.TERMUX -> listOf<String>().also { /* com.termux.permission.RUN_COMMAND is not a runtime perm — granted by Termux itself */ }
-        Feature.LSPATCH -> if (Build.VERSION.SDK_INT >= 33) emptyList()
-            else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        Feature.MORPHE -> if (Build.VERSION.SDK_INT >= 33)
-            listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
-            else listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-        Feature.SHIZUKU -> emptyList() // Shizuku permission is grant-in-app
     }
 
     fun granted(context: Context, feature: Feature): Boolean =
@@ -123,6 +115,6 @@ object PermissionRegistry {
 
     enum class Feature {
         HUD_ORB, STT, GPS, BLUETOOTH, STORAGE, MIC_PROJECTION, NOTIFICATION_LISTENER,
-        TERMUX, LSPATCH, MORPHE, SHIZUKU,
+        TERMUX,
     }
 }

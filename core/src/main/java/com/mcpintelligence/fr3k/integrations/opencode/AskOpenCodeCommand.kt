@@ -18,12 +18,13 @@ class AskOpenCodeCommand(
 
     override val id: String = "agent.ask.opencode"
     override val title: String = "Ask OpenCode Go"
-    override val description: String = "Send the prompt to an OpenCode Go free model (no API key)"
+    override val description: String = "Send explicitly chosen context to OpenCode Go; a stored Go key selects the subscription endpoint"
     override val requiredCapabilities: Set<String> = setOf(Capabilities.AGENT_ASK)
     override val keywords: Set<String> = setOf("ask", "ai", "opencode", "zen", "big-pickle", "free", "explain")
     override val pluginId: String = "fr3k.integrations.opencode"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
+        if (context.consentLevel == com.mcpintelligence.fr3k.core.ConsentLevel.LOCAL_ONLY) return CommandResult.Failed("Local-only consent is enabled. Nothing sent to an AI provider.")
         val prompt = args["prompt"]
             ?: context.selectedText
             ?: context.fullText

@@ -1,0 +1,48 @@
+
+com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest:
+Error in realOnDevicePairingStartsVerifiedShellAndReconnects(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest):
+java.lang.IllegalStateException: ADB connected, but HUD service did not publish a Binder. Reconnect after opening HUD; inspect diagnostics.
+	at com.mcpintelligence.fr3k.integrations.privileged.WirelessDebugging.startHud(WirelessDebugging.kt:71)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.realOnDevicePairingStartsVerifiedShellAndReconnects(WirelessAndSelectedAppsDeviceTest.kt:32)
+
+Error in selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest):
+java.lang.AssertionError: step failed: privileged service is not connected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest$selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides$1.invokeSuspend(WirelessAndSelectedAppsDeviceTest.kt:51)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(WirelessAndSelectedAppsDeviceTest.kt:35)
+
+
+Time: 15.173
+There were 2 failures:
+1) realOnDevicePairingStartsVerifiedShellAndReconnects(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest)
+java.lang.IllegalStateException: ADB connected, but HUD service did not publish a Binder. Reconnect after opening HUD; inspect diagnostics.
+	at com.mcpintelligence.fr3k.integrations.privileged.WirelessDebugging.startHud(WirelessDebugging.kt:71)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.realOnDevicePairingStartsVerifiedShellAndReconnects(WirelessAndSelectedAppsDeviceTest.kt:32)
+2) selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest)
+java.lang.AssertionError: step failed: privileged service is not connected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest$selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides$1.invokeSuspend(WirelessAndSelectedAppsDeviceTest.kt:51)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(WirelessAndSelectedAppsDeviceTest.kt:35)
+
+FAILURES!!!
+Tests run: 2,  Failures: 2
+
+

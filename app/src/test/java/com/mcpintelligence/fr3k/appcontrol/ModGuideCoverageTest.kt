@@ -71,6 +71,32 @@ class ModGuideCoverageTest {
         assertTrue(first.has("examplePhrase"))
     }
 
+    /**
+     * The catalogue an operator actually sees. The lab catalogue above proves the fixture contracts; this
+     * proves the release journeys are complete in their own right, so a later edit cannot quietly ship a
+     * journey with no limits, no undo path, two steps, or a fixture capability bound into it.
+     */
+    @Test fun everyReleaseJourneyIsCompleteAndNeverFixtureBound() {
+        val release = releaseProcedures()
+        assertTrue("the release catalogue must not be empty", release.isNotEmpty())
+        for (guide in release) {
+            assertTrue("${guide.id} needs at least 3 steps", guide.steps.size >= 3)
+            assertTrue("${guide.id} needs what-it-does text", guide.whatItDoes.isNotBlank())
+            assertTrue("${guide.id} needs a one-line summary", guide.oneLiner.isNotBlank())
+            assertTrue("${guide.id} must state its limits", guide.limits.isNotBlank())
+            assertTrue("${guide.id} must state an undo or recovery path", guide.reversible.isNotBlank())
+            assertTrue("${guide.id} must say where it runs", guide.runsOn.isNotBlank())
+            assertTrue(
+                "${guide.id} must not be bound to a fixture capability",
+                guide.capabilityIds.none { it.startsWith("fixture.") || it.startsWith("target.two") },
+            )
+            assertTrue(
+                "${guide.id} must not claim to work on arbitrary apps",
+                !guide.limits.startsWith("Works on any app"),
+            )
+        }
+    }
+
     @Test fun theTwoOwnedTargetsAreDescribedHonestly() {
         // Guides must not imply the platform reaches apps the operator does not own.
         val fixtureGuides = ModGuideCatalogue.capabilities()

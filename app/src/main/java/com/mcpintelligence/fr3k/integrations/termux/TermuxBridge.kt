@@ -155,9 +155,8 @@ class TermuxBridge(private val context: Context) {
         "  echo 'allow-external-apps = true' >> ~/.termux/termux.properties",
         "  termux-reload-settings",
         "",
-        "Termux:API must also be installed (it ships the com.termux.api service).",
-        "If you only installed 'Termux' (the main app), grab 'Termux:API' from",
-        "F-Droid: https://f-droid.org/packages/com.termux.api/.",
+        "Terminal execution uses the main Termux app RunCommandService.",
+        "Termux:API is optional for additional device APIs; it is not required for this console.",
     ).joinToString("\n")
 
     fun runJob(name: String, args: Map<String, String>): Result {

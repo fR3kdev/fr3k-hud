@@ -10,6 +10,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -167,9 +170,11 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Diagnostics")
+
             Text(
                 text = "DIAGNOSTICS",
                 color = Fr3kPalette.Accent,
@@ -188,19 +193,19 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
                         text = if (diagRunning) "probing…" else "agent · termux · browser · blackwave · hud",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                     Button(
                         onClick = { runFullDiagnostic() },
                         enabled = !diagRunning,
                         colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                     ) {
-                        Text("RUN FULL DIAGNOSTIC", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text("RUN FULL DIAGNOSTIC", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(6.dp))
                 if (diagRows.isEmpty()) {
-                    Text("no results yet", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    Text("no results yet", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 } else {
                     diagRows.forEach { row ->
                         Row(
@@ -211,7 +216,7 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
                                 text = row.label.uppercase(),
                                 color = Fr3kPalette.Text,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.width(70.dp),
                             )
@@ -219,7 +224,7 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
                                 text = row.detail,
                                 color = Fr3kPalette.TextDim,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 9.sp,
+                                fontSize = 12.sp,
                                 modifier = Modifier.weight(1f),
                             )
                             Fr3kBadge(
@@ -240,13 +245,13 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
             Section("PERMISSIONS") {
                 bundle.permissions.forEach { (k, v) ->
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Text(k, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                        Text(k, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f))
                         if (v) {
                             Text(
                                 text = "GRANTED",
                                 color = Fr3kPalette.Ok,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp,
+                                fontSize = 12.sp,
                             )
                         } else {
                             // Each denied perm gets a one-tap "GRANT" button
@@ -258,7 +263,7 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
                                 onClick = { activity?.requestPermission(k) },
                                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                             ) {
-                                Text("GRANT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                Text("GRANT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -304,7 +309,7 @@ private fun DiagnosticsScreen(onClose: () -> Unit) {
                     text = "exported → $exportedTo",
                     color = Fr3kPalette.Ok,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                 )
             }
@@ -327,8 +332,8 @@ private fun kv(map: Map<String, String>) {
     Column {
         map.forEach { (k, v) ->
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(k.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-                Text(v, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
+                Text(k.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                Text(v, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
     }
@@ -342,7 +347,7 @@ private fun list_(items: List<String>) {
                 text = item,
                 color = Fr3kPalette.Text,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
             )
         }

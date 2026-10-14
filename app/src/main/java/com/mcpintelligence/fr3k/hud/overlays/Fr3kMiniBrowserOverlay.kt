@@ -77,34 +77,30 @@ class Fr3kMiniBrowserOverlay(
     init {
         val bg = GradientDrawable().apply {
             cornerRadius = 10f.dp()
-            setColor(0xF211111c.toInt())
-            setStroke(0.dp(), 0x13000000.toInt()) // hairline
+            setColor(0xFF151B30.toInt())
+            setStroke(1.dp(), 0xFF343E60.toInt()) // hairline
         }
 
         val header = TextView(ctx).apply {
             text = "BROWSER"
-            setTextColor(0xFF7d3cff.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            setTextColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             letterSpacing = 0.16f
             setPadding(10.dp(), 6.dp(), 6.dp(), 2.dp())
         }
-        dragHandle = View(ctx).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadii = floatArrayOf(10f.dp(), 10f.dp(), 0f, 0f, 0f, 0f, 10f.dp(), 10f.dp())
-                setColor(0x0011111c.toInt()) // transparent but a touch target
-            }
-        }
+        header.text = "BROWSER · move"
+        header.minHeight = 48.dp()
+        dragHandle = header
         close = Button(ctx).apply {
             text = "×"
-            setTextColor(0xFF8e8a99.toInt())
+            setTextColor(0xFFB0BCD5.toInt())
             setBackgroundColor(Color.TRANSPARENT)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             contentDescription = "Close browser"
             setPadding(0, 0, 8.dp(), 0)
             // Compact icon button — fixed 28dp so the title row stays slim.
-            layoutParams = LinearLayout.LayoutParams(28.dp(), 28.dp())
+            layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isAllCaps = false
             setOnClickListener { hide() }
         }
@@ -118,12 +114,12 @@ class Fr3kMiniBrowserOverlay(
         // Compact chat strip — toggled by the chat button, hidden by default.
         chatToggle = Button(ctx).apply {
             text = "◨"
-            setTextColor(0xFF8e8a99.toInt())
+            setTextColor(0xFFB0BCD5.toInt())
             setBackgroundColor(0x00000000.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             contentDescription = "Toggle inline chat"
             setPadding(0, 0, 4.dp(), 0)
-            layoutParams = LinearLayout.LayoutParams(24.dp(), 24.dp())
+            layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isAllCaps = false
             setOnClickListener { toggleChat() }
         }
@@ -131,11 +127,11 @@ class Fr3kMiniBrowserOverlay(
 
         urlField = EditText(ctx).apply {
             hint = "https://…"
-            setHintTextColor(0xFF6a6878.toInt())
+            setHintTextColor(0xFFB0BCD5.toInt())
             setTextColor(0xFFe8eaf2.toInt())
             setBackgroundColor(0xFF0d0d18.toInt())
             setPadding((6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             isSingleLine = true
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_GO
@@ -155,14 +151,14 @@ class Fr3kMiniBrowserOverlay(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             contentDescription = desc
             setPadding(0, 0, 0, 0)
-            layoutParams = LinearLayout.LayoutParams(28.dp(), 28.dp())
+            layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             setOnClickListener { onClick() }
         }
         back = iconBtn("←", "Back") { if (webView.canGoBack()) webView.goBack() }
         reload = iconBtn("↻", "Reload") { webView.reload() }
         val go = iconBtn("GO", "Go to address") { onGo() }
         // The GO button is a little wider to fit the text.
-        (go.layoutParams as LinearLayout.LayoutParams).width = 40.dp()
+        (go.layoutParams as LinearLayout.LayoutParams).width = 48.dp()
 
         val addressRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -178,7 +174,7 @@ class Fr3kMiniBrowserOverlay(
         // doesn't visually compete with the close button.
         resizeGrip = View(ctx).apply {
             background = GradientDrawable().apply {
-                setColor(0xFF7d3cff.toInt())
+                setColor(0xFFC5A0FF.toInt())
             }
             contentDescription = "Drag to resize"
             alpha = 0.7f
@@ -238,7 +234,7 @@ class Fr3kMiniBrowserOverlay(
         // Compact collapsible chat strip — GONE until the chat button opens it.
         chatTranscript = TextView(ctx).apply {
             setTextColor(0xFFcdd1e0.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 9f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             setPadding((6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
             maxLines = 4
@@ -246,11 +242,11 @@ class Fr3kMiniBrowserOverlay(
         }
         chatInput = EditText(ctx).apply {
             hint = "ask about this page…"
-            setHintTextColor(0xFF6a6878.toInt())
+            setHintTextColor(0xFFB0BCD5.toInt())
             setTextColor(0xFFe8eaf2.toInt())
             setBackgroundColor(0xFF0d0d18.toInt())
             setPadding((6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             isSingleLine = true
             imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
@@ -258,9 +254,9 @@ class Fr3kMiniBrowserOverlay(
         }
         chatSend = Button(ctx).apply {
             text = "→"
-            setTextColor(0xFF11111c.toInt())
-            setBackgroundColor(0xFF7d3cff.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextColor(0xFF101527.toInt())
+            setBackgroundColor(0xFFC5A0FF.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             contentDescription = "Send chat message"
             setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(32.dp(), 28.dp())
@@ -284,7 +280,6 @@ class Fr3kMiniBrowserOverlay(
         root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             background = bg
-            addView(dragHandle, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 8.dp()))
             addView(titleRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(chatPanel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(addressRow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
@@ -300,8 +295,8 @@ class Fr3kMiniBrowserOverlay(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ))
                 addView(resizeGrip, android.widget.FrameLayout.LayoutParams(
-                    (14 * density).toInt(),
-                    (14 * density).toInt(),
+                    (48 * density).toInt(),
+                    (48 * density).toInt(),
                     android.view.Gravity.END or android.view.Gravity.BOTTOM,
                 ))
             }
@@ -314,6 +309,7 @@ class Fr3kMiniBrowserOverlay(
 
         installTouch()
         installResizeTouch()
+        FloatingWindowControls.install(host, root, params, dragHandle, resizeGrip)
     }
 
     private val sessionObserver = scope.launch(Dispatchers.Main.immediate) {

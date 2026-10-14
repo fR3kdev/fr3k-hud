@@ -1,0 +1,3 @@
+
+com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest:INSTRUMENTATION_RESULT: shortMsg=Process crashed.
+INSTRUMENTATION_CODE: 0

@@ -1,0 +1,8 @@
+
+com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest:..
+
+Time: 7.09
+
+OK (2 tests)
+
+

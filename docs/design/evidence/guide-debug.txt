@@ -1,0 +1,8 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:.
+
+Time: 6.102
+
+OK (1 test)
+
+

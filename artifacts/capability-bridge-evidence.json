@@ -8,7 +8,7 @@
     {
       "name": "mcp surface started",
       "ok": true,
-      "note": "{'port': 8791, 'token': '413913ae034a43378c370757dfb2808a', 'pid': 10623}"
+      "note": "{'port': 8791, 'token': '23db59d8a28145708fb0eb9116c6fba7', 'pid': 11555}"
     },
     {
       "name": "mcp rejects a missing token",
@@ -38,7 +38,7 @@
     {
       "name": "mask darkens the covered region",
       "ok": true,
-      "note": "bounds=[56, 195, 1052, 321] luma 83.6 -> 0.0"
+      "note": "bounds=[95, 208, 1091, 334] luma 84.8 -> 0.0"
     },
     {
       "name": "unmask clears the overlay",
@@ -88,18 +88,18 @@
     {
       "name": "a guide expands into its walkthrough on device",
       "ok": true,
-      "note": "tapped=(540, 66)"
+      "note": "target=mod.root.extras tapped=(540, 707)"
     },
     {
       "name": "chat bubble names the active provider",
-      "ok": true,
-      "note": "provider=OpenCode Go"
+      "ok": false,
+      "note": "provider=None"
     }
   ],
   "detail": {
     "mcp": {
       "device_port": 8791,
-      "pid": 10623
+      "pid": 11555
     },
     "skip": {
       "ok": true,
@@ -117,19 +117,19 @@
         "foregroundPackage": "com.mcpintelligence.fr3k.patchfixture",
         "maskCount": 1,
         "lastMaskBounds": [
-          56,
-          195,
-          1052,
-          321
+          95,
+          208,
+          1091,
+          334
         ]
       },
       "bounds": [
-        56,
-        195,
-        1052,
-        321
+        95,
+        208,
+        1091,
+        334
       ],
-      "before_luma": 83.55683049658953,
+      "before_luma": 84.80176438391449,
       "after_luma": 0.0
     },
     "appmap": {
@@ -142,12 +142,12 @@
       "note": "completed 2 capability step(s)",
       "records": [
         {
-          "operationId": "34c826f4-ab00-4a1c-b7d8-939dc2f35c8a",
+          "operationId": "2999bb89-6ff7-4071-b9d2-533db2c0c30d",
           "capabilityId": "fixture.banner.hide",
           "appFingerprint": "4db07c805e4c43e1a90426cf1a8b20ef7c4ebfaa0093652471bb2363180b49f2",
           "packageName": "com.mcpintelligence.fr3k.patchfixture",
-          "startedAtMillis": 1791971218206,
-          "durationMs": 1011,
+          "startedAtMillis": 1791985618785,
+          "durationMs": 1010,
           "status": "SUCCEEDED",
           "beforeSha256": "",
           "afterSha256": "",
@@ -158,12 +158,12 @@
           "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK"
         },
         {
-          "operationId": "410b34ad-5266-4b21-9606-d9bdc4d7a56d",
+          "operationId": "ddeb5d41-725e-4a84-aa0d-eee89be8505a",
           "capabilityId": "target.two.acknowledge",
           "appFingerprint": "f316dfdc3bedc0c77e8aaf4a72c7fa1cb058a3f19219cef55459db33d04da0f5",
           "packageName": "com.mcpintelligence.fr3k.patchfixturetwo",
-          "startedAtMillis": 1791971219695,
-          "durationMs": 1489,
+          "startedAtMillis": 1791985620346,
+          "durationMs": 1560,
           "status": "SUCCEEDED",
           "beforeSha256": "",
           "afterSha256": "",
@@ -191,6 +191,7 @@
     },
     "mods_screen": {
       "cards": [
+        "cap.fixture.ad.skip",
         "cap.fixture.banner",
         "cap.fixture.demo.open",
         "cap.fixture.policy",
@@ -199,17 +200,16 @@
         "mod.agent.access",
         "mod.ai.go",
         "mod.appops",
-        "mod.autorun.taps",
+        "mod.ask.plain.english",
         "mod.combine.apps",
-        "mod.inspect.app",
-        "mod.modify.own.app",
         "mod.priv.bootstrap",
-        "mod.root.extras"
+        "mod.root.extras",
+        "mod.skip.ads"
       ],
       "expanded": true
     },
     "chat": {
-      "provider_label": "OpenCode Go"
+      "provider_label": null
     }
   }
 }

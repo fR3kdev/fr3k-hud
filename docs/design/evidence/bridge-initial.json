@@ -1,0 +1,214 @@
+{
+  "results": [
+    {
+      "name": "accessibility service bound",
+      "ok": true,
+      "note": "dumpsys accessibility reports a bound fR3k service"
+    },
+    {
+      "name": "mcp surface started",
+      "ok": true,
+      "note": "{'port': 8791, 'token': '[REDACTED]', 'pid': 12133}"
+    },
+    {
+      "name": "mcp rejects a missing token",
+      "ok": true,
+      "note": "status=401"
+    },
+    {
+      "name": "mcp lists closed-schema tools",
+      "ok": true,
+      "note": "tools=10"
+    },
+    {
+      "name": "bridge reports a live connection",
+      "ok": true,
+      "note": "foreground=com.mcpintelligence.fr3k.hud"
+    },
+    {
+      "name": "unknown goal is refused",
+      "ok": true,
+      "note": "no registered capability matches 'reticulate the splines of the owned fixture'; the closest were fixture.demo.open (2.0)"
+    },
+    {
+      "name": "ad skip reached content on screen",
+      "ok": true,
+      "note": "note=completed 1 capability step(s)"
+    },
+    {
+      "name": "mask darkens the covered region",
+      "ok": true,
+      "note": "bounds=[115, 195, 1111, 321] luma 81.8 -> 0.0"
+    },
+    {
+      "name": "unmask clears the overlay",
+      "ok": true,
+      "note": "maskCount=0"
+    },
+    {
+      "name": "app map records the owned screens as commands",
+      "ok": true,
+      "note": "screens=[home, ads, notes] commands=69"
+    },
+    {
+      "name": "fused workflow runs across two apps",
+      "ok": true,
+      "note": "records=2 packages=['com.mcpintelligence.fr3k.patchfixture', 'com.mcpintelligence.fr3k.patchfixturetwo']"
+    },
+    {
+      "name": "workflow records a tested inverse",
+      "ok": true,
+      "note": "inverses=['run_capability', 'none']"
+    },
+    {
+      "name": "capabilities are inventory-bound",
+      "ok": true,
+      "note": "count=11"
+    },
+    {
+      "name": "every capability has a guide over mcp",
+      "ok": true,
+      "note": "guides=18 uncovered=[]"
+    },
+    {
+      "name": "every guide carries its walkthrough and limits",
+      "ok": true,
+      "note": "smallest step count=4"
+    },
+    {
+      "name": "app mods screen covers the whole catalogue",
+      "ok": true,
+      "note": "header=True reports=14 of 18 guides mcp_serves=18 cards_seen_while_scrolling=13"
+    },
+    {
+      "name": "the guide list scrolls past the first screen",
+      "ok": true,
+      "note": "distinct cards seen=13"
+    },
+    {
+      "name": "a guide expands into its walkthrough on device",
+      "ok": true,
+      "note": "tapped=(540, 188)"
+    },
+    {
+      "name": "chat bubble names the active provider",
+      "ok": true,
+      "note": "provider=OpenCode Go"
+    }
+  ],
+  "detail": {
+    "mcp": {
+      "device_port": 8791,
+      "pid": 12133
+    },
+    "skip": {
+      "ok": true,
+      "note": "completed 1 capability step(s)",
+      "steps": 5
+    },
+    "mask": {
+      "plan": {
+        "ok": true,
+        "note": "completed 1 capability step(s)",
+        "steps": 4
+      },
+      "status": {
+        "connected": true,
+        "foregroundPackage": "com.mcpintelligence.fr3k.patchfixture",
+        "maskCount": 1,
+        "lastMaskBounds": [
+          115,
+          195,
+          1111,
+          321
+        ]
+      },
+      "bounds": [
+        115,
+        195,
+        1111,
+        321
+      ],
+      "before_luma": 81.78073548259884,
+      "after_luma": 0.0
+    },
+    "appmap": {
+      "ok": true,
+      "screens": "[home, ads, notes]",
+      "commands": "[map.patchfixture.home, map.patchfixture.ads, map.patchfixture.notes]",
+      "notes": "[]"
+    },
+    "workflow": {
+      "note": "completed 2 capability step(s)",
+      "records": [
+        {
+          "operationId": "ad591107-d44f-41ac-ab12-2dbb1ef51ba7",
+          "capabilityId": "fixture.banner.hide",
+          "appFingerprint": "4db07c805e4c43e1a90426cf1a8b20ef7c4ebfaa0093652471bb2363180b49f2",
+          "packageName": "com.mcpintelligence.fr3k.patchfixture",
+          "startedAtMillis": 1791972485188,
+          "durationMs": 1008,
+          "status": "SUCCEEDED",
+          "beforeSha256": "",
+          "afterSha256": "",
+          "inverse": {
+            "kind": "run_capability",
+            "capabilityId": "fixture.banner.show"
+          },
+          "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK"
+        },
+        {
+          "operationId": "1dd6d3b8-beba-4d45-bd90-b76813a14e42",
+          "capabilityId": "target.two.acknowledge",
+          "appFingerprint": "f316dfdc3bedc0c77e8aaf4a72c7fa1cb058a3f19219cef55459db33d04da0f5",
+          "packageName": "com.mcpintelligence.fr3k.patchfixturetwo",
+          "startedAtMillis": 1791972486678,
+          "durationMs": 1490,
+          "status": "SUCCEEDED",
+          "beforeSha256": "",
+          "afterSha256": "",
+          "inverse": {
+            "kind": "none"
+          },
+          "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK; launch:OK; wait_for:OK; click:OK; observe:OK; assert_present:OK"
+        }
+      ]
+    },
+    "guides": {
+      "count": 18,
+      "readiness": {
+        "bridgeBound": true,
+        "privilegedShell": false,
+        "privilegedRoot": false
+      },
+      "categories": [
+        "AUTOMATE",
+        "COMBINE",
+        "CONNECT",
+        "INSPECT",
+        "MODIFY"
+      ]
+    },
+    "mods_screen": {
+      "cards": [
+        "cap.fixture.ad.skip",
+        "cap.fixture.banner",
+        "cap.fixture.demo.open",
+        "cap.target.two.acknowledge",
+        "cap.target.two.open",
+        "mod.ai.go",
+        "mod.appops",
+        "mod.ask.plain.english",
+        "mod.combine.apps",
+        "mod.inspect.app",
+        "mod.priv.bootstrap",
+        "mod.root.extras",
+        "mod.skip.ads"
+      ],
+      "expanded": true
+    },
+    "chat": {
+      "provider_label": "OpenCode Go"
+    }
+  }
+}

@@ -38,29 +38,11 @@ object InstallStateProbe {
         state.put("termux_installed", termuxCore && termuxApi)
         state.put("termux_run_command", termuxRunCommand)
 
-        // ----- Tier 2: Shizuku -----
-        val shizukuInstalled = isPkgInstalled(pm, "moe.shizuku.api")
-        val shizukuAuthorized = isShizukuAuthorized()
-        state.put("shizuku_installed", shizukuInstalled)
-        state.put("shizuku_authorized", shizukuAuthorized)
+        // The Shizuku, LSPatch/LSPosed-manager and Morphe probes are gone: the HUD reaches the shell tier
+        // with its own ADB bootstrap and patches with its own embedded engine, so no third-party manager is
+        // a prerequisite and none is detected. Nothing consumed those state keys.
 
-        // ----- Tier 3: LSPatch / LSPosed -----
-        val lspatchInstalled = isPkgInstalled(pm, "org.lsposed.manager")
-        state.put("lspatch_installed", lspatchInstalled)
-        val modules = countLspatchModules(pm)
-        state.put("lspatch_modules", modules)
-
-        // ----- Tier 3: Morphe -----
-        // Morphe isn't an app — it's a JSON patch repo. The actual
-        // `loadAllAvailable()` scan happens at panel-open time. We just
-        // record that the assets dir is present.
-        val morpheAssets = File(context.filesDir, "morphe").exists() ||
-            runCatching {
-                context.assets.list("morphe")?.isNotEmpty() == true
-            }.getOrDefault(false)
-        state.put("morphe_assets", morpheAssets)
-
-        // ----- Tier 4: Vector / root -----
+        // ----- Privileged tier: root -----
         val rootAvailable = probeRoot()
         state.put("root_available", rootAvailable)
         val vectorPkg = listOf(
@@ -127,7 +109,7 @@ object InstallStateProbe {
     }.getOrDefault(false)
 
     /**
-     * Shizuku stores its auth state inside the `moe.shizuku.api` SharedPreferences.
+     * Root probe. Shizuku's auth-preferences helper was removed with the Shizuku tier.
      * The reliable way to check is to ask the running Shizuku service directly
      * via reflection on its `IUserService` binder — but at boot time the
      * service may not be running yet. We just check whether the user has
@@ -137,31 +119,10 @@ object InstallStateProbe {
      * that permission, so we fall back to `isInstalled` only and let the
      * IntegrationsActivity do the live `pingBinder` once it's on screen.
      */
-    private fun isShizukuAuthorized(): Boolean = false // live ping happens in IntegrationsActivity
-
-    private fun countLspatchModules(pm: PackageManager): Int = runCatching {
-        // LSPatch doesn't expose a public "modules" API. The community
-        // convention is to look for apps whose manifest declares an
-        // `xposedmodule` meta-data. We do a cheap count via
-        // GET_META_DATA — it only catches modules that haven't been
-        // stripped, but that's a useful upper bound.
-        var n = 0
-        val flags = PackageManager.GET_META_DATA
-        @Suppress("DEPRECATION")
-        val apps = pm.getInstalledApplications(flags)
-        for (info in apps) {
-            if (info.metaData?.getBoolean("xposedmodule", false) == true) n++
-        }
-        n
-    }.getOrDefault(0)
 
     /**
-     * Mirror of VectorAdapter.probeRoot() — duplicated here so the
-     * boot-time probe doesn't have to instantiate the adapter (which
-     * pulls in Hermes / etc. via the singleton graph). Kept simple:
-     * we just check whether `/system/xbin/su` or `/system/bin/su` is
-     * executable by *some* uid. The real per-app root check happens
-     * in VectorAdapter.status() at panel-open time.
+     * Kept simple: we just check whether `/system/xbin/su` or `/system/bin/su` is executable by *some*
+     * uid. The privileged plane verifies root by the service UID, never by an installed manager.
      */
     private fun probeRoot(): Boolean {
         for (path in listOf("/system/bin/su", "/system/xbin/su", "/sbin/su")) {

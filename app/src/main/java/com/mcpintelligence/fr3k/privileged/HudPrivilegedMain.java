@@ -118,6 +118,7 @@ public final class HudPrivilegedMain {
                 if (mode == null || !MODES.contains(mode)) throw new IllegalArgumentException("mode not allowed: " + mode);
                 try {
                     String before = parseAppOpMode(run("/system/bin/cmd", "appops", "get", pkg, op), op);
+                    if (!MODES.contains(before)) throw new IllegalStateException("Cannot safely change an app-op whose previous mode is unknown");
                     run("/system/bin/cmd", "appops", "set", pkg, op, mode);
                     String after = parseAppOpMode(run("/system/bin/cmd", "appops", "get", pkg, op), op);
                     if (!mode.equals(after)) throw new IllegalStateException("wanted " + mode + " but observed " + after);
@@ -229,12 +230,15 @@ public final class HudPrivilegedMain {
     /** Parses "WAKE_LOCK: allow" style output. Unrecognised output is reported as unknown, never guessed. */
     private static String parseAppOpMode(String output, String op) {
         if (output == null) return "unknown";
+        // Android reports an absent per-app override explicitly. Preserve absence as default,
+        // rather than guessing the op's effective allow/ignore policy.
+        if (output.trim().startsWith("No operations.")) return "default";
         for (String line : output.split("\\r?\\n")) {
             String trimmed = line.trim();
             if (!trimmed.startsWith(op)) continue;
             int colon = trimmed.indexOf(':');
             if (colon < 0) continue;
-            String mode = trimmed.substring(colon + 1).trim().split("\\s+")[0];
+            String mode = trimmed.substring(colon + 1).trim().split("[;\\s]+")[0];
             if (MODES.contains(mode)) return mode;
         }
         return "unknown";

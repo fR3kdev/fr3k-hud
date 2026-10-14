@@ -4,6 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +33,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.key
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,15 +88,18 @@ class ModsActivity : ComponentActivity() {
 @Composable
 private fun ModsScreen(onClose: () -> Unit) {
     val app = Fr3kApplication.get()
-    var environment by remember { mutableStateOf(ModGuideCatalogue.environment(app)) }
+    var environment by remember { mutableStateOf(ModEnvironment()) }
+    var search by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { while (true) { environment = withContext(Dispatchers.IO) { ModGuideCatalogue.environment(app) }; delay(2000) } }
     var category by remember { mutableStateOf<ModCategory?>(null) }
     var expanded by remember { mutableStateOf<String?>(null) }
     var mcpStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val guides = remember(environment) { ModGuideCatalogue.all() }
+    var guides by remember { mutableStateOf(if (com.mcpintelligence.fr3k.appcontrol.CapabilityCatalogue.labMode(app)) ModGuideCatalogue.all() else com.mcpintelligence.fr3k.appcontrol.releaseProcedures()) }
+    LaunchedEffect(Unit) { guides = withContext(Dispatchers.IO) { app.capabilityHost.registry(true); ModGuideCatalogue.all(app) } }
     val ordered = remember(guides, environment) { ModGuideStatus.order(guides, environment) }
-    val shown = ordered.filter { category == null || it.category == category }
+    val shown = ordered.filter { (category == null || it.category == category) && (search.isBlank() || "${it.title} ${it.oneLiner} ${it.id} ${it.requirements.joinToString { r -> r.label }}".contains(search, ignoreCase = true)) }
     val readyCount = ordered.count { ModGuideStatus.readiness(it, environment) == ModReadiness.READY }
 
     Column(
@@ -112,7 +123,7 @@ private fun ModsScreen(onClose: () -> Unit) {
                     "Requirements are checked against this device, not assumed.",
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
             )
         }
 
@@ -132,14 +143,14 @@ private fun ModsScreen(onClose: () -> Unit) {
                         "${ordered.size - readyCount} need setup (they say which step)",
                     color = Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                 )
                 if (!environment.bridgeBound) {
                     Text(
                         text = ModRequirement.BRIDGE.howTo,
                         color = Fr3kPalette.Warn,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
                 if (!environment.privilegedShell) {
@@ -147,18 +158,22 @@ private fun ModsScreen(onClose: () -> Unit) {
                         text = ModRequirement.ADB_BOOTSTRAP.howTo,
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
                 OutlinedButton(
-                    onClick = { environment = ModGuideCatalogue.environment(app) },
+                    onClick = { scope.launch { environment = withContext(Dispatchers.IO) { ModGuideCatalogue.environment(app) } } },
                     modifier = Modifier.semantics { contentDescription = "mods-recheck" },
-                ) { Text("RE-CHECK DEVICE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                ) { Text("RE-CHECK DEVICE", fontFamily = FontFamily.Monospace, fontSize = 13.sp) }
             }
         }
 
+        OutlinedTextField(value = search, onValueChange = { search = it }, label = { Text("Search capabilities and guides") }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "mods-search" })
+        Text("${shown.size} of ${ordered.size} guides", color = Fr3kPalette.TextDim)
+        if (shown.isEmpty()) Text("No matches. Clear search or choose ALL.", color = Fr3kPalette.Warn)
+
         // ---------------------------------------------------------------- filters
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip("ALL", category == null, "mods-filter-ALL") { category = null }
             ModCategory.entries.forEach { entry ->
                 FilterChip(entry.label, category == entry, "mods-filter-${entry.label}") { category = entry }
@@ -169,18 +184,18 @@ private fun ModsScreen(onClose: () -> Unit) {
                 text = it.blurb,
                 color = Fr3kPalette.Accent,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
             )
         }
 
         // ---------------------------------------------------------------- guides
         shown.forEach { guide ->
-            GuideCard(
+            key(guide.id) { GuideCard(
                 guide = guide,
                 environment = environment,
                 expanded = expanded == guide.id,
                 onToggle = { expanded = if (expanded == guide.id) null else guide.id },
-            )
+            ) }
         }
 
         // ---------------------------------------------------------------- surfaces
@@ -191,7 +206,7 @@ private fun ModsScreen(onClose: () -> Unit) {
                         "your own agent. Token required; nothing is written without approval.",
                     color = Fr3kPalette.TextDim,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Button(
@@ -210,21 +225,21 @@ private fun ModsScreen(onClose: () -> Unit) {
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                         modifier = Modifier.semantics { contentDescription = "mods-mcp-start" },
-                    ) { Text("START MCP", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("START MCP", fontFamily = FontFamily.Monospace, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                     OutlinedButton(
                         onClick = {
                             runCatching { app.stopMcp() }
                             mcpStatus = "stopped"
                         },
                         modifier = Modifier.semantics { contentDescription = "mods-mcp-stop" },
-                    ) { Text("STOP", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                    ) { Text("STOP", fontFamily = FontFamily.Monospace, fontSize = 13.sp) }
                 }
                 mcpStatus?.let {
                     Text(
                         text = it,
                         color = Fr3kPalette.Ok,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         modifier = Modifier.semantics { contentDescription = "mods-mcp-status" },
                     )
                 }
@@ -237,7 +252,7 @@ private fun ModsScreen(onClose: () -> Unit) {
                             )
                         },
                         modifier = Modifier.semantics { contentDescription = "mods-open-appcontrol" },
-                    ) { Text("APP CONTROL", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                    ) { Text("APP CONTROL", fontFamily = FontFamily.Monospace, fontSize = 13.sp) }
                     OutlinedButton(
                         onClick = {
                             app.startActivity(
@@ -246,7 +261,7 @@ private fun ModsScreen(onClose: () -> Unit) {
                             )
                         },
                         modifier = Modifier.semantics { contentDescription = "mods-open-integrations" },
-                    ) { Text("INTEGRATIONS", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                    ) { Text("INTEGRATIONS", fontFamily = FontFamily.Monospace, fontSize = 13.sp) }
                 }
             }
         }
@@ -263,16 +278,16 @@ private fun ModsScreen(onClose: () -> Unit) {
 private fun StatusChip(name: String, live: Boolean) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(if (live) Fr3kPalette.Ok.copy(alpha = 0.15f) else Fr3kPalette.Surface)
-            .border(1.dp, if (live) Fr3kPalette.Ok else Fr3kPalette.Border, RoundedCornerShape(4.dp))
+            .border(1.dp, if (live) Fr3kPalette.Ok else Fr3kPalette.Border, RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
         Text(
             text = "$name ${if (live) "LIVE" else "—"}",
             color = if (live) Fr3kPalette.Ok else Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
         )
     }
@@ -282,8 +297,9 @@ private fun StatusChip(name: String, live: Boolean) {
 private fun FilterChip(label: String, selected: Boolean, description: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(if (selected) Fr3kPalette.Accent else Fr3kPalette.Surface)
+            .heightIn(min = 48.dp)
             .clickable { onClick() }
             .padding(horizontal = 8.dp, vertical = 6.dp)
             .semantics { contentDescription = description },
@@ -292,7 +308,7 @@ private fun FilterChip(label: String, selected: Boolean, description: String, on
             text = label,
             color = if (selected) Fr3kPalette.Bg else Fr3kPalette.Text,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
         )
     }
@@ -307,7 +323,7 @@ private fun GuideCard(
 ) {
     val readiness = ModGuideStatus.readiness(guide, environment)
     val missing = ModGuideStatus.missing(guide, environment)
-    val cardShape = RoundedCornerShape(6.dp)
+    val cardShape = RoundedCornerShape(20.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -332,7 +348,7 @@ private fun GuideCard(
                     color = Fr3kPalette.Text,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
+                    fontSize = 17.sp,
                     modifier = Modifier.weight(1f),
                 )
                 Fr3kBadge(
@@ -345,7 +361,7 @@ private fun GuideCard(
                 text = "${guide.category.label} · ${guide.oneLiner}",
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
             )
             if (missing.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
@@ -353,7 +369,7 @@ private fun GuideCard(
                     text = "needs: " + missing.joinToString(", ") { it.label },
                     color = Fr3kPalette.Warn,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -361,7 +377,7 @@ private fun GuideCard(
                 text = if (expanded) "▾ hide walkthrough" else "▸ walkthrough",
                 color = Fr3kPalette.Accent,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -384,7 +400,7 @@ private fun GuideCard(
                     text = "walkthrough",
                     color = Fr3kPalette.Accent,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 guide.steps.forEachIndexed { index, step ->
@@ -392,10 +408,10 @@ private fun GuideCard(
                         text = "${index + 1}. $step",
                         color = Fr3kPalette.Text,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
-                Section("say or type this", guide.examplePhrase, Fr3kPalette.Magenta)
+                Section("goal for Workflows or MCP render_plan", guide.examplePhrase, Fr3kPalette.Magenta)
                 if (guide.capabilityIds.isNotEmpty()) {
                     Section("what actually runs", guide.capabilityIds.joinToString(", "), Fr3kPalette.TextDim)
                 }
@@ -413,9 +429,9 @@ private fun Section(label: String, body: String, color: Color) {
             text = label,
             color = Fr3kPalette.Accent,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
         )
-        Text(text = body, color = color, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        Text(text = body, color = color, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
     }
 }

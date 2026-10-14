@@ -1,0 +1,40 @@
+install artifacts                              PASS  hud + test apk + two owned fixtures
+CapabilityLabModeDeviceTest#enableFixtures     PASS  OK (1 test)
+--- phase 1: bridge, plan, workflow, mask, app map (through the app MCP surface) ---
+accessibility service bound        PASS  dumpsys accessibility reports a bound fR3k service
+mcp surface started                PASS  {'port': 8791, 'token': '[REDACTED]', 'pid': 19651}
+mcp rejects a missing token        PASS  status=401
+mcp lists closed-schema tools      PASS  tools=10
+bridge reports a live connection   PASS  foreground=com.mcpintelligence.fr3k.hud
+unknown goal is refused            PASS  no registered capability matches 'reticulate the splines of the owned fixture'; the closest were fixture.demo.open (2.0)
+ad skip reached content on screen  PASS  note=completed 1 capability step(s)
+mask darkens the covered region    PASS  bounds=[115, 216, 1111, 342] luma 80.1 -> 0.0
+unmask clears the overlay          PASS  maskCount=0
+app map records the owned screens as commands PASS  screens=[home, ads, notes] commands=69
+fused workflow runs across two apps PASS  records=2 packages=['com.mcpintelligence.fr3k.patchfixture', 'com.mcpintelligence.fr3k.patchfixturetwo']
+workflow records a tested inverse  PASS  inverses=['run_capability', 'none']
+capabilities are inventory-bound   PASS  count=11
+every capability has a guide over mcp PASS  guides=18 uncovered=[]
+every guide carries its walkthrough and limits PASS  smallest step count=4
+app mods screen covers the whole catalogue PASS  header=True reports=14 of 18 guides mcp_serves=18 cards_seen_while_scrolling=13
+the guide list scrolls past the first screen PASS  distinct cards seen=13
+a guide expands into its walkthrough on device FAIL  tapped=(540, 210)
+chat bubble names the active provider FAIL  provider=None
+BRIDGE_RESULT FAIL a guide expands into its walkthrough on device,chat bubble names the active provider
+
+bridge-plane-via-mcp                           FAIL  checks=19
+--- phase 2: owned-fixture patching, then the instrumented suites ---
+EmbeddedFixturePatcherDeviceTest               PASS  OK (1 test)
+on-device prepared APK                         PASS  4255005cd70c7302a3862594
+OwnedFixtureControllerDeviceTest               PASS  OK (1 test)
+ProviderPreferenceDeviceTest                   PASS  OK (3 tests)
+PatchPlaneDeviceTest                           PASS  OK (2 tests)
+AppInspectionDeviceTest                        FAIL  Tests run: 2,  Failures: 1
+FixtureAgentApprovalDeviceTest                 PASS  OK (1 test)
+--- phase 3: privileged service at the shell tier ---
+privileged-shell                               PASS  HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2
+--- phase 4: privileged service at the root tier ---
+privileged-root                                PASS  HUD_PRIVILEGED_READY uid=0 tier=ROOT protocol=2
+CapabilityLabModeDeviceTest#disableFixtures    PASS  OK (1 test)
+companion packages present: NONE
+CAPABILITY_RESULT FAIL bridge-plane-via-mcp,AppInspectionDeviceTest

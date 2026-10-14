@@ -47,7 +47,6 @@
          projection, device-attached). We only declare the ones we use. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
     <!-- Storage / media read -->
@@ -102,6 +101,8 @@
         </intent>
     </queries>
 
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
     <application
         android:name="com.mcpintelligence.fr3k.Fr3kApplication"
         android:label="@string/app_name"
@@ -116,9 +117,13 @@
         android:theme="@style/Theme.Fr3kHud"
         tools:targetApi="34">
 
+        <activity android:name="com.mcpintelligence.fr3k.ui.appcontrol.SelectedAppPatchActivity" android:exported="false" />
+        <activity android:name="com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingActivity" android:exported="false" />
         <activity
             android:name="com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity"
             android:exported="false" />
+
+        <service android:name="com.mcpintelligence.fr3k.ui.screenshot.ScreenCaptureService" android:exported="false" android:foregroundServiceType="mediaProjection" />
 
         <!-- APP MODS: the human entry point. Every capability with its live requirements, the
              walkthrough in order, the phrase that runs it, what actually executes, the limits, the undo. -->

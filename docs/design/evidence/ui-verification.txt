@@ -1,0 +1,128 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:...
+Error in eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.AssertionError: Guide limits mod.ai.go
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:113)
+..
+com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest:.
+com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest:..
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:
+Error in nativeSessionHandsBrowserResultToTerminalAndSharesChat(com.mcpintelligence.fr3k.VisibleToolsDeviceTest):
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$nativeSessionHandsBrowserResultToTerminalAndSharesChat$1.invokeSuspend(VisibleToolsDeviceTest.kt:150)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:28)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:100)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.nativeSessionHandsBrowserResultToTerminalAndSharesChat(VisibleToolsDeviceTest.kt:100)
+
+Error in termuxHealthMatchesCurrentPermissionAndRealProbe(com.mcpintelligence.fr3k.VisibleToolsDeviceTest):
+org.junit.ComparisonFailure: expected:<[CONNECT]ED> but was:<[PROBE FAIL]ED>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$termuxHealthMatchesCurrentPermissionAndRealProbe$1.invokeSuspend(VisibleToolsDeviceTest.kt:168)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:28)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:100)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.termuxHealthMatchesCurrentPermissionAndRealProbe(VisibleToolsDeviceTest.kt:163)
+.
+Error in termuxToolMirrorsRealOutputAndExitInVisibleConsole(com.mcpintelligence.fr3k.VisibleToolsDeviceTest):
+org.junit.ComparisonFailure: expected:<[7]> but was:<[1]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$termuxToolMirrorsRealOutputAndExitInVisibleConsole$1.invokeSuspend(VisibleToolsDeviceTest.kt:85)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.termuxToolMirrorsRealOutputAndExitInVisibleConsole(VisibleToolsDeviceTest.kt:75)
+
+
+Time: 225.61
+There were 4 failures:
+1) eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.AssertionError: Guide limits mod.ai.go
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:113)
+2) nativeSessionHandsBrowserResultToTerminalAndSharesChat(com.mcpintelligence.fr3k.VisibleToolsDeviceTest)
+java.lang.AssertionError
+	at org.junit.Assert.fail(Assert.java:87)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertTrue(Assert.java:53)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$nativeSessionHandsBrowserResultToTerminalAndSharesChat$1.invokeSuspend(VisibleToolsDeviceTest.kt:150)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:28)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:100)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.nativeSessionHandsBrowserResultToTerminalAndSharesChat(VisibleToolsDeviceTest.kt:100)
+3) termuxHealthMatchesCurrentPermissionAndRealProbe(com.mcpintelligence.fr3k.VisibleToolsDeviceTest)
+org.junit.ComparisonFailure: expected:<[CONNECT]ED> but was:<[PROBE FAIL]ED>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$termuxHealthMatchesCurrentPermissionAndRealProbe$1.invokeSuspend(VisibleToolsDeviceTest.kt:168)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.internal.ScopeCoroutine.afterResume(Scopes.kt:28)
+	at kotlinx.coroutines.AbstractCoroutine.resumeWith(AbstractCoroutine.kt:100)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:46)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.termuxHealthMatchesCurrentPermissionAndRealProbe(VisibleToolsDeviceTest.kt:163)
+4) termuxToolMirrorsRealOutputAndExitInVisibleConsole(com.mcpintelligence.fr3k.VisibleToolsDeviceTest)
+org.junit.ComparisonFailure: expected:<[7]> but was:<[1]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest$termuxToolMirrorsRealOutputAndExitInVisibleConsole$1.invokeSuspend(VisibleToolsDeviceTest.kt:85)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.VisibleToolsDeviceTest.termuxToolMirrorsRealOutputAndExitInVisibleConsole(VisibleToolsDeviceTest.kt:75)
+
+FAILURES!!!
+Tests run: 15,  Failures: 4
+
+

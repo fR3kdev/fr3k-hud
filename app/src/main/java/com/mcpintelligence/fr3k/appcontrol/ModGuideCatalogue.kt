@@ -47,7 +47,7 @@ object ModGuideCatalogue {
                 "have to be running.",
             requirements = emptyList(),
             steps = listOf(
-                "Open APP CONTROL from the MORE SURFACES panel, or open APP MODS → INSPECT.",
+                "Open APP CONTROL from the Tools tab on the Command Deck, or open APP MODS → INSPECT.",
                 "Type the package name of the app you want to look at (for example com.example.app).",
                 "Press INSPECT SELECTED APP — READ ONLY.",
                 "Read the version, signer and per-APK hashes it reports.",
@@ -102,7 +102,7 @@ object ModGuideCatalogue {
                 "Open APP MODS → AUTOMATE → this guide.",
                 "Record the app map: HUD walks the app's deeplink entries and records the screens it reaches.",
                 "Review the generated commands — each one is bound to that app's exact version and signer.",
-                "Run one from HUD chat by typing its phrase, or attach it to a workflow trigger.",
+                "Open Command Deck → Workflows to select a registered capability, or call MCP render_plan with its phrase and review the result.",
                 "Re-record the app map after that app updates; HUD refuses a command when the build has drifted.",
             ),
             examplePhrase = "record the app map for the owned fixture",
@@ -124,7 +124,7 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Have a capability recorded for each app you want in the flow (see the AUTOMATE guide).",
-                "Open APP MODS → COMBINE, then build the step list in that order.",
+                "Open Command Deck → Workflows, then add the capabilities in that order.",
                 "Check each step shows its own package and identity.",
                 "Run the workflow, or expose it as a trigger so a button or a broadcast starts it.",
                 "Read the journal afterwards: every step records succeeded or failed and the inverse that undoes it.",
@@ -148,7 +148,7 @@ object ModGuideCatalogue {
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
                 "Open APP MODS → MODIFY → this guide and read the limits below.",
-                "For a supported target, type the phrase below into HUD chat.",
+                "Open Command Deck → Workflows, enter the phrase below as the goal, and build a plan. Review the exact target before running.",
                 "Watch the journal: the step succeeds only when the post-condition (content playing) is observed.",
                 "If it reports failure, nothing was changed — do not retry blindly.",
             ),
@@ -275,7 +275,7 @@ object ModGuideCatalogue {
                 "the closest capabilities and executes nothing.",
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
-                "Open the HUD chat bubble (or the MCP tool render_plan).",
+                "Open Command Deck → Workflows → Build reviewable plan (or the MCP tool render_plan).",
                 "Type what you want in your own words, for example 'hide the banner'.",
                 "Read the plan HUD renders: the capability id, its app, and its identity.",
                 "Approve it, or reword it if the match is not what you meant.",
@@ -327,7 +327,7 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
-                "Type 'open the owned fixture' into HUD chat.",
+                "Open Command Deck → Workflows, enter 'open the owned fixture' as the goal, build a plan, review and run it.",
                 "Watch the fixture's home screen appear.",
                 "Check the journal: the launch and the wait should both record OK.",
             ),
@@ -347,9 +347,9 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
-                "Type 'hide the banner' into HUD chat.",
+                "Open Command Deck → Workflows, enter 'hide the banner' as the goal, build a plan, review and run it.",
                 "Check the journal says the banner is absent — HUD looked for it after the write.",
-                "Type 'show the banner' to restore it and confirm it is back.",
+                "Build and review a plan for 'show the banner' to restore it and confirm it is back.",
                 "Notice the PID in the receipt matches the running fixture — that is how a real write is proven.",
             ),
             examplePhrase = "hide the banner",
@@ -369,7 +369,7 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
-                "Type 'skip the ads' into HUD chat.",
+                "Open Command Deck → Workflows, enter 'skip the ads' as the goal, build a plan, review and run it.",
                 "Watch the screen: the skip control is tapped and the status should read CONTENT_PLAYING.",
                 "Confirm the journal records the assertion as OK — that assertion, not the tap, is the proof.",
                 "If it reports failure, nothing changed: read the failure rather than retrying blindly.",
@@ -440,7 +440,7 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
-                "Type 'open the second target' into HUD chat.",
+                "Open Command Deck → Workflows, enter 'open the second target' as the goal, build a plan, review and run it.",
                 "Confirm the journal records the launch and the wait as OK.",
                 "Leave it open if you are about to run the cross-app flow (see COMBINE → fuse several apps).",
             ),
@@ -461,7 +461,7 @@ object ModGuideCatalogue {
             requirements = listOf(ModRequirement.BRIDGE),
             steps = listOf(
                 "Switch on Settings → Accessibility → fR3k HUD.",
-                "Type 'acknowledge the second target' into HUD chat.",
+                "Open Command Deck → Workflows, enter 'acknowledge the second target' as the goal, build a plan, review and run it.",
                 "Confirm the assertion in the journal — that, not the tap, is the proof.",
                 "Run the COMBINE guide to chain this behind a step in another app.",
             ),
@@ -473,6 +473,23 @@ object ModGuideCatalogue {
             reversible = "Relaunch the app; its state is test-only.",
         ),
     )
+
+    fun all(context: Context): List<ModGuide> = (if (CapabilityCatalogue.labMode(context)) all() else releaseProcedures()) + ((context.applicationContext as? com.mcpintelligence.fr3k.Fr3kApplication)?.capabilityHost?.registry() ?: CapabilityCatalogue.discover(context)).all()
+        .map { it.descriptor }.filter { it.id.startsWith("app.") }.map { cap ->
+            val mapped = cap.steps.any { it is com.mcpintelligence.fr3k.capability.Step.Click }
+            val privileged = cap.steps.any { it is com.mcpintelligence.fr3k.capability.Step.PrivilegedOp }
+            ModGuide(id = "guide.${cap.id}", title = cap.summary,
+                category = if (privileged) ModCategory.MODIFY else ModCategory.AUTOMATE,
+                oneLiner = "Selected installed app · exact version, signer and APK fingerprint",
+                whatItDoes = "${cap.summary}. The workflow binds to ${cap.identity.label}; an installation change refuses the old plan.",
+                requirements = if (privileged) listOf(ModRequirement.ADB_BOOTSTRAP) else listOf(ModRequirement.BRIDGE),
+                steps = listOf("App Control → select an installed package → ENABLE SELECTED APP CONTROLS. For screen controls, use MAP SELECTED APP HOME first.",
+                    "Command Deck → Workflows → select ${cap.id}.",
+                    "Review the identity and action, tick approval and run. Inspect the Journal receipt."),
+                examplePhrase = cap.summary, capabilityIds = listOf(cap.id), runsOn = cap.identity.label,
+                limits = "Android enforces shell permissions. App-op modes can change notifications, background behaviour or overlays. This does not grant root, bypass another app's signer, or provide a compatible patch recipe.",
+                reversible = if (mapped) "No automatic inverse is known for this screen control. Review its consequences; return with Back where appropriate. Use the target app to reverse any persistent change." else if (privileged) "For a write, the Journal records the previous mode when confirmed; restore that mode with the corresponding control. A read changes nothing." else "Opening the app changes no persistent setting; return with Back.")
+        }
 
     fun all(): List<ModGuide> = procedures() + capabilities()
 

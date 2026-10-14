@@ -1,0 +1,56 @@
+
+com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest:
+Error in realOnDevicePairingStartsVerifiedShellAndReconnects(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest):
+java.lang.NoSuchMethodError: No static method newInstance()Lorg/bouncycastle/crypto/MultiBlockCipher; in class Lorg/bouncycastle/crypto/engines/AESEngine; or its super classes (declaration of 'org.bouncycastle.crypto.engines.AESEngine' appears in /data/app/~~_-XYMdkOwCob2oiZSq0aTQ==/com.mcpintelligence.fr3k.hud-GPLIDp03t4dkydVYpNFH6A==/base.apk!classes28.dex)
+	at io.github.muntashirakon.adb.PairingAuthCtx.encryptDecrypt(PairingAuthCtx.java:120)
+	at io.github.muntashirakon.adb.PairingAuthCtx.encrypt(PairingAuthCtx.java:94)
+	at io.github.muntashirakon.adb.PairingConnectionCtx.doExchangePeerInfo(PairingConnectionCtx.java:239)
+	at io.github.muntashirakon.adb.PairingConnectionCtx.start(PairingConnectionCtx.java:106)
+	at io.github.muntashirakon.adb.AbsAdbConnectionManager.pair(AbsAdbConnectionManager.java:480)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.realOnDevicePairingStartsVerifiedShellAndReconnects(WirelessAndSelectedAppsDeviceTest.kt:24)
+
+Error in selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest):
+java.lang.AssertionError: step failed: privileged service is not connected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest$selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides$1.invokeSuspend(WirelessAndSelectedAppsDeviceTest.kt:51)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(WirelessAndSelectedAppsDeviceTest.kt:35)
+
+
+Time: 4.374
+There were 2 failures:
+1) realOnDevicePairingStartsVerifiedShellAndReconnects(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest)
+java.lang.NoSuchMethodError: No static method newInstance()Lorg/bouncycastle/crypto/MultiBlockCipher; in class Lorg/bouncycastle/crypto/engines/AESEngine; or its super classes (declaration of 'org.bouncycastle.crypto.engines.AESEngine' appears in /data/app/~~_-XYMdkOwCob2oiZSq0aTQ==/com.mcpintelligence.fr3k.hud-GPLIDp03t4dkydVYpNFH6A==/base.apk!classes28.dex)
+	at io.github.muntashirakon.adb.PairingAuthCtx.encryptDecrypt(PairingAuthCtx.java:120)
+	at io.github.muntashirakon.adb.PairingAuthCtx.encrypt(PairingAuthCtx.java:94)
+	at io.github.muntashirakon.adb.PairingConnectionCtx.doExchangePeerInfo(PairingConnectionCtx.java:239)
+	at io.github.muntashirakon.adb.PairingConnectionCtx.start(PairingConnectionCtx.java:106)
+	at io.github.muntashirakon.adb.AbsAdbConnectionManager.pair(AbsAdbConnectionManager.java:480)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.realOnDevicePairingStartsVerifiedShellAndReconnects(WirelessAndSelectedAppsDeviceTest.kt:24)
+2) selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest)
+java.lang.AssertionError: step failed: privileged service is not connected
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest$selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides$1.invokeSuspend(WirelessAndSelectedAppsDeviceTest.kt:51)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:101)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:95)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:69)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source:1)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:47)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source:1)
+	at com.mcpintelligence.fr3k.ui.WirelessAndSelectedAppsDeviceTest.selectedNonFixtureAppGetsExecutableControlsAndCompleteGuides(WirelessAndSelectedAppsDeviceTest.kt:35)
+
+FAILURES!!!
+Tests run: 2,  Failures: 2
+
+

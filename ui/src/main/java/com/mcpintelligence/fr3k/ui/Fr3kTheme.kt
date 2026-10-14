@@ -13,13 +13,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Typography
 
 object Fr3kPalette {
-    val Bg = Color(0xFF05060A)
-    val Surface = Color(0xFF0E1018)
-    val Border = Color(0xFF1F2A3D)
+    val Bg = Color(0xFF080B18)
+    val Surface = Color(0xFF151B30)
+    val Border = Color(0xFF343E60)
     val Text = Color(0xFFE6ECF5)
-    val TextDim = Color(0xFF8A93A6)
-    val Accent = Color(0xFFB829FF)
-    val AccentDim = Color(0xFF5A1F8C)
+    val TextDim = Color(0xFFB0BCD5)
+    val Accent = Color(0xFFC5A0FF)
+    val AccentDim = Color(0xFF9CBAFF)
     val Ok = Color(0xFF28E0B0)
     val Warn = Color(0xFFFFAA33)
     val Err = Color(0xFFFF5577)
@@ -51,13 +51,13 @@ private val Fr3kLightColors = lightColorScheme(
 )
 
 private val Fr3kTypography = Typography(
-    displaySmall = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 22.sp, letterSpacing = 1.sp),
-    titleLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 18.sp, letterSpacing = 1.sp),
+    displaySmall = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 38.sp),
+    titleLarge = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 28.sp),
     titleMedium = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium, fontSize = 14.sp, letterSpacing = 0.5.sp),
-    bodyLarge = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp),
-    bodyMedium = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+    bodyLarge = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 16.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp, lineHeight = 21.sp),
     labelLarge = TextStyle(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.5.sp),
-    labelSmall = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 10.sp, letterSpacing = 1.sp),
+    labelSmall = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 18.sp, letterSpacing = 0.3.sp),
 )
 
 @Composable

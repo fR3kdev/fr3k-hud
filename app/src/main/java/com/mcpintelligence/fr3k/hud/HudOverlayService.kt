@@ -54,6 +54,7 @@ class HudOverlayService : Service() {
     private lateinit var orb: Fr3kHudOrb
     private lateinit var overlays: OverlayManager
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var wirelessPanel: com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingPanel? = null
     private var radialOpen = false
     private var edgeHidden = false
 
@@ -77,6 +78,7 @@ class HudOverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_OPEN_WIRELESS -> { wirelessPanel?.hide(); wirelessPanel = com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingPanel(this).also { it.show() } }
             ACTION_OPEN_CHAT,
             "com.mcpintelligence.fr3k.hud.OPEN_CHAT_OVERLAY" -> overlays.openChat()
             ACTION_OPEN_BROWSER,
@@ -95,6 +97,7 @@ class HudOverlayService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         try { unregisterReceiver(overlayReceiver) } catch (_: Exception) {}
+        wirelessPanel?.hide()
         scope.cancel()
         orb.detach()
         Fr3kApplication.get().agentSession.cancel()
@@ -282,6 +285,7 @@ class HudOverlayService : Service() {
     }
 
     companion object {
+        const val ACTION_OPEN_WIRELESS = "com.mcpintelligence.fr3k.hud.OPEN_WIRELESS"
         const val ACTION_OPEN_CHAT = "com.mcpintelligence.fr3k.hud.OPEN_CHAT"
         const val ACTION_OPEN_BROWSER = "com.mcpintelligence.fr3k.hud.OPEN_BROWSER"
         const val ACTION_OPEN_TERMINAL = "com.mcpintelligence.fr3k.hud.OPEN_TERMINAL"

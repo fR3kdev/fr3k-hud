@@ -1,0 +1,30 @@
+[
+  {
+    "action": "mods-recheck",
+    "clicked": true
+  },
+  {
+    "filter": "ALL",
+    "clicked": true
+  },
+  {
+    "filter": "INSPECT",
+    "clicked": true
+  },
+  {
+    "filter": "MODIFY",
+    "clicked": true
+  },
+  {
+    "filter": "AUTOMATE",
+    "clicked": true
+  },
+  {
+    "filter": "COMBINE",
+    "clicked": true
+  },
+  {
+    "filter": "CONNECT",
+    "clicked": true
+  }
+]

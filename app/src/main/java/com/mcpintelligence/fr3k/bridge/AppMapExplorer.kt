@@ -30,10 +30,7 @@ class AppMapExplorer(private val service: Fr3kBridgeService) {
         val notes = ArrayList<String>()
 
         entries.forEach { (name, deeplink) ->
-            service.launch(
-                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(deeplink))
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
+            service.launch(launchIntent(deeplink))
             val tree = awaitTree(identity.packageName, 4000)
             if (tree == null) {
                 notes.add("$name: no window from ${identity.packageName} within timeout")
@@ -54,11 +51,8 @@ class AppMapExplorer(private val service: Fr3kBridgeService) {
                 val candidates = screen.elements.filter { !BridgeGuard.isDestructive(it.label) }.take(maxClickProbesPerScreen)
                 candidates.forEach { candidate ->
                     val launch = screen.reachVia.firstOrNull() as? Step.Launch ?: return@forEach
-                    service.launch(
-                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(launch.target))
-                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                    )
-                    val tree = awaitTree("com.mcpintelligence.fr3k.patchfixture", 3000) ?: return@forEach
+                    service.launch(launchIntent(launch.target))
+                    val tree = awaitTree(identity.packageName, 3000) ?: return@forEach
                     val executor = BridgeStepExecutor(service, setOf(identity.packageName), { _, _, _ -> "" })
                     runCatching { executor.execute(listOf(Step.Click(candidate.selector), Step.Observe(400))) }
                         .onFailure { notes.add("probe on ${screen.name} failed: ${it.message}") }
@@ -69,6 +63,11 @@ class AppMapExplorer(private val service: Fr3kBridgeService) {
         }
         return Result(AppMap(identity, screens, edges), notes)
     }
+
+    private fun launchIntent(target: String): android.content.Intent =
+        (if (target.contains("://")) android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(target))
+        else service.packageManager.getLaunchIntentForPackage(target) ?: error("No launch activity for $target"))
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
 
     private fun describeElements(tree: UiNode): List<MapElement> {
         val out = ArrayList<MapElement>()

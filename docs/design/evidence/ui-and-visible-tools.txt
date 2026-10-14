@@ -1,0 +1,26 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:..
+Error in blackwaveWizardAllEighteenStepsAndTransportModesAreReachable(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.AssertionError: Step 4: bluetooth
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.blackwaveWizardAllEighteenStepsAndTransportModesAreReachable(RedesignUiDeviceTest.kt:228)
+...
+com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest:.
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:....
+
+Time: 223.392
+There was 1 failure:
+1) blackwaveWizardAllEighteenStepsAndTransportModesAreReachable(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.AssertionError: Step 4: bluetooth
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.blackwaveWizardAllEighteenStepsAndTransportModesAreReachable(RedesignUiDeviceTest.kt:228)
+
+FAILURES!!!
+Tests run: 13,  Failures: 1
+
+

@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,9 +72,11 @@ private fun AutomationScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Automations")
+
             Text(
                 text = "AUTOMATIONS",
                 color = Fr3kPalette.Accent,
@@ -135,7 +140,7 @@ private fun AutomationRow(a: AutomationEngine.Automation) {
                 text = "${a.trigger.type.name.lowercase()}${if (a.trigger.debounceMs > 0) " · debounce ${a.trigger.debounceMs}ms" else ""}",
                 color = Fr3kPalette.TextDim,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
             )
         }
         Spacer(Modifier.height(2.dp))
@@ -143,14 +148,14 @@ private fun AutomationRow(a: AutomationEngine.Automation) {
             text = "→ ${actionLabel(a.action)}",
             color = Fr3kPalette.Accent,
             fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = "fired ${a.fireCount} times · ${if (a.enabled) "enabled" else "DISABLED"}",
             color = if (a.enabled) Fr3kPalette.Ok else Fr3kPalette.Err,
             fontFamily = FontFamily.Monospace,
-            fontSize = 10.sp,
+            fontSize = 12.sp,
         )
     }
 }
@@ -173,20 +178,20 @@ private fun LogRow(entry: AutomationEngine.LogEntry) {
                 text = entry.title,
                 color = color,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
             )
             Text(
                 text = entry.outcome.name.lowercase(),
                 color = color,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
+                fontSize = 12.sp,
             )
         }
         Text(
             text = "${entry.timestamp} · ${entry.trigger.name.lowercase()} · ${actionLabel(entry.action)}",
             color = Fr3kPalette.TextDim,
             fontFamily = FontFamily.Monospace,
-            fontSize = 9.sp,
+            fontSize = 12.sp,
         )
     }
 }

@@ -24,6 +24,7 @@ class HermesAskCommand(
     override val pluginId: String = "fr3k.integrations.hermes"
 
     override suspend fun execute(context: Fr3kContext, args: Map<String, String>): CommandResult {
+        if (context.consentLevel == com.mcpintelligence.fr3k.core.ConsentLevel.LOCAL_ONLY) return CommandResult.Failed("Local-only consent is enabled. Nothing sent to an AI provider.")
         val prompt = args["prompt"]
             ?: context.selectedText
             ?: context.fullText

@@ -5,6 +5,7 @@ The accessibility bridge cannot be hosted by an instrumentation process, so the 
 workflow planes are driven here exactly as a user's agent would drive them: over MCP, against the
 real running app, with on-screen evidence read back from the device.
 """
+import xml.etree.ElementTree as ET
 import argparse
 import http.client
 import json
@@ -302,25 +303,40 @@ def main():
         left, top, right, bottom = (int(v) for v in match.groups())
         return (left + right) // 2, (top + bottom) // 2
 
-    # Tap whichever card is on screen right now, rather than assuming a particular one is visible.
-    markup = dump_ui('mods') if cards else ''
-    visible = re.findall(r'content-desc="mods-guide-([^"]+)"', markup)
-    target = visible[0] if visible else ''
-    point = node_bounds(markup, 'mods-guide-%s' % target) if target else None
+    # A tagged card can be clipped under the fixed header. Choose a visible card header,
+    # then scroll the expanded guide to actually render both walkthrough and limits.
+    target = ''
+    point = None
+    expanded_ok = False
+    for attempt in range(8):
+        markup = dump_ui('mods') if cards else ''
+        for node in ET.fromstring(markup).iter('node'):
+            desc = node.get('content-desc', '')
+            bounds = re.findall(r'\d+', node.get('bounds', ''))
+            if desc.startswith('mods-guide-') and len(bounds) == 4:
+                left, top, right, bottom = map(int, bounds)
+                if 400 < top < 1550 and bottom - top > 60:
+                    target = desc.removeprefix('mods-guide-')
+                    point = ((left + right) // 2, top + 40)
+                    break
+        if point:
+            break
+        sh('input swipe 700 700 700 1300 300')
     try:
         if point:
             sh('input tap %d %d' % point)
-            time.sleep(1.5)
-            expanded = dump_ui('mods2')
-            expanded_ok = (
-                'mods-steps-%s' % target in expanded
-                and 'walkthrough' in expanded
-                and 'limits — read this' in expanded
-            )
+            time.sleep(1)
+            rendered = ''
+            for attempt in range(10):
+                rendered += dump_ui('mods2')
+                if ('mods-steps-%s' % target in rendered and 'walkthrough' in rendered
+                        and 'limits — read this' in rendered):
+                    expanded_ok = True
+                    break
+                sh('input swipe 850 1450 850 800 300')
     except Exception as error:
-        expanded_ok = False
         print('   expansion diagnostics:', error)
-    check('a guide expands into its walkthrough on device', expanded_ok, 'tapped=%s' % (point,))
+    check('a guide expands into its walkthrough on device', expanded_ok, 'target=%s tapped=%s' % (target, point))
 
     detail['mods_screen'] = {'cards': cards, 'expanded': expanded_ok}
 
@@ -329,6 +345,15 @@ def main():
     try:
         sh('am start -n %s/com.mcpintelligence.fr3k.ui.MainActivity' % HUD)
         time.sleep(1)
+        # Start HUD through the real Deck control; Main respects the user's disabled preference.
+        for attempt in range(8):
+            main = dump_ui('deck-start')
+            start = node_bounds(main, 'deck-hud-start')
+            if start and 100 < start[1] < 1750:
+                sh('input tap %d %d' % start)
+                time.sleep(1)
+                break
+            sh('input swipe 850 1450 850 850 300')
         sh('am broadcast -a %s.OPEN_CHAT -p %s' % (HUD, HUD))
         time.sleep(2.5)
         chat = sh('uiautomator dump /sdcard/chat.xml >/dev/null 2>&1; cat /sdcard/chat.xml')

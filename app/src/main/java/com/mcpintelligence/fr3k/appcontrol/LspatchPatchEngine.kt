@@ -135,7 +135,7 @@ class LspatchPatchEngine(private val context: Context) : PatchEngine {
 
     private fun publish(apk: File, packageName: String, sha: String): File {
         val shares = File(context.filesDir, "shares").apply { mkdirs() }
-        val dest = File(shares, "$packageName-$sha.take(12).apk")
+        val dest = File(shares, "$packageName-${sha.take(12)}.apk")
         apk.copyTo(dest, overwrite = true)
         check(ApkHashing.sha256(dest) == sha) { "published copy changed" }
         File(shares, "$packageName-latest.json").writeText(

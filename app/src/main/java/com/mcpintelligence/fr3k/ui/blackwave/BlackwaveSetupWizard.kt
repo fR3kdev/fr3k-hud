@@ -15,6 +15,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,6 +48,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveBridgeClient
 import com.mcpintelligence.fr3k.integrations.blackwave.DeviceStatusResponse
@@ -170,7 +175,9 @@ private fun SetupWizard(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val pageScroll = rememberScrollState()
     LaunchedEffect(Unit) { session.stepIndex = startStep }
+    LaunchedEffect(session.stepIndex) { pageScroll.scrollTo(0) }
 
     fun probeEntered() {
         scope.launch {
@@ -218,9 +225,11 @@ private fun SetupWizard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("BLACKWAVE")
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -232,16 +241,16 @@ private fun SetupWizard(
                         "step ${session.stepIndex + 1}/${WizardStep.entries.size} · ${step.title}",
                         color = Fr3kPalette.TextDim,
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                     )
                 }
                 OutlinedButton(onClick = { activity.finish() }) {
-                    Text("EXIT", fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    Text("EXIT", fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                 }
             }
             Spacer(Modifier.height(12.dp))
 
-            Fr3kPanel(title = step.title) {
+            Fr3kPanel(modifier = Modifier.weight(1f).verticalScroll(pageScroll), title = step.title) {
                 WizardStepBody(
                     step = step,
                     session = session,
@@ -257,7 +266,7 @@ private fun SetupWizard(
                 OutlinedButton(
                     onClick = { session.stepIndex = (session.stepIndex - 1).coerceAtLeast(0) },
                     enabled = session.stepIndex > 0,
-                ) { Text("PREV", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                ) { Text("PREV", fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
                 if (step == WizardStep.SYSTEM_HEALTH_SUMMARY) {
                     Button(
                         onClick = { activity.finish() },
@@ -272,7 +281,7 @@ private fun SetupWizard(
                             if (step == WizardStep.SAVE_CONFIG) "SUMMARY →" else "NEXT",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                         )
                     }
                 }
@@ -296,7 +305,7 @@ private fun WizardStepBody(
         WizardStep.IDENTITY_PROFILE -> {
             Text(
                 "This device's BLACKWAVE identity and the fleet bridge it talks to.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("device", BwLevel.PASS, app.identity.deviceId)
@@ -305,7 +314,7 @@ private fun WizardStepBody(
             OutlinedTextField(
                 value = session.endpoint,
                 onValueChange = { session.endpoint = it },
-                label = { Text("endpoint (https://…:8878)", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+                label = { Text("endpoint (https://…:8878)", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -313,15 +322,16 @@ private fun WizardStepBody(
             OutlinedTextField(
                 value = session.clientId,
                 onValueChange = { session.clientId = it },
-                label = { Text("client id", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+                label = { Text("client id", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(
                 value = session.credential,
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 onValueChange = { session.credential = it },
-                label = { Text("credential (stored encrypted)", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+                label = { Text("credential (stored encrypted)", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -330,7 +340,7 @@ private fun WizardStepBody(
         WizardStep.PERMISSIONS -> {
             Text(
                 "Runtime permissions the BLACKWAVE screens need. Missing ones are requested inline.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val btGranted = PermissionRegistry.granted(context, PermissionRegistry.Feature.BLUETOOTH)
@@ -343,7 +353,7 @@ private fun WizardStepBody(
             if (session.lastGranted.isNotEmpty()) {
                 Text(
                     "last grant: ${session.lastGranted.joinToString(", ")}",
-                    color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                    color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
                 )
             }
             if (!btGranted) {
@@ -354,7 +364,7 @@ private fun WizardStepBody(
                         PermissionRegistry.request(activity, PermissionRegistry.Feature.BLUETOOTH, BlackwaveSetupActivity.REQ_BW_SETUP)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                ) { Text("REQUEST BLUETOOTH", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+                ) { Text("REQUEST BLUETOOTH", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 session.permRound // observe — recomposes after the OS dialog round-trip
             }
         }
@@ -362,7 +372,7 @@ private fun WizardStepBody(
         WizardStep.NETWORKING -> {
             Text(
                 "Network reachability for the fleet bridge. INTERNET + ACCESS_NETWORK_STATE are install-time grants.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -404,14 +414,14 @@ private fun WizardStepBody(
             Spacer(Modifier.height(6.dp))
             Text(
                 "BLE transports are scanned from the ADD DEVICE screen.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
 
         WizardStep.WIFI_LAN_DISCOVERY -> {
             Text(
                 "Discovery over the local network via the fleet bridge endpoint.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("endpoint", probe?.level ?: BwLevel.WARN, session.endpoint)
@@ -424,13 +434,13 @@ private fun WizardStepBody(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "PROBING…" else "PROBE NOW", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "PROBING…" else "PROBE NOW", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.CONNECT_HUD -> {
             Text(
                 "The FR3K HUD app is the bridge client for this identity.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("bridge", probe?.level ?: BwLevel.WARN, probe?.let { if (it.reachable) "connected" else it.error ?: "unprobed" } ?: "unprobed")
@@ -440,7 +450,7 @@ private fun WizardStepBody(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "PROBING…" else "RE-CONNECT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "PROBING…" else "RE-CONNECT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.DISCOVER_DEVICES -> {
@@ -460,26 +470,26 @@ private fun WizardStepBody(
             } else {
                 Text(
                     "no devices discovered — try the ADD MANUALLY step or ADD DEVICE → BLE",
-                    color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                    color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
                 )
             }
             Button(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "SCANNING…" else "SCAN FLEET", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "SCANNING…" else "SCAN FLEET", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.ADD_MANUAL -> {
             Text(
                 "Add a device by its BLACKWAVE model id (§7). The bridge looks it up over the network.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             OutlinedTextField(
                 value = session.manualDeviceId,
                 onValueChange = { session.manualDeviceId = it },
-                label = { Text("model id (e.g. bw-core-0007)", fontFamily = FontFamily.Monospace, fontSize = 10.sp) },
+                label = { Text("model id (e.g. bw-core-0007)", fontFamily = FontFamily.Monospace, fontSize = 12.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -500,23 +510,23 @@ private fun WizardStepBody(
                     scope
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text("LOOK UP", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text("LOOK UP", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             session.manualLookup?.let { lookup ->
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "found: ${(lookup.identity["display_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: session.manualDeviceId} · ${lookup.observation_status}",
-                    color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                    color = Fr3kPalette.Ok, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
                 )
             }
             session.manualLookupError?.let {
-                Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                Text(it, color = Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
             }
         }
 
         WizardStep.PAIRING_AUTH -> {
             Text(
                 "Pairing credential + role authenticity against the bridge.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow(
@@ -539,13 +549,13 @@ private fun WizardStepBody(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "VERIFYING…" else "VERIFY", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "VERIFYING…" else "VERIFY", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.CAPABILITY_DISCOVERY -> {
             Text(
                 "Capabilities the role grants, from the role manifest.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val caps = probe?.role?.capabilities_map.orEmpty()
@@ -556,8 +566,8 @@ private fun WizardStepBody(
                     caps.toList().sortedBy { it.first }.take(10).forEach { (scope, capId) ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 6.dp))
-                            Text(scope, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.weight(1f))
-                            Text(capId, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                            Text(scope, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                            Text(capId, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         }
                     }
                 }
@@ -566,13 +576,13 @@ private fun WizardStepBody(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "DISCOVERING…" else "DISCOVER", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "DISCOVERING…" else "DISCOVER", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.IDENTITY_VERIFICATION -> {
             Text(
                 "The role's bound identity should match this device.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val roleIdentity = probe?.role?.identity
@@ -590,7 +600,7 @@ private fun WizardStepBody(
             if (roleIdentity != null && !verified) {
                 Text(
                     "mismatch — role binds '${roleIdentity}', app sends client '${session.clientId.trim()}'",
-                    color = Fr3kPalette.Warn, fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                    color = Fr3kPalette.Warn, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
                 )
             }
         }
@@ -598,7 +608,7 @@ private fun WizardStepBody(
         WizardStep.ENABLE_FEATURES -> {
             Text(
                 "Choose which scopes this device may use. Scope list comes from the role manifest.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val scopes = probe?.role?.allowed_scopes?.ifEmpty { null } ?: BwScopes.LABELS.keys.sorted()
@@ -607,7 +617,8 @@ private fun WizardStepBody(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { session.toggleScope(scope) },
+                            .clickable { session.toggleScope(scope) }
+                            .semantics { contentDescription = scope },
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Checkbox(
@@ -615,8 +626,8 @@ private fun WizardStepBody(
                             onCheckedChange = { session.toggleScope(scope) },
                         )
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(BwScopes.label(scope), color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-                            Text(scope, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                            Text(BwScopes.label(scope), color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                            Text(scope, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         }
                     }
                 }
@@ -624,7 +635,7 @@ private fun WizardStepBody(
             Spacer(Modifier.height(6.dp))
             Text(
                 "enabled: ${session.enabledScopes.size}",
-                color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
 
@@ -648,7 +659,7 @@ private fun WizardStepBody(
                     else -> "OTA unavailable: no authenticated OTA-capable device connected."
                 },
                 color = if (hasOta && online > 0) Fr3kPalette.Ok else Fr3kPalette.Warn,
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
 
@@ -672,14 +683,14 @@ private fun WizardStepBody(
                     else -> "Live Apply unavailable: no authenticated device with profile.apply scope connected."
                 },
                 color = if (hasLive && online > 0) Fr3kPalette.Ok else Fr3kPalette.Warn,
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
 
         WizardStep.AGENT_CONTROL_PERMS -> {
             Text(
                 "Agent-control permissions follow the role: what agents may do on managed devices.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             val role = probe?.role
@@ -698,7 +709,7 @@ private fun WizardStepBody(
         WizardStep.TEST_CONNECTIVITY -> {
             Text(
                 "Live end-to-end connectivity against the entered endpoint, credential and client id.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("bridge", probe?.level ?: BwLevel.WARN, probe?.let { if (it.reachable) "connected" else it.error ?: "unprobed" } ?: "unprobed")
@@ -721,13 +732,13 @@ private fun WizardStepBody(
                 onClick = onProbe,
                 enabled = !session.probing,
                 colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-            ) { Text(if (session.probing) "TESTING…" else "RUN TEST", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+            ) { Text(if (session.probing) "TESTING…" else "RUN TEST", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
         }
 
         WizardStep.SAVE_CONFIG -> {
             Text(
                 "Persisting endpoint, credential, client id and enabled scopes.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("endpoint", BwLevel.PASS, session.endpoint.trim().ifBlank { settingsEndpoint(app) })
@@ -738,14 +749,14 @@ private fun WizardStepBody(
             Text(
                 session.savedMessage ?: "saving…",
                 color = if (session.savedMessage != null) Fr3kPalette.Ok else Fr3kPalette.Accent,
-                fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
 
         WizardStep.SYSTEM_HEALTH_SUMMARY -> {
             Text(
                 "Final health summary. DONE exits the wizard.",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
             Spacer(Modifier.height(6.dp))
             StatusRow("bridge", probe?.level ?: BwLevel.WARN, probe?.let { if (it.reachable) "connected" else it.error ?: "unprobed" } ?: "unprobed")
@@ -771,7 +782,7 @@ private fun WizardStepBody(
             Spacer(Modifier.height(6.dp))
             Text(
                 app.settings.settings.value.blackwaveEnabledScopes.takeIf { it.isNotEmpty() }?.let { "enabled scopes: ${it.size}" } ?: "no scopes enabled",
-                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
             )
         }
     }
@@ -785,9 +796,9 @@ private fun DiscoveryRow(card: FleetDeviceCard) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(end = 6.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-            Text(card.model_id, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+            Text(card.display_name.ifBlank { card.model_id }, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            Text(card.model_id, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
         }
-        Text(card.online, color = if (card.online == "online") Fr3kPalette.Ok else Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+        Text(card.online, color = if (card.online == "online") Fr3kPalette.Ok else Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
     }
 }

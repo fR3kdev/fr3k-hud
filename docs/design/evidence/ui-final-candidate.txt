@@ -1,0 +1,74 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:...
+Error in eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.AssertionError: Guide expands mod.modify.own.app
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:111)
+
+Error in settingsKeysPreferencesAndContextControlsWorkAndRestore(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.IllegalStateException: Missing rendered control: SAVE ENDPOINT
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:77)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click$default(RedesignUiDeviceTest.kt:76)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.settingsKeysPreferencesAndContextControlsWorkAndRestore(RedesignUiDeviceTest.kt:205)
+.
+com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest:.
+com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest:..
+com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest:
+Error in initializationError(com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest):
+java.lang.RuntimeException: Failed loading specified test class 'com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest'
+	at androidx.test.internal.runner.DirectTestLoader.doCreateRunner(DirectTestLoader.java:50)
+	at androidx.test.internal.runner.TestLoader.getRunnersFor(TestLoader.java:64)
+	at androidx.test.internal.runner.TestRequestBuilder.build(TestRequestBuilder.java:842)
+	at androidx.test.runner.AndroidJUnitRunner.buildRequest(AndroidJUnitRunner.java:663)
+	at androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:437)
+	at android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2594)
+Caused by: java.lang.ClassNotFoundException: com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest
+	at java.lang.Class.classForName(Native Method)
+	at java.lang.Class.forName(Class.java:607)
+	at androidx.test.internal.runner.DirectTestLoader.doCreateRunner(DirectTestLoader.java:44)
+	... 5 more
+Caused by: java.lang.ClassNotFoundException: Didn't find class "com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest" on path: DexPathList[[zip file "/system/framework/android.test.runner.jar", zip file "/system/framework/android.test.mock.jar", zip file "/system/framework/android.test.base.jar", zip file "/data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/base.apk", zip file "/data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/base.apk"],nativeLibraryDirectories=[/data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/lib/x86_64, /data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/lib/x86_64, /data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/base.apk!/lib/x86_64, /data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/base.apk!/lib/x86_64, /system/lib64, /system_ext/lib64]]
+	at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:259)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:637)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:573)
+	... 8 more
+
+
+Time: 162.349
+There were 3 failures:
+1) eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.AssertionError: Guide expands mod.modify.own.app
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:111)
+2) settingsKeysPreferencesAndContextControlsWorkAndRestore(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.IllegalStateException: Missing rendered control: SAVE ENDPOINT
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:77)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click$default(RedesignUiDeviceTest.kt:76)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.settingsKeysPreferencesAndContextControlsWorkAndRestore(RedesignUiDeviceTest.kt:205)
+3) initializationError(com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest)
+java.lang.RuntimeException: Failed loading specified test class 'com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest'
+	at androidx.test.internal.runner.DirectTestLoader.doCreateRunner(DirectTestLoader.java:50)
+	at androidx.test.internal.runner.TestLoader.getRunnersFor(TestLoader.java:64)
+	at androidx.test.internal.runner.TestRequestBuilder.build(TestRequestBuilder.java:842)
+	at androidx.test.runner.AndroidJUnitRunner.buildRequest(AndroidJUnitRunner.java:663)
+	at androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:437)
+	at android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2594)
+Caused by: java.lang.ClassNotFoundException: com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest
+	at java.lang.Class.classForName(Native Method)
+	at java.lang.Class.forName(Class.java:607)
+	at androidx.test.internal.runner.DirectTestLoader.doCreateRunner(DirectTestLoader.java:44)
+	... 5 more
+Caused by: java.lang.ClassNotFoundException: Didn't find class "com.mcpintelligence.fr3k.hud.overlays.VisibleToolsDeviceTest" on path: DexPathList[[zip file "/system/framework/android.test.runner.jar", zip file "/system/framework/android.test.mock.jar", zip file "/system/framework/android.test.base.jar", zip file "/data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/base.apk", zip file "/data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/base.apk"],nativeLibraryDirectories=[/data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/lib/x86_64, /data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/lib/x86_64, /data/app/~~1yX7yVGXHnvwVZ0WTdNK4Q==/com.mcpintelligence.fr3k.hud.test-o05kw572_OBNV7knxJ9K3A==/base.apk!/lib/x86_64, /data/app/~~jI8I9X1G_D-cmAeF-lRRgw==/com.mcpintelligence.fr3k.hud-jdWM1XD4FBSnt1rFXOY8Yg==/base.apk!/lib/x86_64, /system/lib64, /system_ext/lib64]]
+	at dalvik.system.BaseDexClassLoader.findClass(BaseDexClassLoader.java:259)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:637)
+	at java.lang.ClassLoader.loadClass(ClassLoader.java:573)
+	... 8 more
+
+FAILURES!!!
+Tests run: 10,  Failures: 3
+
+

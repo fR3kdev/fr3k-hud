@@ -19,8 +19,8 @@ class BuildMetadataContractTest {
 
     // Baseline version this test pins. Bump both this constant and
     // app/build.gradle.kts versionName/versionCode in the same commit.
-    private val baselineVersionName = "0.4.20"
-    private val baselineVersionCode = 420
+    private val baselineVersionName = "0.4.21"
+    private val baselineVersionCode = 421
 
     private val projectRoot: File by lazy {
         // unitTest runs from <repo>/app when invoked as :app:testDebugUnitTest

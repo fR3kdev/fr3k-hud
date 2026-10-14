@@ -5,6 +5,10 @@
       "ok": true,
       "note": "hud + test apk + two owned fixtures"
     },
+    "CapabilityLabModeDeviceTest#enableFixtures": {
+      "ok": true,
+      "note": "OK (1 test)"
+    },
     "bridge-plane-via-mcp": {
       "ok": true,
       "note": "checks=19"
@@ -15,11 +19,15 @@
     },
     "on-device prepared APK": {
       "ok": true,
-      "note": "1c9c2bb146a533f2a796da31"
+      "note": "77d6a00778fc1c9b4af15772"
     },
     "OwnedFixtureControllerDeviceTest": {
       "ok": true,
       "note": "OK (1 test)"
+    },
+    "ProviderPreferenceDeviceTest": {
+      "ok": true,
+      "note": "OK (3 tests)"
     },
     "PatchPlaneDeviceTest": {
       "ok": true,
@@ -40,6 +48,10 @@
     "privileged-root": {
       "ok": true,
       "note": "HUD_PRIVILEGED_READY uid=0 tier=ROOT protocol=2"
+    },
+    "CapabilityLabModeDeviceTest#disableFixtures": {
+      "ok": true,
+      "note": "OK (1 test)"
     }
   },
   "companion_packages": []

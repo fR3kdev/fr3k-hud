@@ -7,12 +7,16 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +38,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.CommandResult
 import com.mcpintelligence.fr3k.core.ConsentLevel
@@ -103,9 +109,11 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(Fr3kPalette.Bg)
-            .verticalScroll(rememberScrollState())
+            .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Ask")
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 text = "ASK ABOUT THIS",
@@ -129,7 +137,7 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
             ContextRow("url", if (includeUrl) (extras.initialUrl ?: "(current url)") else "NO")
             ContextRow("selected text", if (includeSelected) (extras.selectedText?.take(60) ?: "(selection)") else "NO")
             ContextRow("screenshot", if (includeScreenshot) (extras.screenshotUri ?: "YES") else "NO")
-            ContextRow("location", if (includeLocation) "YES" else "NO")
+            ContextRow("location", "Not attached · use Copy coordinates in Commands")
             ContextRow("clipboard", "NO")
         }
 
@@ -149,7 +157,7 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
             ToggleChip("URL", includeUrl) { includeUrl = !includeUrl }
             ToggleChip("Selected", includeSelected) { includeSelected = !includeSelected }
             ToggleChip("Screenshot", includeScreenshot) { includeScreenshot = !includeScreenshot }
-            ToggleChip("Location", includeLocation) { includeLocation = !includeLocation }
+            ToggleChip("Location help", false) { response = "Location is not attached by this screen. Use Copy coordinates or Share location in Commands to read an actual fix." }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -161,17 +169,9 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
                 response = null
                 coroutine.launch {
                     val capIds = capabilities.keys
-                    val provider = app.aiProviders.get("hermes") as? com.mcpintelligence.fr3k.integrations.hermes.HermesProvider
-                    val command = if (provider != null) {
-                        HermesAskCommand(provider = { provider })
-                    } else {
-                        response = "Hermes provider unavailable"
-                        inFlight = false
-                        return@launch
-                    }
                     val ctx = Fr3kContext(
                         deviceId = app.identity.deviceId,
-                        consentLevel = ConsentLevel.NORMAL,
+                        consentLevel = app.settings.settings.value.consentProfile,
                         foregroundPackage = extras.foregroundPackage,
                         currentUrl = if (includeUrl) extras.initialUrl else null,
                         selectedText = if (includeSelected) extras.selectedText else null,
@@ -179,14 +179,20 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
                         screenshotUri = if (includeScreenshot) extras.screenshotUri else null,
                         enabledCapabilities = capIds,
                     )
-                    val result = command.execute(ctx, mapOf("prompt" to prompt))
-                    response = when (result) {
-                        is CommandResult.Ok -> result.message
-                        is CommandResult.Failed -> "Failed: ${result.reason}"
-                        is CommandResult.Cancelled -> "Cancelled: ${result.reason}"
-                        is CommandResult.NeedsConfirmation -> "Needs: ${result.summary}"
-                    }
-                    inFlight = false
+                    try {
+                        response = if (ctx.consentLevel == ConsentLevel.LOCAL_ONLY) {
+                            "Local-only consent is enabled. Nothing sent. Change consent in Settings to use remote AI."
+                        } else if (prompt.isBlank()) {
+                            "Enter a question first. Nothing sent."
+                        } else {
+                            app.routingProvider.ask(com.mcpintelligence.fr3k.protocol.AgentAskRequest(
+                                prompt = prompt,
+                                context = ctx.asAgentContext(),
+                            )).text
+                        }
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                      catch (error: Exception) { response = "Failed: ${error.message ?: error.javaClass.simpleName}" }
+                    finally { inFlight = false }
                 }
             },
             enabled = !inFlight,
@@ -194,7 +200,7 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = if (inFlight) "SENDING…" else "SEND TO HERMES",
+                text = if (inFlight) "SENDING…" else "SEND TO ${app.activeProviderLabel}",
                 fontFamily = FontFamily.Monospace,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             )
@@ -226,8 +232,8 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
 @Composable
 private fun ContextRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
-        Text(value, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+        Text(label.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+        Text(value, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
     }
 }
 
@@ -239,9 +245,10 @@ private fun ToggleChip(label: String, active: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .clip(RoundedCornerShape(4.dp))
             .background(bg)
-            .clickable { onClick() }
+            .heightIn(min = 48.dp).clickable { onClick() }
+            .semantics { contentDescription = label }
             .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        Text(label, color = fg, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.padding(2.dp))
+        Text(label, color = fg, fontFamily = FontFamily.Monospace, fontSize = 12.sp, modifier = Modifier.padding(2.dp))
     }
 }

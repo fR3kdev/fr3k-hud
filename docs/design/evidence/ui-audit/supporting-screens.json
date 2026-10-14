@@ -1,0 +1,258 @@
+[
+  {
+    "action": "How to use Settings",
+    "clicked": true
+  },
+  {
+    "action": "Hide Settings guide",
+    "clicked": true
+  },
+  {
+    "screen": "settings.SettingsActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Settings guide",
+      "Capability walkthroughs →",
+      "Why is HUD here? ?",
+      "android.view.View",
+      "Why is consent profile here? ?",
+      "OpenRouter API key",
+      "SAVE KEY",
+      "REMOVE",
+      "VALIDATE",
+      "openrouter\/free",
+      "USE MODEL",
+      "USE FREE",
+      "REFRESH",
+      "Why is telemetry here? ?",
+      "Why is current context here? ?",
+      "CLEAR CONTEXT",
+      "CLOSE"
+    ]
+  },
+  {
+    "action": "How to use Diagnostics",
+    "clicked": true
+  },
+  {
+    "action": "Hide Diagnostics guide",
+    "clicked": true
+  },
+  {
+    "screen": "diagnostics.DiagnosticsActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Diagnostics guide",
+      "Capability walkthroughs →",
+      "Why is system diagnostics · pass\/warn\/fail here? ?",
+      "RUN FULL DIAGNOSTIC",
+      "Why is application here? ?",
+      "Why is plugins here? ?",
+      "Why is automations (4) here? ?",
+      "Why is recent automation logs here? ?",
+      "EXPORT",
+      "CLOSE"
+    ]
+  },
+  {
+    "action": "How to use Automations",
+    "clicked": true
+  },
+  {
+    "action": "Hide Automations guide",
+    "clicked": true
+  },
+  {
+    "screen": "automation.AutomationActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Automations guide",
+      "Capability walkthroughs →",
+      "Why is rules (4) here? ?",
+      "Why is recent logs (0) here? ?",
+      "CLOSE"
+    ]
+  },
+  {
+    "action": "How to use Clipboard",
+    "clicked": true
+  },
+  {
+    "action": "Hide Clipboard guide",
+    "clicked": true
+  },
+  {
+    "screen": "clipboard.SmartClipboardActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Clipboard guide",
+      "Capability walkthroughs →",
+      "Why is clipboard content here? ?",
+      "Why is suggested actions here? ?",
+      "› CLASSIFY",
+      "› EXPLAIN",
+      "› REWRITE",
+      "› TRANSLATE",
+      "android.view.View",
+      "DISMISS",
+      "How to use Clipboard · ?",
+      "› SEND TO MESH",
+      "› SUMMARISE"
+    ]
+  },
+  {
+    "action": "How to use Screenshot",
+    "clicked": true
+  },
+  {
+    "action": "Hide Screenshot guide",
+    "clicked": true
+  },
+  {
+    "screen": "screenshot.ScreenshotActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Screenshot guide",
+      "Capability walkthroughs →",
+      "Capture screen",
+      "Save to Pictures",
+      "Share image",
+      "Delete private capture",
+      "android.view.View",
+      "Why is Image analysis · unavailable here? ?",
+      "Close"
+    ]
+  },
+  {
+    "action": "How to use Palette",
+    "clicked": true
+  },
+  {
+    "action": "Hide Palette guide",
+    "clicked": true
+  },
+  {
+    "screen": "palette.CommandPaletteActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Commands · move",
+      "×",
+      "Hide Palette guide",
+      "android.widget.EditText",
+      "RUN",
+      "↘ Resize",
+      "How to use Palette · ?",
+      "android.view.View"
+    ]
+  },
+  {
+    "action": "How to use Ask",
+    "clicked": true
+  },
+  {
+    "action": "Hide Ask guide",
+    "clicked": true
+  },
+  {
+    "screen": "ask.AskAboutThisActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Ask guide",
+      "Capability walkthroughs →",
+      "Why is context firewall here? ?",
+      "Describe the current context. Prompt",
+      "How to use Ask · ?",
+      "URL",
+      "Selected",
+      "Screenshot",
+      "Location",
+      "SEND TO HERMES",
+      "CLOSE"
+    ]
+  },
+  {
+    "action": "How to use Handoff",
+    "clicked": true
+  },
+  {
+    "action": "Hide Handoff guide",
+    "clicked": true
+  },
+  {
+    "screen": "handoff.DeviceHandoffActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Handoff guide",
+      "Capability walkthroughs →",
+      "Why is context here? ?",
+      "Why is fleet (0) here? ?",
+      "DISMISS",
+      "How to use Handoff · ?"
+    ]
+  },
+  {
+    "action": "How to use Developer",
+    "clicked": true
+  },
+  {
+    "action": "Hide Developer guide",
+    "clicked": true
+  },
+  {
+    "screen": "devoverlay.DeveloperOverlayActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Developer guide",
+      "Capability walkthroughs →",
+      "Why is foreground app here? ?",
+      "Why is actions here? ?",
+      "android.view.View",
+      "DISMISS"
+    ]
+  },
+  {
+    "action": "How to use BLACKWAVE",
+    "clicked": true
+  },
+  {
+    "action": "Hide BLACKWAVE guide",
+    "clicked": true
+  },
+  {
+    "screen": "blackwave.BlackwaveActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide BLACKWAVE guide",
+      "Capability walkthroughs →",
+      "BACK",
+      "Why is bridge here? ?",
+      "PROBING…",
+      "Why is actions here?",
+      "ADD DEVICE",
+      "Why is feature access here? ?",
+      "CONFIGURE →",
+      "Why is enabled scopes (0) here? ?",
+      "Why is fleet (0) here? ?"
+    ]
+  },
+  {
+    "action": "How to use Setup",
+    "clicked": true
+  },
+  {
+    "action": "Hide Setup guide",
+    "clicked": true
+  },
+  {
+    "screen": "onboarding.OnboardingActivity",
+    "helpExpanded": true,
+    "visibleControlInventory": [
+      "Hide Setup guide",
+      "Capability walkthroughs →",
+      "BEGIN SETUP",
+      "android.view.View",
+      "How to use Setup · ?",
+      "SKIP SETUP"
+    ]
+  }
+]

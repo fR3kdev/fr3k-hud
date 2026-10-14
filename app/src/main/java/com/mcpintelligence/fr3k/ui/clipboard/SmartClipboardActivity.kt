@@ -2,19 +2,28 @@ package com.mcpintelligence.fr3k.ui.clipboard
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +43,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.SmartClipboardCommand
 import com.mcpintelligence.fr3k.core.CommandResult
@@ -48,20 +59,20 @@ import com.mcpintelligence.fr3k.ui.Fr3kTheme
  * The user explicitly invokes this — no background clipboard reading.
  */
 class SmartClipboardActivity : ComponentActivity() {
-
+    private var clipboardText by mutableStateOf<String?>(null)
+    private var readOnce = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Single explicit read (§29 — no continuous monitor)
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = cm.primaryClip
-        val text = if (clip != null && clip.description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN)) {
-            clip.getItemAt(0).coerceToText(this)?.toString()
-        } else null
-        setContent {
-            Fr3kTheme {
-                SmartClipboardScreen(initialText = text, onClose = { finish() })
-            }
-        }
+        setContent { Fr3kTheme { SmartClipboardScreen(initialText = clipboardText, onClose = { finish() }) } }
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus || readOnce) return
+        readOnce = true
+        val clip = getSystemService(ClipboardManager::class.java).primaryClip
+        clipboardText = if (clip != null && clip.itemCount > 0 &&
+            (clip.description.hasMimeType(ClipDescription.MIMETYPE_TEXT_PLAIN) || clip.description.hasMimeType(ClipDescription.MIMETYPE_TEXT_URILIST)))
+            clip.getItemAt(0).coerceToText(this)?.toString() else null
     }
 }
 
@@ -70,7 +81,9 @@ private fun SmartClipboardScreen(initialText: String?, onClose: () -> Unit) {
     val app = Fr3kApplication.get()
     val capabilities by app.capabilityRegistry.snapshot.collectAsState()
 
-    var text by remember { mutableStateOf(initialText ?: "") }
+    var text by remember(initialText) { mutableStateOf(initialText ?: "") }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(initialText) {
@@ -80,7 +93,9 @@ private fun SmartClipboardScreen(initialText: String?, onClose: () -> Unit) {
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Fr3kPalette.Bg)) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState()).padding(16.dp)) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Clipboard")
+
             Text(
                 text = "SMART CLIPBOARD",
                 color = Fr3kPalette.Accent,
@@ -111,15 +126,18 @@ private fun SmartClipboardScreen(initialText: String?, onClose: () -> Unit) {
             com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "suggested actions") {
                 Column {
                     listOf(
-                        "classify" to { runCommand(app, "context.clipboard", mapOf("text" to text)) },
-                        "explain" to { runCommand(app, "share.text.explain", mapOf("text" to text)) },
-                        "rewrite" to { runCommand(app, "share.text.rewrite", mapOf("text" to text)) },
-                        "translate" to { runCommand(app, "share.text.translate", mapOf("text" to text)) },
-                        "summarise" to { runCommand(app, "share.text.summarise", mapOf("text" to text)) },
-                        "send to mesh" to { runCommand(app, "share.mesh.send", mapOf("text" to text)) },
-                    ).forEach { (label, action) ->
+                        "classify" to "context.clipboard",
+                        "explain" to "share.text.explain",
+                        "rewrite" to "share.text.rewrite",
+                        "translate" to "share.text.translate",
+                        "summarise" to "share.text.summarise",
+                        "send to mesh" to "share.mesh.send",
+                    ).forEach { (label, id) ->
                         ActionRow(label.uppercase()) {
-                            result = action()
+                            if (!busy) {
+                                busy = true; result = "Running $label…"
+                                scope.launch { result = withContext(Dispatchers.IO) { runCommand(app, id, mapOf("text" to text)) }; busy = false }
+                            }
                         }
                     }
                 }
@@ -130,7 +148,7 @@ private fun SmartClipboardScreen(initialText: String?, onClose: () -> Unit) {
                 com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "result") {
                     Text(
                         text = result!!,
-                        color = Fr3kPalette.Ok,
+                        color = if (result!!.startsWith("✗")) Fr3kPalette.Err else Fr3kPalette.Text,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                     )
@@ -152,13 +170,13 @@ private fun SmartClipboardScreen(initialText: String?, onClose: () -> Unit) {
     }
 }
 
-private fun runCommand(app: Fr3kApplication, id: String, args: Map<String, String>): String {
+private suspend fun runCommand(app: Fr3kApplication, id: String, args: Map<String, String>): String {
     val cmd = app.fr3kCore.commandRegistry.get(id) ?: return "command not registered"
     val caps = app.fr3kCore.currentCapabilities()
     val ok = cmd.requiredCapabilities.all { it in caps }
     if (!ok) return "missing capability: ${cmd.requiredCapabilities - caps}"
-    val ctx = Fr3kContext(deviceId = app.identity.deviceId, consentLevel = ConsentLevel.NORMAL, enabledCapabilities = caps)
-    return when (val r = kotlinx.coroutines.runBlocking { cmd.execute(ctx, args) }) {
+    val ctx = Fr3kContext(deviceId = app.identity.deviceId, consentLevel = app.settings.settings.value.consentProfile, enabledCapabilities = caps)
+    return when (val r = com.mcpintelligence.fr3k.core.executeCommand(cmd, ctx, args)) {
         is CommandResult.Ok -> "✓ ${r.message}"
         is CommandResult.Failed -> "✗ ${r.reason}"
         is CommandResult.Cancelled -> "– ${r.reason}"
@@ -174,7 +192,8 @@ private fun ActionRow(label: String, onClick: () -> Unit) {
             .padding(vertical = 2.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(Fr3kPalette.Surface)
-            .clickable { onClick() }
+            .heightIn(min = 48.dp).clickable { onClick() }
+            .semantics { contentDescription = label }
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

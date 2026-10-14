@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -79,9 +82,11 @@ private fun DeveloperOverlayScreen(onClose: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+            com.mcpintelligence.fr3k.ui.FeatureGuide("Developer")
+
             Text(
                 text = "DEV OVERLAY",
                 color = Fr3kPalette.Accent,
@@ -94,8 +99,8 @@ private fun DeveloperOverlayScreen(onClose: () -> Unit) {
                 Column {
                     metrics.forEach { (k, v) ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween) {
-                            Text(k.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
-                            Text(v, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                            Text(k.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                            Text(v, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
                         }
                     }
                 }

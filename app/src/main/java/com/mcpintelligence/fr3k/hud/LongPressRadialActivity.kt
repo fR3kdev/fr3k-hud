@@ -36,14 +36,14 @@ class LongPressRadialActivity : Activity() {
         window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
         window.setBackgroundDrawable(GradientDrawable().apply { setColor(0x88000000.toInt()) })
         setContentView(buildContent())
+        com.mcpintelligence.fr3k.ui.makeActivityFloating(this, "Tools")
     }
 
     private fun openOverlay(action: String, extraUrl: String? = null) {
-        val i = Intent(action).setPackage(packageName)
+        val i = Intent(this, HudOverlayService::class.java).setAction(action)
         if (extraUrl != null) i.putExtra("url", extraUrl)
-        // Use startService so the HUD service wakes even if the radial was
-        // launched from outside the service process context.
-        startService(i)
+        // Overlay windows belong to the foreground service.
+        startForegroundService(i)
         finish()
     }
 

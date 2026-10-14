@@ -1,0 +1,8 @@
+
+com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest:.
+
+Time: 5.468
+
+OK (1 test)
+
+

@@ -1,0 +1,28 @@
+[
+  {
+    "action": "INSPECT SELECTED APP",
+    "clicked": true
+  },
+  {
+    "action": "SHOW AUTHORISED ADB BOOTSTRAP COMMAND",
+    "clicked": true
+  },
+  {
+    "action": "STOP HUD PRIVILEGED SERVICE",
+    "clicked": true
+  },
+  {
+    "action": "RUN FULL DIAGNOSTIC",
+    "clicked": true
+  },
+  {
+    "diagnosticOutput": [
+      "How to use Diagnostics · ?",
+      "DIAGNOSTICS",
+      "system diagnostics · pass\/warn\/fail",
+      "?",
+      "agent · termux · browser · blackwave · hud",
+      "OpenRouter: offline · OpenCode Go: online · Hermes: online"
+    ]
+  }
+]

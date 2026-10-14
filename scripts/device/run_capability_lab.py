@@ -7,6 +7,7 @@ Order matters and is deliberate:
   3. privileged service at the shell tier        -> typed app-op operations
   4. privileged service at the root tier         -> root-gated operations actually granted
 """
+import atexit
 import argparse
 import hashlib
 import json
@@ -110,6 +111,15 @@ def main():
     run(['install', '-r', str(repo / 'patch-fixture-two/build/outputs/apk/debug/patch-fixture-two-debug.apk')])
     record('install artifacts', True, 'hud + test apk + two owned fixtures')
 
+    def leave_lab_mode():
+        subprocess.run(adb + ['shell', 'am', 'instrument', '-w', '-e', 'class',
+                       'com.mcpintelligence.fr3k.ui.CapabilityLabModeDeviceTest#disableFixtures', RUNNER],
+                       capture_output=True, timeout=60, check=False)
+    # Leave lab mode at process exit AND immediately when the body finishes, so a device that is left
+    # behind after this run never keeps disposable fixture capabilities reachable.
+    atexit.register(leave_lab_mode)
+    instrument('com.mcpintelligence.fr3k.ui.CapabilityLabModeDeviceTest#enableFixtures', 1)
+
     # ---------------------------------------------------------------- phase 1
     print('--- phase 1: bridge, plan, workflow, mask, app map (through the app MCP surface) ---')
     mcp = subprocess.run([sys.executable, str(repo / 'scripts/device/verify_bridge_via_mcp.py'),
@@ -158,7 +168,9 @@ def main():
         else:
             record('privileged-root', False, 'adb root unavailable on this image: NOT TESTED')
 
-    companions = [p for p in sh('pm list packages').stdout.split() if any(k in p for k in ('shizuku', 'lspatch', 'termux'))]
+    instrument('com.mcpintelligence.fr3k.ui.CapabilityLabModeDeviceTest#disableFixtures', 1)
+
+    companions = [p for p in sh('pm list packages').stdout.split() if p.removeprefix('package:') in COMPANIONS]
     summary = {'serial': args.serial, 'results': results, 'companion_packages': companions}
     args.log.parent.mkdir(parents=True, exist_ok=True)
     args.log.write_text(json.dumps(summary, indent=2) + '\n')

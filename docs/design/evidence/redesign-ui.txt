@@ -1,0 +1,47 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:
+Error in guideCategoryFiltersAndRecheckAreRealControls(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.IllegalStateException: Missing rendered control: mods-recheck
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:52)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.guideCategoryFiltersAndRecheckAreRealControls(RedesignUiDeviceTest.kt:83)
+
+Error in inspectionBootstrapAndDiagnosticsButtonsReportActualResults(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.AssertionError: Click RUN FULL DIAGNOSTIC
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:54)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click$default(RedesignUiDeviceTest.kt:51)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.inspectionBootstrapAndDiagnosticsButtonsReportActualResults(RedesignUiDeviceTest.kt:139)
+
+Error in eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest):
+java.lang.AssertionError: Guide expands mod.inspect.app
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:73)
+.
+
+Time: 46.024
+There were 3 failures:
+1) guideCategoryFiltersAndRecheckAreRealControls(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.IllegalStateException: Missing rendered control: mods-recheck
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:52)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.guideCategoryFiltersAndRecheckAreRealControls(RedesignUiDeviceTest.kt:83)
+2) inspectionBootstrapAndDiagnosticsButtonsReportActualResults(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.AssertionError: Click RUN FULL DIAGNOSTIC
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click(RedesignUiDeviceTest.kt:54)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.click$default(RedesignUiDeviceTest.kt:51)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.inspectionBootstrapAndDiagnosticsButtonsReportActualResults(RedesignUiDeviceTest.kt:139)
+3) eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest)
+java.lang.AssertionError: Guide expands mod.inspect.app
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest.eachGuideIsSearchableExpandableAndKeepsLimitsAndUndo(RedesignUiDeviceTest.kt:73)
+
+FAILURES!!!
+Tests run: 4,  Failures: 3
+
+

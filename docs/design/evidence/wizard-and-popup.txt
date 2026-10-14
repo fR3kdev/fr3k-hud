@@ -1,0 +1,9 @@
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:.
+com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest:..
+
+Time: 40.882
+
+OK (3 tests)
+
+

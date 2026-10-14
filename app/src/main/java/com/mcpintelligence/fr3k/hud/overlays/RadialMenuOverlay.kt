@@ -61,12 +61,12 @@ class RadialMenuOverlay(
             background = GradientDrawable().apply {
                 cornerRadius = 12f * density
                 setColor(0xF0111126.toInt())
-                setStroke((1.5f * density).toInt(), 0xFF2b2b40.toInt())
+                setStroke((1.5f * density).toInt(), 0xFF343E60.toInt())
             }
         }
         val title = TextView(ctx).apply {
             text = "FR3K ▸ RADIAL"
-            setTextColor(0xFF7d3cff.toInt())
+            setTextColor(0xFFC5A0FF.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             letterSpacing = 0.1f
@@ -103,29 +103,33 @@ class RadialMenuOverlay(
 
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding((24 * density).toInt(), 0, (24 * density).toInt(), 0)
+            background = GradientDrawable().apply {
+                cornerRadius = 20f * density
+                setColor(0xFF151B30.toInt())
+                setStroke(density.toInt().coerceAtLeast(1), 0xFF343E60.toInt())
+            }
         }
-        container.addView(
-            rows,
-            LinearLayout.LayoutParams((340 * density).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT),
-        )
-        // Background tap dismisses the radial.
-        container.setOnClickListener { hide() }
-
+        rows.removeView(title)
+        title.text = "TOOLS · drag to move"
+        title.minHeight = (48 * density).toInt()
+        container.addView(title)
+        container.addView(android.widget.ScrollView(ctx).apply { addView(rows) },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        val grip = TextView(ctx).apply {
+            text = "↘ Resize"
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setTextColor(0xFFC5A0FF.toInt())
+            minHeight = (48 * density).toInt()
+            setPadding(0, 0, (16 * density).toInt(), 0)
+        }
+        container.addView(grip)
         root = container
-
-        params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-            android.graphics.PixelFormat.TRANSLUCENT,
-        ).apply {
-            gravity = Gravity.CENTER
-        }
+        val bounds = host.windowManager.currentWindowMetrics.bounds
+        params = OverlayParams.make(
+            width = (320 * density).toInt().coerceAtMost(bounds.width()),
+            height = (540 * density).toInt().coerceAtMost((bounds.height() * 0.8).toInt()),
+        ).apply { x = (16 * density).toInt(); y = (80 * density).toInt() }
+        FloatingWindowControls.install(host, root, params, title, grip)
     }
 
     private fun addOverlayRow(parent: LinearLayout, label: String, action: String, onClick: (() -> Unit)? = null) {
@@ -168,13 +172,14 @@ class RadialMenuOverlay(
         val ctx = host.context
         val bg = GradientDrawable().apply {
             cornerRadius = 8f * density
-            setColor(0xFF11111c.toInt())
-            setStroke((1.5f * density).toInt(), 0xFF2b2b40.toInt())
+            setColor(0xFF101527.toInt())
+            setStroke((1.5f * density).toInt(), 0xFF343E60.toInt())
         }
         return TextView(ctx).apply {
             text = label
             setTextColor(0xFFcdd1e0.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            minHeight = (48 * density).toInt()
             typeface = android.graphics.Typeface.MONOSPACE
             setPadding(
                 (16 * density).toInt(),
@@ -200,6 +205,8 @@ class RadialMenuOverlay(
             isAttached = true
         } catch (_: Throwable) { /* already added */ }
     }
+
+    fun rootView(): View = root
 
     override fun hide() {
         if (!isAttached) return

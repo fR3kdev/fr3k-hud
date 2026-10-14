@@ -1,0 +1,47 @@
+{
+  "results": {
+    "accessibility + clipping at current font scale": {
+      "ok": true,
+      "note": "OK (2 tests)"
+    },
+    "no unlabelled control and nothing clipped at 200% font": {
+      "ok": true,
+      "note": "OK (2 tests)"
+    },
+    "floating tools still work with animations disabled": {
+      "ok": true,
+      "note": "OK (2 tests)"
+    },
+    "cold start measured": {
+      "ok": true,
+      "note": "TotalTime=1569ms WaitTime=1570ms"
+    },
+    "frame timing measured while scrolling": {
+      "ok": true,
+      "note": "frames=252 janky=110 p90=65ms"
+    },
+    "memory footprint recorded": {
+      "ok": true,
+      "note": "TOTAL PSS=191052 kB"
+    }
+  },
+  "detail": {
+    "baselineFontScale": "1.0",
+    "coldStart": {
+      "cold-with-existing-install": {
+        "TotalTime": 1569,
+        "WaitTime": 1570
+      }
+    },
+    "frames": {
+      "after-scroll": {
+        "totalFrames": 252,
+        "jankyFrames": 110,
+        "p90ms": 65
+      }
+    },
+    "memory": {
+      "totalPssKb": 191052
+    }
+  }
+}

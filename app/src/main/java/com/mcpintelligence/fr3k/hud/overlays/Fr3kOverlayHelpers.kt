@@ -147,7 +147,7 @@ class Fr3kEdgeArc(
             addView(arc, FrameLayout.LayoutParams((8+14).dp(), (64+14).dp(), Gravity.CENTER))
         }
         params = WindowManager.LayoutParams(
-            (8+14).dp(), (64+14).dp(),
+            48.dp(), (64+14).dp(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -245,6 +245,7 @@ private class ParticleView(ctx: Context) : View(ctx) {
     fun updateAnchors(ax: Int, ay: Int, bx: Int, by: Int) = setAnchors(ax, ay, bx, by)
 
     fun start() {
+        if (android.provider.Settings.Global.getFloat(context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f) return
         if (visible) return
         visible = true
         startTime = System.currentTimeMillis()

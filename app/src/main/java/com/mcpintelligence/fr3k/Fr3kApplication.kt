@@ -115,13 +115,16 @@ class Fr3kApplication : Application() {
         override val capabilities: Set<String> get() = activeProvider.capabilities
         override val requiresNetwork: Boolean = true
         override val requiresApiKey: Boolean = false
-        override suspend fun ask(request: com.mcpintelligence.fr3k.protocol.AgentAskRequest) =
-            activeProvider.ask(request)
+        override suspend fun ask(request: com.mcpintelligence.fr3k.protocol.AgentAskRequest): com.mcpintelligence.fr3k.protocol.AgentAskResponse {
+            check(settings.settings.value.consentProfile != com.mcpintelligence.fr3k.core.ConsentLevel.LOCAL_ONLY) { "Local-only consent is enabled; nothing sent to an AI provider." }
+            return activeProvider.ask(request)
+        }
         override suspend fun health() = activeProvider.health()
         override suspend fun complete(
             messages: org.json.JSONArray,
             tools: List<com.mcpintelligence.fr3k.core.tools.AgentTool>,
         ): org.json.JSONObject {
+            check(settings.settings.value.consentProfile != com.mcpintelligence.fr3k.core.ConsentLevel.LOCAL_ONLY) { "Local-only consent is enabled; nothing sent to an AI provider." }
             val chosen = activeProvider
             val backend = chosen as? com.mcpintelligence.fr3k.core.tools.AgentSessionBackend
                 ?: throw IllegalStateException("$activeProviderLabel cannot run the shared agent session")
@@ -138,6 +141,8 @@ class Fr3kApplication : Application() {
     }
 
     /** Localhost-only capability surface, started on demand and bounded by the process lifetime. */
+    val workflowSession by lazy { com.mcpintelligence.fr3k.workflow.WorkflowSession(capabilityHost) }
+
     val mcpServer: com.mcpintelligence.fr3k.mcp.Fr3kMcpServer by lazy {
         com.mcpintelligence.fr3k.mcp.Fr3kMcpServer(capabilityHost)
     }
@@ -204,12 +209,7 @@ class Fr3kApplication : Application() {
         super.onCreate()
         instance = this
         bootstrap()
-        // Register the Shizuku listeners at process scope so the binder /
-        // permission state is tracked once, not per Activity. Without this
-        // the Integrations panel's Shizuku section renders "manager not
-        // installed" even when the binder is live but the callback hasn't
-        // arrived yet.
-        com.mcpintelligence.fr3k.integrations.shizuku.ShizukuBridge.start(this)
+
     }
 
     private fun bootstrap() {
@@ -218,12 +218,18 @@ class Fr3kApplication : Application() {
         registerOpenCode()
         registerOpenRouter()
         registerBlackwave()
-        fr3kCore.pluginManager.register(GpsPlugin())
+        fr3kCore.pluginManager.register(GpsPlugin(com.mcpintelligence.fr3k.location.LocationActions(this)::execute))
         fr3kCore.pluginManager.register(ShareCommandsPlugin(
             contextEngineProvider = { contextEngineImpl },
             deviceRegistryProvider = { deviceRegistryImpl },
+            transform = { operation, text ->
+                routingProvider.ask(com.mcpintelligence.fr3k.protocol.AgentAskRequest(
+                    prompt = "$operation:\n\n$text",
+                    context = null,
+                )).text
+            },
         ))
-        fr3kCore.pluginManager.register(SystemPlugin())
+        fr3kCore.pluginManager.register(SystemPlugin(com.mcpintelligence.fr3k.ui.AndroidStatusReader(this)::read))
         fr3kCore.pluginManager.startAll()
         seedAutomations()
     }
@@ -288,7 +294,7 @@ class Fr3kApplication : Application() {
             AutomationEngine.Automation(
                 id = "share-received-ask",
                 ownerId = owner,
-                title = "Share received → Ask Hermes",
+                title = "Share received → Ask selected provider",
                 trigger = AutomationEngine.Automation.Trigger(type = AutomationEngine.TriggerType.SHARE_RECEIVED),
                 action = AutomationEngine.Action.OpenAskAboutThis(),
             )
@@ -309,7 +315,7 @@ class Fr3kApplication : Application() {
             AutomationEngine.Automation(
                 id = "url-shared-ask",
                 ownerId = owner,
-                title = "URL shared → Ask Hermes",
+                title = "URL shared → Ask selected provider",
                 trigger = AutomationEngine.Automation.Trigger(type = AutomationEngine.TriggerType.URL_SHARED),
                 action = AutomationEngine.Action.OpenAskAboutThis(),
             )
@@ -318,7 +324,7 @@ class Fr3kApplication : Application() {
             AutomationEngine.Automation(
                 id = "browser-foreground-ask",
                 ownerId = owner,
-                title = "Browser foreground → Ask Hermes",
+                title = "Browser foreground → Ask selected provider",
                 trigger = AutomationEngine.Automation.Trigger(
                     type = AutomationEngine.TriggerType.FOREGROUND_APP,
                     packageMatch = "com.android.chrome",

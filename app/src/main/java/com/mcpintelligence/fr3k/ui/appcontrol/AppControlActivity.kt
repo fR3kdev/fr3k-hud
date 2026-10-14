@@ -12,7 +12,9 @@ import kotlinx.coroutines.*
 
 /** Explicit local inspection UI; no hook or preparation success is implied. */
 class AppControlActivity : ComponentActivity() {
-    private var preparedForInstall: com.mcpintelligence.fr3k.appcontrol.EmbeddedFixturePatchEngine.Prepared? = null
+    private var reviewPanel: com.mcpintelligence.fr3k.ui.FloatingPanel? = null
+    override fun onDestroy() { reviewPanel?.dismiss(); super.onDestroy() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val density = resources.displayMetrics.density
@@ -20,7 +22,7 @@ class AppControlActivity : ComponentActivity() {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
-            setBackgroundColor(0xff0a0a14.toInt())
+            setBackgroundColor(0xff080B18.toInt())
         }
         // Insets belong on the scrolling root so the last control clears the navigation gesture handle.
         val scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
@@ -29,17 +31,17 @@ class AppControlActivity : ComponentActivity() {
             typeface = Typeface.MONOSPACE; setPadding(0, pad / 2, 0, pad / 2)
         }
         body.addView(text("fR3k // APP CONTROL", 22f).apply { setTextColor(0xffe879f9.toInt()) })
-        body.addView(text("INSPECTION AVAILABLE\nPATCH / LIVE CONTROL: OWNED FIXTURE LAB ONLY\nTHIRD-PARTY RECIPES: NOT AVAILABLE"))
+        body.addView(text("INSPECTION AVAILABLE\nSELECT INSTALLED APPS FOR BRIDGE & SHELL CONTROL\nPATCHING REQUIRES A COMPATIBLE MODULE"))
         val status = text("")
         fun refreshStatus() {
             status.text = if (HudPrivilegedBridge.serviceOrNull() != null)
-                "HUD shell service: BINDER CONNECTED (read-only)" else
+                "HUD shell service: BINDER CONNECTED" else
                 "HUD shell service: DISCONNECTED — authorised ADB bootstrap required"
         }
         refreshStatus(); body.addView(status)
         val target = EditText(this).apply {
             hint = "Installed package name"
-            setText("com.mcpintelligence.fr3k.patchfixture")
+            setText("")
             setTextColor(0xffe5e7eb.toInt()); setHintTextColor(0xff9ca3af.toInt())
             setSingleLine(true)
             contentDescription = "app-control-target-package"
@@ -76,10 +78,68 @@ class AppControlActivity : ComponentActivity() {
             }
         })
         body.addView(Button(this).apply {
+            text = "BROWSE INSTALLED APPS"
+            setOnClickListener {
+                val apps = packageManager.getInstalledApplications(0).sortedBy { packageManager.getApplicationLabel(it).toString().lowercase() }
+                val list = LinearLayout(this@AppControlActivity).apply { orientation = LinearLayout.VERTICAL }
+                apps.forEach { app -> list.addView(Button(this@AppControlActivity).apply {
+                    text = "${packageManager.getApplicationLabel(app)}\n${app.packageName}"
+                    setOnClickListener { target.setText(app.packageName); reviewPanel?.dismiss() }
+                }) }
+                reviewPanel?.dismiss()
+                reviewPanel = com.mcpintelligence.fr3k.ui.FloatingPanel(this@AppControlActivity, "Choose installed app", ScrollView(this@AppControlActivity).apply { addView(list) }).show()
+            }
+        })
+        for (enable in listOf(true, false)) body.addView(Button(this).apply {
+            text = if (enable) "ENABLE SELECTED APP CONTROLS" else "REMOVE SELECTED APP CONTROLS"
+            setOnClickListener {
+                val pkg = target.text.toString().trim()
+                isEnabled = false
+                lifecycleScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            com.mcpintelligence.fr3k.appcontrol.CapabilityCatalogue.select(this@AppControlActivity, pkg, enable)
+                            com.mcpintelligence.fr3k.Fr3kApplication.get().capabilityHost.reset()
+                        }
+                        output.text = if (enable) "Selected $pkg. Open Command Deck → Workflows to review launch and eight app-op controls. APP MODS provides a guide for every action. App changes require review; Android permissions still apply." else "Removed $pkg from the catalogue. Existing app-op modes are unchanged; restore them before removing controls."
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { output.text = "Selection failed: ${e.message}" }
+                    finally { isEnabled = true }
+                }
+            }
+        })
+        body.addView(Button(this).apply {
+            text = "MAP SELECTED APP HOME — READ SCREEN CONTROLS"
+            setOnClickListener {
+                val pkg=target.text.toString().trim(); isEnabled=false
+                lifecycleScope.launch {
+                    try {
+                        val count=withContext(Dispatchers.IO) {
+                            val service=com.mcpintelligence.fr3k.bridge.Fr3kBridgeService.require()
+                            require(com.mcpintelligence.fr3k.bridge.BridgeGuard.mayActOn(pkg,setOf(pkg))) { "Android system and HUD surfaces are not automation targets" }
+                            com.mcpintelligence.fr3k.appcontrol.CapabilityCatalogue.select(this@AppControlActivity,pkg,true)
+                            val identity=com.mcpintelligence.fr3k.appcontrol.AndroidIdentityReader.of(this@AppControlActivity,pkg)
+                            val result=com.mcpintelligence.fr3k.bridge.AppMapExplorer(service).explore(identity,listOf("home" to pkg),0)
+                            com.mcpintelligence.fr3k.appcontrol.UserAppMaps.save(this@AppControlActivity,result.map)
+                            com.mcpintelligence.fr3k.Fr3kApplication.get().capabilityHost.reset()
+                            com.mcpintelligence.fr3k.appcontrol.UserAppMaps.descriptors(this@AppControlActivity,mapOf(pkg to identity)).size
+                        }
+                        output.text="Recorded $count fingerprinted screen controls. Return to HUD → Workflows to review each tap. No control was pressed during mapping. Password fields, destructive labels and ambiguous matches are excluded. Custom canvas controls may expose no accessibility nodes. APK changes invalidate this map. Screen actions may have no automatic inverse."
+                    } catch(e:CancellationException) { throw e }
+                    catch(e:Exception) { output.text="Mapping failed: ${e.message}" }
+                    finally { isEnabled=true }
+                }
+            }
+        })
+        body.addView(Button(this).apply {
             text = "SHOW AUTHORISED ADB BOOTSTRAP COMMAND"
             setOnClickListener {
-                output.text = "Run only from your authorised ADB host. No Shizuku or LSPatch manager is needed for this read-only service. Wireless pairing is not integrated yet.\n\nadb shell 'CLASSPATH=\"${applicationInfo.sourceDir}\" app_process /system/bin com.mcpintelligence.fr3k.privileged.HudPrivilegedMain'\n\nKeep the session open. Service expires after 30 minutes or HUD process death."
+                output.text = "Run only from your authorised ADB host. HUD owns this shell service; no companion manager is required. Or use WIRELESS DEBUG below to pair and start entirely on this phone.\n\nadb shell 'CLASSPATH=\"${applicationInfo.sourceDir}\" app_process /system/bin com.mcpintelligence.fr3k.privileged.HudPrivilegedMain'\n\nKeep the session open. Service expires after 30 minutes or HUD process death."
             }
+        })
+        body.addView(Button(this).apply {
+            text = "WIRELESS DEBUG — PAIR & START WITHOUT A COMPUTER"
+            setOnClickListener { startActivity(android.content.Intent(this@AppControlActivity, com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingActivity::class.java)) }
         })
         body.addView(Button(this).apply {
             text = "STOP HUD PRIVILEGED SERVICE"
@@ -94,67 +154,8 @@ class AppControlActivity : ComponentActivity() {
         })
         body.addView(output)
         body.addView(Button(this).apply {
-            text = "LAB: PREPARE OWNED FIXTURE ON THIS DEVICE"
-            setOnClickListener {
-                isEnabled = false
-                output.text = "Preparing only the bundled owned test fixture. No installed app will be replaced."
-                lifecycleScope.launch {
-                    try {
-                        preparedForInstall = com.mcpintelligence.fr3k.appcontrol.EmbeddedFixturePatchEngine(this@AppControlActivity).prepare()
-                        output.text = "Owned fixture prepared and signed with this installation's AndroidKeyStore key.\nSHA256: ${preparedForInstall!!.sha256}\nNot installed. Use the reviewed installation button."
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { output.text = "Preparation failed: ${e.message}" }
-                    finally { isEnabled = true }
-                }
-            }
-        })
-        body.addView(Button(this).apply {
-            text = "LAB: REVIEW OWNED FIXTURE INSTALLATION"
-            setOnClickListener {
-                val candidate = preparedForInstall
-                if (candidate == null) { output.text = "Prepare the owned fixture first."; return@setOnClickListener }
-                val sheet = candidate.sheet
-                if (!sheet.installable) {
-                    output.text = "This build has ${sheet.warnings.size} warning(s) that must be acknowledged:" +
-                        sheet.warnings.joinToString("") { "\n  - $it" } +
-                        "\nAcknowledge them in the review dialog before installing."
-                }
-                android.app.AlertDialog.Builder(this@AppControlActivity)
-                    .setTitle("Install ONLY the owned test fixture?")
-                    .setMessage("Target: com.mcpintelligence.fr3k.patchfixture. Re-signing may require removing the old fixture and loses that fixture's data. HUD never uninstalls it automatically. No third-party application is selected. Continue to Android's installer?")
-                    .setNegativeButton("CANCEL", null)
-                    .setPositiveButton("OPEN ANDROID INSTALLER") { _, _ ->
-                        if (!packageManager.canRequestPackageInstalls()) {
-                            startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                android.net.Uri.parse("package:$packageName")))
-                        } else {
-                            val uri = androidx.core.content.FileProvider.getUriForFile(this@AppControlActivity,
-                                "$packageName.fileprovider", candidate.apk)
-                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW)
-                                .setDataAndType(uri, "application/vnd.android.package-archive")
-                                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION))
-                        }
-                    }.show()
-            }
-        })
-        body.addView(Button(this).apply {
-            text = "LAB: LAUNCH PREPARED OWNED FIXTURE"
-            setOnClickListener {
-                val intent = packageManager.getLaunchIntentForPackage(com.mcpintelligence.fr3k.appcontrol.OwnedFixtureController.TARGET)
-                if (intent != null) startActivity(intent) else output.text = "Install the owned fixture first."
-            }
-        })
-        for (show in listOf(false, true)) body.addView(Button(this).apply {
-            text = if (show) "LAB: RESTORE OWNED FIXTURE BANNER (UNDO)" else "LAB: HIDE OWNED FIXTURE BANNER"
-            setOnClickListener {
-                isEnabled = false
-                lifecycleScope.launch {
-                    try { output.text = com.mcpintelligence.fr3k.appcontrol.OwnedFixtureController(this@AppControlActivity).change(show) }
-                    catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { output.text = "Operation not confirmed: ${e.message}" }
-                    finally { isEnabled = true }
-                }
-            }
+            text = "PATCH SELECTED APP — IMPORT MODULE & REVIEW"
+            setOnClickListener { startActivity(android.content.Intent(this@AppControlActivity, SelectedAppPatchActivity::class.java).putExtra("package",target.text.toString().trim())) }
         })
         body.addView(Button(this).apply { text = "CLOSE"; setOnClickListener { finish() } })
         scroll.addView(body)

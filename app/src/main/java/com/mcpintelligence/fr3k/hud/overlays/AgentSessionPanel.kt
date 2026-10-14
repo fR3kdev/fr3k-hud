@@ -11,7 +11,7 @@ import kotlinx.coroutines.*
 /** Same pending action and conversation on every chat surface. */
 class AgentSessionPanel(context: Context, private val session: SharedAgentSession) : LinearLayout(context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val details = TextView(context).apply { setTextColor(0xffe8eaf2.toInt()); textSize = 11f }
+    private val details = TextView(context).apply { setTextColor(0xffe8eaf2.toInt()); textSize = 14f }
     private val actions = LinearLayout(context)
     init {
         orientation = VERTICAL
@@ -20,16 +20,16 @@ class AgentSessionPanel(context: Context, private val session: SharedAgentSessio
         actions.addView(Button(context).apply {
             text = "ALLOW"
             setOnClickListener { session.approval.value?.let { session.decide(it.id, true) } }
-        }, LayoutParams(0, 40.dp(), 1f))
+        }, LayoutParams(0, 48.dp(), 1f))
         actions.addView(Button(context).apply {
             text = "DECLINE"
             setOnClickListener { session.approval.value?.let { session.decide(it.id, false) } }
-        }, LayoutParams(0, 40.dp(), 1f))
+        }, LayoutParams(0, 48.dp(), 1f))
         addView(actions)
         addView(Button(context).apply {
             text = "STOP AGENT"
             setOnClickListener { session.cancel() }
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 36.dp()))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 48.dp()))
         scope.launch { session.approval.collect { request ->
             review.visibility = if (request == null) View.GONE else View.VISIBLE
             actions.visibility = review.visibility

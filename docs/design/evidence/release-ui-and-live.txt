@@ -1,0 +1,61 @@
+
+===== com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest =====
+
+com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest:......
+
+Time: 294.876
+
+OK (6 tests)
+
+
+
+===== com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest =====
+
+com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest:.
+
+Time: 5.335
+
+OK (1 test)
+
+
+
+===== com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest =====
+
+com.mcpintelligence.fr3k.ui.FloatingSurfaceDeviceTest:..
+
+Time: 11.516
+
+OK (2 tests)
+
+
+
+===== com.mcpintelligence.fr3k.VisibleToolsDeviceTest =====
+
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:
+com.mcpintelligence.fr3k.VisibleToolsDeviceTest:....
+
+Time: 3.05
+
+OK (6 tests)
+
+
+
+===== com.mcpintelligence.fr3k.ui.LocationAndTextDeviceTest =====
+
+com.mcpintelligence.fr3k.ui.LocationAndTextDeviceTest:...
+
+Time: 52.633
+
+OK (3 tests)
+
+
+
+===== com.mcpintelligence.fr3k.integrations.opencode.OpenCodeGoLiveDeviceTest =====
+
+com.mcpintelligence.fr3k.integrations.opencode.OpenCodeGoLiveDeviceTest:..
+
+Time: 8.508
+
+OK (2 tests)
+
+

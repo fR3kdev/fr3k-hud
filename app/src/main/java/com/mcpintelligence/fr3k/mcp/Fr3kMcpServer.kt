@@ -109,7 +109,7 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
         "get_guides" -> {
             val wanted = arguments.optString("category").trim().uppercase()
             val only = arguments.optString("id").trim()
-            var guides = com.mcpintelligence.fr3k.appcontrol.ModGuideCatalogue.all()
+            var guides = com.mcpintelligence.fr3k.appcontrol.ModGuideCatalogue.all(context)
             if (wanted.isNotEmpty()) guides = guides.filter { it.category.label == wanted }
             if (only.isNotEmpty()) guides = guides.filter { it.id == only }
             if (guides.isEmpty()) return error("no guide matches that filter")
@@ -177,6 +177,10 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
                 parts[0] to parts[1]
             }
             val result = runBlocking { com.mcpintelligence.fr3k.bridge.AppMapExplorer(service).explore(identity, entries, 0) }
+            if (pkg in com.mcpintelligence.fr3k.appcontrol.CapabilityCatalogue.selectedPackages(context)) {
+                com.mcpintelligence.fr3k.appcontrol.UserAppMaps.save(context, result.map)
+                host.reset()
+            }
             JSONObject().put("ok", true).put("screens", result.map.screens.map { it.name })
                 .put("commands", com.mcpintelligence.fr3k.capability.MapCommandCompiler.compile(result.map).map { it.id })
                 .put("notes", result.notes)
