@@ -452,6 +452,10 @@ class IntegrationsActivity : ComponentActivity() {
             container.addView(section("VECTOR / ROOT (TIER 4) — optional, root only", vBody))
             container.addView(this@IntegrationsActivity.spacer(density, 24))
 
+            addView(makeButton("APP CONTROL — INSPECT / ENGINE STATUS") {
+                startActivity(Intent(this@IntegrationsActivity,
+                    com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity::class.java))
+            })
             addView(makeButton("CLOSE") { _ -> finish() })
         }
 

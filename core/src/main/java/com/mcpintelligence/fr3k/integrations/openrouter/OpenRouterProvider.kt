@@ -167,6 +167,7 @@ class OpenRouterProvider(
         tools.forEach { tool ->
             val properties = JSONObject()
             val names = when (tool.capability) {
+                "app.control.read" -> listOf("package")
                 "browser" -> listOf("action", "url", "selector", "text", "x", "y")
                 "termux" -> listOf("command", "cwd")
                 else -> listOf("action", "deviceId", "url")
@@ -176,6 +177,7 @@ class OpenRouterProvider(
                 .put("name", com.mcpintelligence.fr3k.core.tools.SharedAgentSession.functionName(tool.id))
                 .put("description", tool.description)
                 .put("parameters", JSONObject().put("type", "object").put("properties", properties)
+                    .put("required", JSONArray(if (tool.capability == "app.control.read") listOf("package") else emptyList<String>()))
                     .put("additionalProperties", false))))
         }
         val body = JSONObject().put("model", currentModel).put("messages", messages)

@@ -60,6 +60,10 @@ class Fr3kApplication : Application() {
     }
 
     val agentSession by lazy {
+        agentToolBus.register(com.mcpintelligence.fr3k.core.appcontrol.AppControlPlanTool())
+        agentToolBus.register(com.mcpintelligence.fr3k.core.appcontrol.AppControlInspectTool {
+            com.mcpintelligence.fr3k.appcontrol.AndroidPackageInspector(this).inspect(it)
+        })
         agentToolBus.register(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveAgentTool(blackwaveBridgeClient))
         com.mcpintelligence.fr3k.core.tools.SharedAgentSession(agentToolBus, openRouterProvider, identity.deviceId)
     }
