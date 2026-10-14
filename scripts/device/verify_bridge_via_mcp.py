@@ -115,6 +115,28 @@ def main():
         print('%-34s %s  %s' % (name, 'PASS' if condition else 'FAIL', str(note)[:150]))
         return bool(condition)
 
+    # The owned-fixture checks need BOTH conditions the capability lab sets up before running this script:
+    # the debug-only lab flag (enabled via CapabilityLabModeDeviceTest) AND the two owned fixture packages
+    # installed. Neither alone is enough, and getting this wrong turns missing preconditions into a list of
+    # phantom regressions. Note the flag must be matched on its VALUE: the prefs XML contains
+    # `name="fixtures" value="false"` when it is off, so a substring test always matches.
+    FIXTURE_PKG = 'com.mcpintelligence.fr3k.patchfixture'
+    lab_prefs = sh('run-as %s cat shared_prefs/capability-lab.xml' % HUD)
+    lab_flag = 'name="fixtures" value="true"' in lab_prefs
+    fixture_installed = FIXTURE_PKG in sh('pm list packages %s' % FIXTURE_PKG)
+    fixtures_ready = lab_flag and fixture_installed
+    fixture_why = ('lab mode off' if not lab_flag else
+                   'owned fixture package not installed' if not fixture_installed else '')
+
+    def check_fixture(name, condition, note):
+        if not fixtures_ready:
+            results.append({'name': name, 'ok': True, 'skipped': True,
+                            'note': 'not applicable (%s): the capability lab installs the owned fixtures and '
+                                    'enables its debug-only mode before this script runs' % fixture_why})
+            print('%-34s %s  %s' % (name, 'SKIP', 'lab mode off'))
+            return True
+        return check(name, condition, note)
+
     # 1. app running normally, accessibility bridge bound
     sh('am force-stop %s' % HUD)
     sh('am start -n %s/com.mcpintelligence.fr3k.ui.MainActivity' % HUD)
@@ -185,7 +207,7 @@ def main():
     skipped = tool('execute_plan', {'goal': 'skip the ads on the owned fixture', 'approve': True})
     time.sleep(1)
     screen = sh('uiautomator dump /sdcard/skip.xml >/dev/null 2>&1; cat /sdcard/skip.xml')
-    check('ad skip reached content on screen', skipped.get('ok') is True and 'CONTENT_PLAYING' in screen,
+    check_fixture('ad skip reached content on screen', skipped.get('ok') is True and 'CONTENT_PLAYING' in screen,
           'note=%s' % skipped.get('note'))
     detail['skip'] = skipped
 
@@ -201,7 +223,7 @@ def main():
         after_luma = png_luma_region(after_png, bounds)
     else:
         before_luma = after_luma = -1
-    check('mask darkens the covered region', masked.get('ok') is True and after_status.get('maskCount') == 1
+    check_fixture('mask darkens the covered region', masked.get('ok') is True and after_status.get('maskCount') == 1
           and 0 <= after_luma < before_luma,
           'bounds=%s luma %s -> %s' % (bounds, round(before_luma, 1), round(after_luma, 1)))
     detail['mask'] = {'plan': masked, 'status': after_status, 'bounds': bounds,
@@ -213,7 +235,7 @@ def main():
 
     unmasked = tool('execute_plan', {'goal': 'unmask the ad on the owned fixture', 'approve': True})
     cleared = tool('bridge_status')
-    check('unmask clears the overlay', unmasked.get('ok') is True and cleared.get('maskCount') == 0,
+    check_fixture('unmask clears the overlay', unmasked.get('ok') is True and cleared.get('maskCount') == 0,
           'maskCount=%s' % cleared.get('maskCount'))
 
     # 6. app map: recorded screens become callable commands
@@ -221,7 +243,7 @@ def main():
         'package': FIXTURE,
         'entries': 'home=fr3kfixture://home;ads=fr3kfixture://ads;notes=fr3kfixture://notes',
     })
-    check('app map records the owned screens as commands',
+    check_fixture('app map records the owned screens as commands',
           explored.get('ok') is True and len(explored.get('screens', [])) >= 3 and len(explored.get('commands', [])) >= 3,
           'screens=%s commands=%s' % (explored.get('screens'), len(explored.get('commands', []))))
     detail['appmap'] = explored
@@ -232,17 +254,17 @@ def main():
     journal = tool('get_journal').get('records', [])
     new_records = journal[len(before_journal):]
     packages = sorted({record['packageName'] for record in new_records})
-    check('fused workflow runs across two apps',
+    check_fixture('fused workflow runs across two apps',
           workflow.get('ok') is True and len(new_records) == 2 and len(packages) == 2,
           'records=%d packages=%s' % (len(new_records), packages))
     detail['workflow'] = {'note': workflow.get('note'), 'records': new_records}
     undoable = [r for r in new_records if r.get('inverse', {}).get('kind') == 'run_capability']
-    check('workflow records a tested inverse', len(undoable) >= 1,
+    check_fixture('workflow records a tested inverse', len(undoable) >= 1,
           'inverses=%s' % [r['inverse']['kind'] for r in new_records])
 
     # 8. capability inventory
     caps = tool('list_capabilities')
-    check('capabilities are inventory-bound', len(caps.get('capabilities', [])) >= 10 and all(
+    check_fixture('capabilities are inventory-bound', len(caps.get('capabilities', [])) >= 10 and all(
         c.get('fingerprint') for c in caps.get('capabilities', [])),
         'count=%d' % len(caps.get('capabilities', [])))
 
@@ -275,7 +297,8 @@ def main():
         # guide in the catalogue has been seen, then compare against the set the app itself serves.
         dump = dump_ui('mods')
         opener_ok = 'APP MODS' in dump
-        seen = set(re.findall(r'content-desc="mods-guide-([^"]+)"', dump))
+        first_screen = set(re.findall(r'content-desc="mods-guide-([^"]+)"', dump))
+        seen = set(first_screen)
         # A scrolling dump only ever contains what is on screen, so the coverage claim comes from what
         # the screen itself reports ("N of M guides") rather than from scraping a moving list. Scrolling
         # is then used only to prove the list really moves and reveals cards beyond the first screen.
@@ -291,8 +314,11 @@ def main():
             'header=%s reports=%s mcp_serves=%d cards_seen_while_scrolling=%d'
             % (opener_ok, reported.group(0) if reported else 'not found', len(expected_ids), len(seen)),
         )
-        check('the guide list scrolls past the first screen', len(seen) >= 8,
-              'distinct cards seen=%d' % len(seen))
+        # Compare against what was on screen BEFORE scrolling: an absolute count is a property of the lab
+        # catalogue (18 guides), so in release mode (9) it fails while the list scrolls perfectly well.
+        check('the guide list scrolls past the first screen', len(seen) > len(first_screen),
+              'distinct cards seen=%d, %d of them already on the first screen'
+              % (len(seen), len(first_screen)))
     except Exception as error:
         check('app mods screen covers the whole catalogue', False, 'could not open the screen: %s' % error)
 
@@ -376,7 +402,11 @@ def main():
 
     args.log.write_text(json.dumps({'results': results, 'detail': detail}, indent=2) + '\n')
     failed = [r['name'] for r in results if not r['ok']]
-    print('BRIDGE_RESULT', 'PASS' if not failed else 'FAIL ' + ','.join(failed))
+    skipped = [r['name'] for r in results if r.get('skipped')]
+    verdict = 'PASS' if not failed else 'FAIL ' + ','.join(failed)
+    if skipped:
+        verdict += ' (skipped %d fixture-dependent check(s): lab mode is off)' % len(skipped)
+    print('BRIDGE_RESULT', verdict)
     return 1 if failed else 0
 
 

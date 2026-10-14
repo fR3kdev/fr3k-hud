@@ -8,7 +8,7 @@
     {
       "name": "mcp surface started",
       "ok": true,
-      "note": "{'port': 8791, 'token': 'f4937669de614a71be3fcefdd4eb6105', 'pid': 19511}"
+      "note": "{'port': 8791, 'token': 'f3f69f06e0b443958e48798cd7a19caa', 'pid': 23770}"
     },
     {
       "name": "mcp rejects a missing token",
@@ -38,7 +38,7 @@
     {
       "name": "mask darkens the covered region",
       "ok": true,
-      "note": "bounds=[59, 208, 1055, 334] luma 86.3 -> 0.0"
+      "note": "bounds=[59, 199, 1055, 325] luma 85.4 -> 0.0"
     },
     {
       "name": "unmask clears the overlay",
@@ -83,12 +83,12 @@
     {
       "name": "the guide list scrolls past the first screen",
       "ok": true,
-      "note": "distinct cards seen=14"
+      "note": "distinct cards seen=14, 0 of them already on the first screen"
     },
     {
       "name": "a guide expands into its walkthrough on device",
       "ok": true,
-      "note": "target=mod.root.extras tapped=(540, 661)"
+      "note": "target=mod.root.extras tapped=(540, 690)"
     },
     {
       "name": "chat bubble names the active provider",
@@ -99,7 +99,7 @@
   "detail": {
     "mcp": {
       "device_port": 8791,
-      "pid": 19511
+      "pid": 23770
     },
     "skip": {
       "ok": true,
@@ -118,18 +118,18 @@
         "maskCount": 1,
         "lastMaskBounds": [
           59,
-          208,
+          199,
           1055,
-          334
+          325
         ]
       },
       "bounds": [
         59,
-        208,
+        199,
         1055,
-        334
+        325
       ],
-      "before_luma": 86.26729138777331,
+      "before_luma": 85.36718301778542,
       "after_luma": 0.0
     },
     "appmap": {
@@ -142,12 +142,12 @@
       "note": "completed 2 capability step(s)",
       "records": [
         {
-          "operationId": "2e646c09-76ca-4398-8bcc-ecd234a727ea",
+          "operationId": "d549b393-3c0e-416c-8d27-6c3080ae42b2",
           "capabilityId": "fixture.banner.hide",
           "appFingerprint": "4db07c805e4c43e1a90426cf1a8b20ef7c4ebfaa0093652471bb2363180b49f2",
           "packageName": "com.mcpintelligence.fr3k.patchfixture",
-          "startedAtMillis": 1791988533855,
-          "durationMs": 1008,
+          "startedAtMillis": 1791989873711,
+          "durationMs": 1012,
           "status": "SUCCEEDED",
           "beforeSha256": "",
           "afterSha256": "",
@@ -158,12 +158,12 @@
           "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK"
         },
         {
-          "operationId": "8df83924-6f86-42ef-b4aa-344f79aaa0dc",
+          "operationId": "3e6366bb-2d8f-4668-89cf-871035a22120",
           "capabilityId": "target.two.acknowledge",
           "appFingerprint": "f316dfdc3bedc0c77e8aaf4a72c7fa1cb058a3f19219cef55459db33d04da0f5",
           "packageName": "com.mcpintelligence.fr3k.patchfixturetwo",
-          "startedAtMillis": 1791988535348,
-          "durationMs": 1492,
+          "startedAtMillis": 1791989875254,
+          "durationMs": 1541,
           "status": "SUCCEEDED",
           "beforeSha256": "",
           "afterSha256": "",

@@ -52,6 +52,16 @@ Honest limits of this section:
 
 ## 3. Capability planes on device
 
+> **Two harness bugs found while re-checking this section, both fixed.** (1) The owned-fixture checks
+> reported as failures when the bridge script ran outside the capability lab, because they need *both*
+> conditions the lab sets up — its debug-only flag **and** the two fixture packages installed. Worse, the
+> flag was matched with a substring test that always matched (`name="fixtures" value="false"` contains
+> `fixtures`). They are now skipped **with the reason** (`not applicable (lab mode off)`) instead of counted
+> as regressions; release-mode run: 19 checks, 0 failing, 7 skipped. (2) "The guide list scrolls past the
+> first screen" asserted an absolute count of 8 cards, which is a property of the 18-guide lab catalogue and
+> therefore failed in release mode (9 guides) while the list scrolled perfectly well. It now compares against
+> what was on screen **before** scrolling: *"distinct cards seen=7, 0 of them already on the first screen"*.
+>
 > **Correction, and how it was caught.** An earlier draft of this report called the capability lab PASS on
 > the strength of `cap-lab-summary.json` — a file left over from an earlier session. The lab writes its
 > result to the path given as `--log`, and that stale file did not describe the run in question: the actual
