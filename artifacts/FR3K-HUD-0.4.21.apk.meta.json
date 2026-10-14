@@ -3,8 +3,8 @@
   "versionCode": 421,
   "sha256": "9c78189671d7163c5bfbeee2d69851c07dd69ed1a23b0fcc35fe461f30ed947a",
   "bytes": 105188326,
-  "source_commit": "612ee56b9e4bcba90579e08a89ef61c63c194216",
-  "source_tree": "Local uncommitted redesign, accessibility fixes and release-surface cleanup; see docs/design/CONTINUATION.md for the checkpoint.",
+  "source_commit": "8822de84269685393d498dd0a473faf07dba0529",
+  "source_tree": "Committed in this repository at the recorded source_commit; the tree also carries\npre-existing BLACKWAVE work, so this is not a clean-tree reproducibility claim. See docs/design/VERIFICATION-REPORT.md and docs/design/CONTINUATION.md.",
   "signature": "APK_V2_VERIFIED_DEBUG",
   "jvm_tests": {
     "app": {

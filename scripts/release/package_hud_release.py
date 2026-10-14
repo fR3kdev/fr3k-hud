@@ -102,8 +102,9 @@ def main():
         'sha256': digest,
         'bytes': size,
         'source_commit': commit,
-        'source_tree': 'Local uncommitted redesign, accessibility fixes and release-surface cleanup; '
-                       'see docs/design/CONTINUATION.md for the checkpoint.',
+        'source_tree': 'Committed in this repository at the recorded source_commit; the tree also carries\n'
+                       'pre-existing BLACKWAVE work, so this is not a clean-tree reproducibility claim. '
+                       'See docs/design/VERIFICATION-REPORT.md and docs/design/CONTINUATION.md.',
         'signature': 'APK_V2_VERIFIED_DEBUG' if 'Verified' in signer_out.stdout else 'APK_SIGNATURE_VERIFICATION_FAILED',
         'jvm_tests': tests,
         'emulator_evidence': {
