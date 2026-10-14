@@ -14,4 +14,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "fr3k-hud"
-include(":app", ":core", ":protocol", ":transport", ":ui")
+include(":app", ":core", ":protocol", ":transport", ":ui", ":patch-fixture")
