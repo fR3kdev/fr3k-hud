@@ -36,12 +36,12 @@ class ShizukuCommandPolicyTest {
         assertTrue(op is ShizukuCommandExecutor.Operation.Allowed)
     }
 
-    @Test fun allowsInstallApprovedApk() {
+    @Test fun rejectsUnverifiedInstallPath() {
         val op = ShizukuCommandExecutor.Operation.from(
             request = "InstallApprovedApk",
             arg = "/data/user/0/com.mcpintelligence.fr3k.hud/files/approved.apk",
         )
-        assertTrue(op is ShizukuCommandExecutor.Operation.Allowed)
+        assertTrue(op is ShizukuCommandExecutor.Operation.Denied)
     }
 
     @Test fun allowsReadSystemSetting() {

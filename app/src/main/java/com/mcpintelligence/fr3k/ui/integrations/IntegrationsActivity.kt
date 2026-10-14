@@ -429,27 +429,25 @@ class IntegrationsActivity : ComponentActivity() {
                 addView(this@IntegrationsActivity.spacer(density, 4))
                 if (!v.rootAvailable) {
                     addView(tv(
-                        "Root not available. Skip this section — standalone LSPatch (above) works without root.",
+                        "Root NOT VERIFIED. Installed managers do not prove privilege or loaded hooks.",
                         0xFF9ca3af.toInt(), 11f,
                     ))
                 } else {
-                    addView(tv("root available: yes  (su at ${v.suPath ?: "?"})", 0xFF4ade80.toInt(), 11f))
-                    addView(tv("Vector pkg: ${v.vectorPackage ?: "none"}", 0xFF9ca3af.toInt(), 11f))
-                    addView(tv("LSPatch modules: ${v.lspatchPackages.size}", 0xFF9ca3af.toInt(), 11f))
-                    addView(this@IntegrationsActivity.spacer(density, 8))
-                    addView(makeButton("SMOKE-TEST: su -c 'id'") { btn ->
-                        btn.isEnabled = false
-                        btn.text = "RUNNING…"
-                        lifecycleScope.launch {
-                            val out = withContext(Dispatchers.IO) {
-                                vector.runRootedShell("id", 4000)
-                            }
-                            showToast(out.take(400))
-                            btn.isEnabled = true
-                            btn.text = "SMOKE-TEST: su -c 'id'"
-                        }
-                    })
+                    addView(tv("root UID verified recently; hook runtime still NOT VERIFIED", 0xFF4ade80.toInt(), 11f))
                 }
+                addView(tv("Vector manager: ${v.vectorPackage ?: "not detected"}", 0xFF9ca3af.toInt(), 11f))
+                addView(this@IntegrationsActivity.spacer(density, 8))
+                addView(makeButton("VERIFY ROOT: su -c 'id' (may request permission)") { btn ->
+                    btn.isEnabled = false
+                    btn.text = "VERIFYING…"
+                    lifecycleScope.launch {
+                        val out = withContext(Dispatchers.IO) {
+                            vector.runRootedShell("id", 4000)
+                        }
+                        showToast(out.take(400))
+                        setContentView(buildContent())
+                    }
+                })
             }
             container.addView(section("VECTOR / ROOT (TIER 4) — optional, root only", vBody))
             container.addView(this@IntegrationsActivity.spacer(density, 24))

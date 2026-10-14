@@ -1,7 +1,7 @@
 package com.mcpintelligence.fr3k.integrations.shizuku
 
 import android.app.Application
-import android.os.Build
+import android.content.pm.PackageManager
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +50,7 @@ class ShizukuBridge private constructor() {
         // Register all three listeners exactly once. The Shizuku AAR
         // accepts anonymous listeners and dedupes by reference for the
         // binder / dead listeners, but we still guard ourselves.
-        Shizuku.addBinderReceivedListener(binderReceivedListener)
+        Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
         Shizuku.addBinderDeadListener(binderDeadListener)
         Shizuku.addRequestPermissionResultListener(permissionListener)
         listenerInstalled = true
@@ -71,9 +71,7 @@ class ShizukuBridge private constructor() {
      */
     fun requestPermission(requestCode: Int): Boolean {
         val s = _state.value
-        if (s !is ShizukuState.BinderLivePermissionRequired &&
-            s !is ShizukuState.ServerStarting
-        ) {
+        if (s !is ShizukuState.BinderLivePermissionRequired || !Shizuku.pingBinder()) {
             Log.w(TAG, "requestPermission refused in state=$s")
             return false
         }
@@ -92,29 +90,20 @@ class ShizukuBridge private constructor() {
 
     private fun observeInstallState() {
         val app = application ?: return
+        // Official upstream manager id, not a separate API shim package.
         val present = runCatching {
-            app.packageManager.getPackageInfo(SHIZUKU_PKG, 0)
+            app.packageManager.getPackageInfo(SHIZUKU_PRIVILEGED_PKG, 0)
             true
-        }.getOrDefault(false) ||
-            runCatching {
-                app.packageManager.getPackageInfo(SHIZUKU_PRIVILEGED_PKG, 0)
-                true
-            }.getOrDefault(false)
-        applyEvent(ShizukuEvent.InstallCheck(present = present))
-        // Also check whether the OS shizuku_server process is alive —
-        // informational but useful for the ServerStarting → ready race.
-        val osRunning = runCatching {
-            Runtime.getRuntime().exec("ps -A").inputStream.bufferedReader().use {
-                it.readText().contains("shizuku_server")
-            }
         }.getOrDefault(false)
-        applyEvent(ShizukuEvent.OsProcessSeen(running = osRunning))
+        applyEvent(ShizukuEvent.InstallCheck(present = present))
+        // Never spawn ps on Application.onCreate/UI thread. Binder is authoritative.
+        if (Shizuku.pingBinder()) observeLiveBinder()
     }
 
     private val binderReceivedListener =
         Shizuku.OnBinderReceivedListener {
             Log.i(TAG, "binder received")
-            applyEvent(ShizukuEvent.BinderReceived)
+            observeLiveBinder()
         }
 
     private val binderDeadListener =
@@ -132,13 +121,22 @@ class ShizukuBridge private constructor() {
             applyEvent(ShizukuEvent.PermissionResult(granted = grantResult == PackageManager_PERMISSION_GRANTED))
         }
 
+    private fun observeLiveBinder() {
+        if (!Shizuku.pingBinder()) return
+        applyEvent(ShizukuEvent.BinderReceived)
+        val granted = runCatching { Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED }
+            .getOrDefault(false)
+        // No grant observation is different from an explicit user refusal.
+        if (granted) applyEvent(ShizukuEvent.PermissionResult(true))
+    }
+
+    @Synchronized
     private fun applyEvent(event: ShizukuEvent) {
         _state.value = ShizukuStateReducer.reduce(_state.value, event)
     }
 
     companion object {
         private const val TAG = "FR3K.shizuku"
-        private const val SHIZUKU_PKG = "moe.shizuku.api"
         private const val SHIZUKU_PRIVILEGED_PKG = "moe.shizuku.privileged.api"
         // android.content.pm.PackageManager.PERMISSION_GRANTED is 0
         // but we keep the value explicit to avoid an Android import in

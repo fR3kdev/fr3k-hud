@@ -1,8 +1,7 @@
 package com.mcpintelligence.fr3k.integrations.shizuku
 
-import android.os.Parcel
-import android.os.RemoteException
-import android.util.Log
+// No raw Binder transaction numbers: this legacy executor is deliberately
+// unsupported until a qualified typed service is connected.
 
 /**
  * Policy-scoped Shizuku executor — replaces the raw `Parcel.transact(0x0A)`
@@ -43,14 +42,12 @@ object ShizukuCommandExecutor {
             /** Map a raw request + arg to a policy decision. */
             fun from(request: String, arg: String): Operation =
                 when (request) {
-                    "GetPackageInfo" -> Allowed(Kind.GetPackageInfo, arg)
-                    "ListPackageSplits" -> Allowed(Kind.ListPackageSplits, arg)
-                    "InstallApprovedApk" ->
-                        if (policyTargetsApproved(arg)) {
-                            Allowed(Kind.InstallApprovedApk, arg)
-                        } else {
-                            Denied("restricted target for InstallApprovedApk: $arg")
-                        }
+                    "GetPackageInfo", "ListPackageSplits" ->
+                        if (isPackageName(arg)) {
+                            Allowed(if (request == "GetPackageInfo") Kind.GetPackageInfo else Kind.ListPackageSplits, arg)
+                        } else Denied("invalid package name")
+                    "InstallApprovedApk" -> Denied(
+                        "installation requires staged APK identity, signer and explicit approval; a path is insufficient")
                     "UninstallTestFixture" ->
                         if (arg == FIXTURE_PACKAGE) {
                             Allowed(Kind.UninstallTestFixture, arg)
@@ -74,7 +71,7 @@ object ShizukuCommandExecutor {
         // Deny banking/payment/credential/authenticator/security/DRM/system.
         val deniedAny = DENIED_TARGET_MARKERS.any { marker -> pkg.contains(marker, ignoreCase = true) }
             || pkg in SYSTEM_CRITICAL_PACKAGES
-        return !deniedAny && pkg.isNotBlank()
+        return !deniedAny && isPackageName(pkg)
     }
 
     private val DENIED_TARGET_MARKERS = listOf(
@@ -92,9 +89,11 @@ object ShizukuCommandExecutor {
     )
 
     /** Read-only settings only (global/secure/system). Never a writer. */
+    private fun isPackageName(value: String): Boolean =
+        value.matches(Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+"))
+
     private fun isReadableSystemSetting(arg: String): Boolean =
-        arg.startsWith("settings:") && !arg.contains("=") &&
-            listOf("global:", "secure:", "system:").any { arg.contains(it) }
+        arg.matches(Regex("settings:(global|secure|system):[A-Za-z0-9_]+"))
 
     // ---------- executor (uses typed operations only) ----------
 
@@ -104,55 +103,10 @@ object ShizukuCommandExecutor {
      * operation observed, exit code, duration ms, and the operation kind.
      * Never accepts a raw shell string.
      */
-    fun execute(binder: android.os.IBinder, op: Operation.Allowed): ShResult {
-        val start = System.currentTimeMillis()
-        return try {
-            // Parcel-based call to IShizukuService for typed ops.
-            val data = Parcel.obtain()
-            val reply = Parcel.obtain()
-            try {
-                data.writeInterfaceToken("moe.shizuku.api.IShizukuService")
-                writeTypedRequest(data, op)
-                binder.transact(OP_EXEC, data, reply, 0)
-                reply.readException()
-                val result = reply.readString().orEmpty()
-                ShResult(ensureMetadata(result, op), "", 0, System.currentTimeMillis() - start, op.kind.name)
-            } finally {
-                reply.recycle(); data.recycle()
-            }
-        } catch (t: Throwable) {
-            Log.w(TAG, "execute ${op.kind} failed: ${t.message}")
-            ShResult("", t.message ?: t.javaClass.simpleName, 1, System.currentTimeMillis() - start, op.kind.name)
-        }
-    }
-
-    private fun writeTypedRequest(data: Parcel, op: Operation.Allowed) {
-        when (op.kind) {
-            Operation.Kind.GetPackageInfo -> {
-                data.writeString("package-info")
-                data.writeString(op.target)
-            }
-            Operation.Kind.ListPackageSplits -> {
-                data.writeString("list-splits")
-                data.writeString(op.target)
-            }
-            Operation.Kind.InstallApprovedApk -> {
-                data.writeString("install")
-                data.writeString(op.target)
-            }
-            Operation.Kind.UninstallTestFixture -> {
-                data.writeString("uninstall-fixture")
-                data.writeString(op.target)
-            }
-            Operation.Kind.ReadSystemSetting -> {
-                data.writeString("read-setting")
-                data.writeString(op.target)
-            }
-        }
-    }
-
-    private fun ensureMetadata(raw: String, op: Operation.Allowed): String =
-        raw.ifBlank { "op=${op.kind.name} target=${op.target}" }
+    @Suppress("UNUSED_PARAMETER")
+    fun execute(binder: android.os.IBinder, op: Operation.Allowed): ShResult =
+        ShResult("", "Unsupported: no qualified typed Shizuku execution service is connected",
+            1, 0, "unsupported:${op.kind.name}")
 
     data class ShResult(
         val stdout: String,
@@ -162,6 +116,4 @@ object ShizukuCommandExecutor {
         val provenance: String,
     )
 
-    private const val TAG = "FR3K.shizuku-exec"
-    private const val OP_EXEC = 0x0B // distinct from the old raw 0x0A
 }

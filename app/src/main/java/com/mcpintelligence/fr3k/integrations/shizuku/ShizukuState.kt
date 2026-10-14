@@ -170,18 +170,11 @@ object ShizukuStateReducer {
                 else -> ShizukuState.Dead
             }
 
-            is ShizukuEvent.PermissionResult ->
-                if (event.granted) {
-                    when (current) {
-                        ShizukuState.BinderLivePermissionRequired -> ShizukuState.Ready
-                        // Allow grant from any state — defensive.
-                        else -> ShizukuState.Ready
-                    }
-                } else {
-                    when (current) {
-                        ShizukuState.Ready -> current
-                        else -> ShizukuState.Denied
-                    }
-                }
+            is ShizukuEvent.PermissionResult -> when (current) {
+                ShizukuState.Ready, ShizukuState.BinderLivePermissionRequired,
+                ShizukuState.Denied -> if (event.granted) ShizukuState.Ready else ShizukuState.Denied
+                // A late permission callback cannot establish that a binder is live.
+                else -> current
+            }
         }
 }
