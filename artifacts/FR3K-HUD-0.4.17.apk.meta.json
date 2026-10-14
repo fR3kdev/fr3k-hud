@@ -1,0 +1,43 @@
+{
+  "versionName": "0.4.17",
+  "versionCode": 417,
+  "sha256": "b55f7804a965b9ec86dbbc168f215e6dc7333fcbabf403284cff9706d6a5f276",
+  "bytes": 63011280,
+  "source_commit": "1db80f840233977b2bd5001c106e1f87a489b201",
+  "source_tree": "Includes preserved pre-existing dirty BLACKWAVE work; not a clean source-tree claim",
+  "signature": "APK_V2_VERIFIED_DEBUG",
+  "jvm_tests": {
+    "core": {
+      "tests": 58,
+      "failures": 0
+    },
+    "app": {
+      "tests": 66,
+      "failures": 0
+    },
+    "patch-fixture": {
+      "tests": 1,
+      "failures": 0
+    }
+  },
+  "emulator_api35_tests": {
+    "embedded_service": 2,
+    "inspection_ui": 2
+  },
+  "hardware_tested": false,
+  "launcher_install_tested": false,
+  "capabilities": [
+    "selected_package_identity",
+    "shell_uid_2000_read_only_service",
+    "local_inspection_ui",
+    "agent_inspect_and_plan"
+  ],
+  "not_implemented": [
+    "wireless_adb_pairing_ui",
+    "embedded_apk_patcher",
+    "target_hook_runtime",
+    "youtube_recipe",
+    "apply_and_undo"
+  ],
+  "full_objective": "OPEN"
+}
