@@ -327,7 +327,12 @@ class Fr3kChatBubble(
             // seed once per process so reopens don't spam the user.
             if (!hasSeededWelcome) {
                 hasSeededWelcome = true
-                appendLine("fr3k: Shared agent chat. Tap M to configure OpenRouter and select a model.")
+                // Name the brain actually answering: with an OpenCode key stored this is OpenCode, not OpenRouter.
+                val activeApp = Fr3kApplication.get()
+                appendLine(
+                    "fr3k: Shared agent chat on ${activeApp.activeProviderLabel} · model ${activeApp.activeModelLabel}." +
+                        " Tap M for provider and model settings.",
+                )
                 appendLine("fr3k: Browser and terminal actions appear here. Availability is checked when used.")
             }
         } catch (t: Throwable) {
@@ -499,7 +504,7 @@ class Fr3kChatBubble(
     )
 
     /**
-     * Cycle the active model through the OpenCode Zen free-list. Each tap
+     * Cycle the active model through the OpenCode Go free-list. Each tap
      * moves to the next free model. Long-press opens a text-prompt picker.
      */
     private fun cycleModel() = showModelPicker()

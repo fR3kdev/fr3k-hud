@@ -7,7 +7,7 @@
     },
     "bridge-plane-via-mcp": {
       "ok": true,
-      "note": "checks=13"
+      "note": "checks=19"
     },
     "EmbeddedFixturePatcherDeviceTest": {
       "ok": true,
@@ -15,7 +15,7 @@
     },
     "on-device prepared APK": {
       "ok": true,
-      "note": "bb90fe9c8cf7c04733e08191"
+      "note": "1c9c2bb146a533f2a796da31"
     },
     "OwnedFixtureControllerDeviceTest": {
       "ok": true,

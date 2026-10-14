@@ -15,7 +15,7 @@ import java.util.Locale
  * - we do NOT call [TextToSpeech.setPitch] / setSpeechRate; the system
  *   picks defaults so a screen reader on the user's device still works.
  * - we DO short-circuit on empty / error responses so we never speak
- *   `opencode-zen error: ...` out loud (the user can read the transcript).
+ *   `opencode-go error: ...` out loud (the user can read the transcript).
  */
 object TtsPreference {
     private const val PREFS = "fr3k_hud_prefs"
@@ -38,8 +38,8 @@ object TtsPreference {
         val clean = text.trim()
         if (clean.isEmpty()) return
         // Skip obvious error / fallback messages so the user isn't told
-        // "opencode-zen error: 401" verbally.
-        if (clean.startsWith("opencode-zen error", ignoreCase = true)) return
+        // "opencode-go error: 401" verbally.
+        if (clean.startsWith("opencode-go error", ignoreCase = true)) return
         if (clean.startsWith("hermes unreachable", ignoreCase = true)) return
         getEngine(ctx).speak(clean, TextToSpeech.QUEUE_FLUSH, null, "fr3k-chat")
     }

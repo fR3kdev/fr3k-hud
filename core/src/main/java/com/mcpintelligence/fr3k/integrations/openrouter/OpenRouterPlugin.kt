@@ -9,7 +9,7 @@ import com.mcpintelligence.fr3k.protocol.CapabilityTier
 /**
  * OpenRouter integration plugin. Registers the [OpenRouterProvider] (API-key
  * backed, default free-model routing) and the [AskOpenRouterCommand], so
- * OpenRouter appears alongside Hermes / OpenCode Zen in the provider registry.
+ * OpenRouter appears alongside Hermes / OpenCode Go in the provider registry.
  */
 class OpenRouterPlugin(
     private val provider: OpenRouterProvider,

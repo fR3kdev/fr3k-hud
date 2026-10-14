@@ -163,28 +163,7 @@ class OpenRouterProvider(
     ): JSONObject = withContext(Dispatchers.IO) {
         val key = apiKeyProvider()?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("OpenRouter is not configured. Add an API key in Settings.")
-        val functions = JSONArray()
-        tools.forEach { tool ->
-            val properties = JSONObject()
-            val names = when (tool.capability) {
-                "app.control.read" -> listOf("package")
-                "app.control.fixture.write" -> listOf("visible")
-                "browser" -> listOf("action", "url", "selector", "text", "x", "y")
-                "termux" -> listOf("command", "cwd")
-                else -> listOf("action", "deviceId", "url")
-            }
-            names.forEach { properties.put(it, JSONObject().put("type", "string")) }
-            functions.put(JSONObject().put("type", "function").put("function", JSONObject()
-                .put("name", com.mcpintelligence.fr3k.core.tools.SharedAgentSession.functionName(tool.id))
-                .put("description", tool.description)
-                .put("parameters", JSONObject().put("type", "object").put("properties", properties)
-                    .put("required", JSONArray(when (tool.capability) {
-                        "app.control.read" -> listOf("package")
-                        "app.control.fixture.write" -> listOf("visible")
-                        else -> emptyList<String>()
-                    }))
-                    .put("additionalProperties", false))))
-        }
+        val functions = com.mcpintelligence.fr3k.core.tools.AgentToolSchema.openAiFunctions(tools)
         val body = JSONObject().put("model", currentModel).put("messages", messages)
             .put("stream", false).put("max_tokens", 2048)
         if (tools.isNotEmpty()) body.put("tools", functions).put("tool_choice", "auto").put("parallel_tool_calls", false)

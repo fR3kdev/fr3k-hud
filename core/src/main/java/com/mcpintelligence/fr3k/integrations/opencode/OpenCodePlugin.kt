@@ -7,25 +7,25 @@ import com.mcpintelligence.fr3k.protocol.Capability
 import com.mcpintelligence.fr3k.protocol.CapabilityTier
 
 /**
- * OpenCode Zen integration plugin. Registers the [OpenCodeZenProvider]
+ * OpenCode Go integration plugin. Registers the [OpenCodeGoProvider]
  * (no API key, free models) and the [AskOpenCodeCommand]. Wakes the model
  * registry once on start so the integrations panel and the chat overlay
  * can render the live free-model list immediately.
  */
 class OpenCodePlugin(
-    private val provider: OpenCodeZenProvider,
+    private val provider: OpenCodeGoProvider,
     private val aiProviderRegistry: AiProviderRegistry,
     private val commandFactory: () -> AskOpenCodeCommand,
 ) : Fr3kPlugin {
 
     override val pluginId: String = "fr3k.integrations.opencode"
-    override val displayName: String = "OpenCode Zen"
+    override val displayName: String = "OpenCode Go"
     override val version: String = "0.1.0"
 
     override fun capabilities() = listOf(
         Capability(
             id = Capabilities.AI_LOCAL_CHAT,
-            displayName = "OpenCode Zen chat",
+            displayName = "OpenCode Go chat",
             description = "Hosted free-model chat via opencode.ai/zen (Big Pickle default)",
             tier = CapabilityTier.TIER_0,
         ),
@@ -37,7 +37,7 @@ class OpenCodePlugin(
         aiProviderRegistry.register(provider)
         // Warm the model registry in the background; failures are non-fatal
         // (the chat overlay falls back to the default model).
-        runCatching { provider.refreshFreeModels() }
+        runCatching { provider.refreshModels() }
     }
 
     override suspend fun stop() {

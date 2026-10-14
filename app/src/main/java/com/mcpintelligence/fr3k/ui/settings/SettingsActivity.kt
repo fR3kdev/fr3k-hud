@@ -150,7 +150,129 @@ private fun SettingsScreen(onClose: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
-            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "OpenRouter") {
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "AI provider — which brain answers") {
+                val scope = rememberCoroutineScope()
+                val openCode = app.openCodeProvider
+                val stored = app.secureStore.get(settings.opencodeApiKeyKey)
+                var openCodeKeyInput by remember { mutableStateOf("") }
+                var status by remember { mutableStateOf<String?>(null) }
+                Column {
+                    Text(
+                        text = "active: ${app.activeProviderLabel}  ·  model ${app.activeModelLabel}",
+                        color = Fr3kPalette.Accent,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "With no keys at all, OpenCode Go answers on the public free tier. Saving an " +
+                            "OpenCode key replaces OpenRouter everywhere in the app — chat bubble, mini browser, " +
+                            "shared agent session and model picker. OpenCode wins even if both keys are stored.",
+                        color = Fr3kPalette.TextDim,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 9.sp,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "opencode key: " + (stored?.let { "stored (encrypted) — ${maskKey(it)}" } ?: "not set"),
+                        color = if (stored != null) Fr3kPalette.Ok else Fr3kPalette.TextDim,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = openCodeKeyInput,
+                        onValueChange = { openCodeKeyInput = it },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        placeholder = { Text("paste your OpenCode key", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Button(
+                            onClick = {
+                                val trimmed = openCodeKeyInput.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    app.secureStore.put(settings.opencodeApiKeyKey, trimmed)
+                                    openCodeKeyInput = ""
+                                    status = "key saved — OpenCode now answers everywhere"
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
+                        ) { Text("SAVE KEY", fontFamily = FontFamily.Monospace, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = {
+                                app.secureStore.remove(settings.opencodeApiKeyKey)
+                                status = "key removed — the key rules re-evaluate immediately"
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+                        ) { Text("REMOVE", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    status = "checking…"
+                                    val health = openCode.health()
+                                    status = if (health.online) {
+                                        "ONLINE — ${health.model ?: "?"} — ${health.message ?: ""}"
+                                    } else {
+                                        "OFFLINE — ${health.message ?: "no answer"}"
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
+                        ) { Text("TEST", fontFamily = FontFamily.Monospace, fontSize = 10.sp) }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text("preference:", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            com.mcpintelligence.fr3k.core.AiProviderPreference.AUTO to "AUTO (follow keys)",
+                            com.mcpintelligence.fr3k.core.AiProviderPreference.OPENCODE to "OPENCODE",
+                            com.mcpintelligence.fr3k.core.AiProviderPreference.OPENROUTER to "OPENROUTER",
+                        ).forEach { (value, label) ->
+                            val selected = settings.aiProviderPreference == value
+                            Button(
+                                onClick = {
+                                    app.settings.update { it.copy(aiProviderPreference = value) }
+                                    status = "preference: $label"
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) Fr3kPalette.Accent else Fr3kPalette.Surface,
+                                    contentColor = if (selected) Fr3kPalette.Bg else Fr3kPalette.Text,
+                                ),
+                            ) { Text(label, fontFamily = FontFamily.Monospace, fontSize = 9.sp) }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "model: ${openCode.selectedModel()}  (tap to switch)",
+                        color = Fr3kPalette.TextDim,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        openCode.availableModels().take(3).forEach { model ->
+                            Button(
+                                onClick = {
+                                    openCode.setModel(model.id)
+                                    app.settings.update { it.copy(opencodeModel = model.id) }
+                                    status = "model: ${model.id}"
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (openCode.selectedModel() == model.id) Fr3kPalette.Accent else Fr3kPalette.Surface,
+                                    contentColor = if (openCode.selectedModel() == model.id) Fr3kPalette.Bg else Fr3kPalette.Text,
+                                ),
+                            ) { Text(model.id, fontFamily = FontFamily.Monospace, fontSize = 9.sp) }
+                        }
+                    }
+                    status?.let {
+                        Spacer(Modifier.height(4.dp))
+                        Text(it, color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "OpenRouter (fallback)") {
                 val scope = rememberCoroutineScope()
                 val provider = app.openRouterProvider
                 val storedKey = app.secureStore.get(settings.openrouterApiKeyKey)

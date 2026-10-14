@@ -1,0 +1,50 @@
+{
+  "versionName": "0.4.20",
+  "versionCode": 420,
+  "sha256": "d9963b47d04f8c8f199734202dabcb2d65473016111d397cf0e046bbd804c3c4",
+  "bytes": 84664012,
+  "source_commit": "7432a2b4827ffe4a0b0020266d80b17ceac08fdd",
+  "source_tree": "Includes preserved pre-existing dirty BLACKWAVE work; not a clean source-tree claim",
+  "signature": "APK_V2_VERIFIED_DEBUG",
+  "jvm_tests": {
+    "core": {
+      "tests": 74,
+      "failures": 0
+    },
+    "app": {
+      "tests": 78,
+      "failures": 0
+    },
+    "patch-fixture": {
+      "tests": 1,
+      "failures": 0
+    }
+  },
+  "emulator_api35_tests": {
+    "embedded_service": 2,
+    "inspection_ui": 2,
+    "on_device_patcher": 1,
+    "owned_controller_ui": 1,
+    "owned_agent_approval": 1
+  },
+  "hardware_tested": false,
+  "launcher_install_tested": false,
+  "capabilities": [
+    "selected_package_identity",
+    "shell_uid_2000_read_only_service",
+    "local_inspection_ui",
+    "agent_inspect_and_plan",
+    "on_device_apk_patching_owned_fixture",
+    "on_device_keystore_signing",
+    "owned_fixture_live_method_control",
+    "agent_approved_owned_write"
+  ],
+  "not_implemented": [
+    "wireless_adb_pairing_ui",
+    "third_party_target_recipes",
+    "signature_bypass",
+    "youtube_recipe",
+    "general_apply_and_undo_for_arbitrary_apps"
+  ],
+  "full_objective": "OPEN"
+}

@@ -11,9 +11,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Snapshot of one model from the OpenCode Zen catalog.
+ * Snapshot of one model from the OpenCode Go catalog.
  */
-data class OpenCodeZenModel(
+data class OpenCodeGoModel(
     val id: String,
     val ownedBy: String = "opencode",
     val created: Long = 0L,
@@ -22,26 +22,52 @@ data class OpenCodeZenModel(
 )
 
 /**
- * Registry of OpenCode Zen free models. Fetches [https://opencode.ai/zen/v1/models]
+ * The OpenCode Go catalogue as documented at
+ * [opencode.ai/docs/go](https://opencode.ai/docs/go), restricted to the models served on the
+ * OpenAI-compatible `/chat/completions` shape. Go also lists models on `/responses` and `/messages`;
+ * those need a different client, so they are deliberately absent here — the app's chat path cannot drive
+ * them, and offering them would produce failures that look like authentication bugs.
+ */
+object OpenCodeGoCatalogue {
+    val chatCompletionsModelIds: List<String> = listOf(
+        "mimo-v2.6-pro",
+        "mimo-v2.6-flash",
+        "mimo-v2.5-pro",
+        "mimo-v2.5",
+        "deepseek-v4-flash-vision-exp",
+    )
+
+    fun chatCompletions(): List<OpenCodeGoModel> = chatCompletionsModelIds.map { id ->
+        OpenCodeGoModel(id = id, ownedBy = "opencode", created = 0L, isFree = false)
+    }
+}
+
+/**
+ * Registry of OpenCode Go free models. Fetches [https://opencode.ai/zen/v1/models]
  * on first request, caches the result, and exposes a filter for the free
  * subset (model id ends in "-free" or matches a known promo name).
  */
-class OpenCodeZenModelRegistry(
-    private val endpoint: String = "https://opencode.ai/zen/v1",
+class OpenCodeGoModelRegistry(
+    private val endpoint: String = "https://opencode.ai/zen/go/v1",
     private val bearerToken: String = "public",
+    /** Read at request time so a key saved in Settings is used without rebuilding the registry. */
+    private val bearerTokenProvider: (() -> String)? = null,
 ) {
+    private fun bearer(): String =
+        bearerTokenProvider?.invoke()?.takeIf { it.isNotBlank() } ?: bearerToken
+
     private val mutex = Mutex()
 
     @Volatile
-    private var all: List<OpenCodeZenModel> = emptyList()
+    private var all: List<OpenCodeGoModel> = emptyList()
 
     @Volatile
-    private var free: List<OpenCodeZenModel> = emptyList()
+    private var free: List<OpenCodeGoModel> = emptyList()
 
-    fun cachedFree(): List<OpenCodeZenModel> = free
-    fun cachedAll(): List<OpenCodeZenModel> = all
+    fun cachedFree(): List<OpenCodeGoModel> = free
+    fun cachedAll(): List<OpenCodeGoModel> = all
 
-    suspend fun refresh(): Result<List<OpenCodeZenModel>> = mutex.withLock {
+    suspend fun refresh(): Result<List<OpenCodeGoModel>> = mutex.withLock {
         withContext(Dispatchers.IO) {
             runCatching {
                 val url = URL("$endpoint/models")
@@ -49,7 +75,7 @@ class OpenCodeZenModelRegistry(
                     connectTimeout = 10_000
                     readTimeout = 15_000
                     requestMethod = "GET"
-                    setRequestProperty("Authorization", "Bearer $bearerToken")
+                    setRequestProperty("Authorization", "Bearer ${bearer()}")
                 }
                 val raw = try {
                     if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
@@ -60,7 +86,7 @@ class OpenCodeZenModelRegistry(
                 val arr = JSONObject(raw).optJSONArray("data") ?: org.json.JSONArray()
                 val allList = (0 until arr.length()).map { i ->
                     val o = arr.getJSONObject(i)
-                    OpenCodeZenModel(
+                    OpenCodeGoModel(
                         id = o.optString("id"),
                         ownedBy = o.optString("owned_by", "opencode"),
                         created = o.optLong("created", 0L),
@@ -77,7 +103,14 @@ class OpenCodeZenModelRegistry(
 
     companion object {
         /**
-         * Heuristic for "is this a free model". OpenCode Zen's model ids
+         * The OpenCode Go catalogue as documented at
+         * [opencode.ai/docs/go](https://opencode.ai/docs/go), restricted to the models served on the
+         * OpenAI-compatible `/chat/completions` shape. Go also lists models on `/responses` and
+         * `/messages`; those need a different client, so they are deliberately absent here — the app's
+         * chat path cannot drive them and offering them would produce failures that look like auth bugs.
+         */
+        /**
+         * Heuristic for "is this a free model". OpenCode Go's model ids
          * follow a few patterns:
          * - `*-free` (e.g. `mimo-v2.5-free`)
          * - `big-pickle` (current free headliner, name is not "-free")

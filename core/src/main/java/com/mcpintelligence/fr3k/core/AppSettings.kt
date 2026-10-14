@@ -50,6 +50,13 @@ class AppSettings(
         val blackwaveClientId: String = "fr3k-hud",
         val openrouterApiKeyKey: String = "openrouter.api.key",
         val openrouterModel: String = "openrouter/free",
+        val opencodeApiKeyKey: String = "opencode.api.key",
+        val opencodeModel: String = "",
+        /**
+         * [AiProviderPreference.AUTO] follows the key rules: a configured OpenCode key replaces
+         * OpenRouter everywhere. An explicit value pins one provider regardless of keys.
+         */
+        val aiProviderPreference: String = AiProviderPreference.AUTO,
         val termuxPackage: String = "com.termux",
         val autoShareTargets: List<String> = emptyList(),
         val telemetryEnabled: Boolean = true,
@@ -71,6 +78,9 @@ class AppSettings(
             put("blackwaveClientId", blackwaveClientId)
             put("openrouterApiKeyKey", openrouterApiKeyKey)
             put("openrouterModel", openrouterModel)
+            put("opencodeApiKeyKey", opencodeApiKeyKey)
+            put("opencodeModel", opencodeModel)
+            put("aiProviderPreference", aiProviderPreference)
             put("termuxPackage", termuxPackage)
             put("autoShareTargets", JSONArray(autoShareTargets))
             put("telemetryEnabled", telemetryEnabled)
@@ -102,6 +112,9 @@ class AppSettings(
                     blackwaveClientId = json.optString("blackwaveClientId", defaults.blackwaveClientId),
                     openrouterApiKeyKey = json.optString("openrouterApiKeyKey", defaults.openrouterApiKeyKey),
                     openrouterModel = json.optString("openrouterModel", defaults.openrouterModel),
+                    opencodeApiKeyKey = json.optString("opencodeApiKeyKey", defaults.opencodeApiKeyKey),
+                    opencodeModel = json.optString("opencodeModel", defaults.opencodeModel),
+                    aiProviderPreference = json.optString("aiProviderPreference", defaults.aiProviderPreference),
                     termuxPackage = json.optString("termuxPackage", defaults.termuxPackage),
                     autoShareTargets = strings("autoShareTargets"),
                     telemetryEnabled = json.optBoolean("telemetryEnabled", defaults.telemetryEnabled),

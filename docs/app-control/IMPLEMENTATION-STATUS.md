@@ -1,5 +1,28 @@
 # App control implementation status — 0.4.19
 
+## 0.4.20 — APP MODS and OpenCode Go
+
+**APP MODS** is the human entry point: `ui/mods/ModsActivity.kt`, reached from the dashboard
+(`APP MODS · GUIDES + WALKTHROUGHS`), the radial menu (`APP MODS`) and `am start --ez open_mods true`.
+It lists **18 guides** — 10 procedures (inspect, modify an app you own, automate a tap sequence, fuse apps,
+skip ads, app-ops, root extras, plain-English goals, the MCP surface, the ADB bootstrap, the AI provider)
+and one card per registered capability. Each card shows a live readiness badge (`READY` /
+`NEEDS SETUP` with the exact missing requirement and how to satisfy it), and expands into: what it does,
+what it runs on, the numbered walkthrough, the phrase that runs it, what actually executes, the limits and
+the undo. The same catalogue is served to agents as the MCP tool `get_guides`.
+
+Coverage is enforced by test, not by discipline: `ModGuideCoverageTest` fails the build if a capability
+ever exists without a guide, if a guide invents a capability that does not exist, if a guide has fewer
+than three steps, or if any guide omits its limits or undo line.
+
+**OpenCode Go** replaces the old Zen integration entirely. The endpoint is
+`https://opencode.ai/zen/go/v1`, the credential is the operator's key, and requests carry the
+`x-opencode-session` routing header the API requires — without it the API answers
+`400 MissingSessionID`, which was the real cause of an earlier "headers" failure. Full contract, model
+constrained by what can carry tool calls, and the live receipt are in
+`docs/app-control/opencode-go-integration.md`. With an OpenCode key stored, OpenCode answers every chat
+surface — bubble, mini browser, shared agent session, model picker — immediately and without a restart.
+
 ## What this build is
 
 fR3k HUD is a single user-facing controller for inspecting, patching and driving the behaviour of
@@ -45,7 +68,10 @@ All of the following ran against a real API 35 emulator with `org.lsposed.lspatc
 | Privileged, shell tier | `HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2`; root-gated operations refused by tier |
 | Privileged, root tier | `HUD_PRIVILEGED_READY uid=0 tier=ROOT protocol=2`; root-gated operations granted |
 
-166 JVM tests pass: capability 38, core 58, app 69, owned patch fixture 1.
+198 JVM tests pass: capability 45, core 74, app 78, owned patch fixture 1. Verified on device in the same
+run: the App-MODS catalogue over MCP (18 guides, 0 uncovered), the APP MODS screen (reports the whole
+catalogue, scrolls, and expands a guide into its walkthrough with limits), the chat bubble naming
+`OpenCode Go`, and the provider-preference device tests (3).
 
 Two real defects were found by these tests and fixed rather than worked around: the selector matcher
 scored a single declared criterion below its own threshold (so a content-description-only selector could
@@ -77,12 +103,23 @@ Expect `CAPABILITY_RESULT PASS` and `companion packages present: NONE`. Require 
   from a worker thread throws "Can't create handler inside thread that has not called Looper.prepare()";
   every bridge entry point now marshals to the main thread.
 
+## Verified engine limitation
+
+The LSPatch repackaging used for the owned fixture **drops non-launcher intent filters**: the prepared
+build keeps `MAIN`/`LAUNCHER` but loses the `fr3kfixture://` deeplink filters, so any capability that
+launches the patched app by deeplink fails with `ActivityNotFoundException`. Found by the capability lab
+(phase 1 runs against the stock build, phase 2 replaces it, and a later bridge run surfaced it). Treat
+deeplink-driven capabilities as unverified on a patched build until the engine preserves filters, or drive
+the patched app through its launcher intent instead.
+
 ## Still open, honestly
 
 1. YouTube ad removal is **not implemented** and is not close: it needs a per-version patch set qualified
    on a real device, and a rootless patch means re-signing and reinstalling the target, which destroys its
    signature-protected data. The signature-bypass path exists in the engine and is deliberately not exposed.
 2. One genuinely useful recipe on a target the operator owns, with recorded before/after evidence.
+   Related: the manifest-filter limitation above means a patched third-party app may lose its deeplinks,
+   which matters as soon as a real recipe replaces a real app.
 3. Wireless-ADB pairing UI for the privileged bootstrap, plus reboot recovery.
 4. The GPL-3.0 question: the embedded engine descends from a GPL-3.0 project. For a private build this is
    the operator's call; before any public distribution the obligations must be reviewed deliberately.

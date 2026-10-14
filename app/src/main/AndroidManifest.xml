@@ -120,6 +120,12 @@
             android:name="com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity"
             android:exported="false" />
 
+        <!-- APP MODS: the human entry point. Every capability with its live requirements, the
+             walkthrough in order, the phrase that runs it, what actually executes, the limits, the undo. -->
+        <activity
+            android:name="com.mcpintelligence.fr3k.ui.mods.ModsActivity"
+            android:exported="false" />
+
         <!-- Bridge plane: user-enabled accessibility service. It only ever acts on packages in the
              active reviewed plan, and never reads credential fields. -->
         <service

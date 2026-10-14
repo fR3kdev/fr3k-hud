@@ -59,6 +59,79 @@ class Fr3kApplication : Application() {
         )
     }
 
+    /**
+     * One routing session id for this process, so the chat bubble, the mini browser and the tool calls
+     * all stay on the same OpenCode Go route instead of each looking like a new client.
+     */
+    private val routingSessionId: String by lazy { "hud-" + java.util.UUID.randomUUID() }
+
+    /** OpenCode Go: the operator's key when configured, the subscription endpoint either way. */
+    val openCodeProvider by lazy {
+        com.mcpintelligence.fr3k.integrations.opencode.OpenCodeGoProvider(
+            bearerTokenProvider = { secureStore.get(settingsImpl.settings.value.opencodeApiKeyKey).orEmpty() },
+            sessionIdProvider = { routingSessionId },
+            defaultModel = settingsImpl.settings.value.opencodeModel
+                .takeIf { it.isNotBlank() }
+                ?: com.mcpintelligence.fr3k.integrations.opencode.OpenCodeGoProvider.DEFAULT_MODEL,
+        )
+    }
+
+    /**
+     * The single decision point for which provider answers, used by the chat bubble, the mini browser,
+     * the shared agent session and the model picker. Re-evaluated on every call, so saving an OpenCode
+     * key in Settings takes over the whole app immediately rather than at the next process start.
+     */
+    val activeProviderId: String
+        get() = com.mcpintelligence.fr3k.core.AiProviderPreference.resolve(
+            explicit = settingsImpl.settings.value.aiProviderPreference,
+            openCodeKeyConfigured = secureStore.get(settingsImpl.settings.value.opencodeApiKeyKey) != null,
+            openRouterKeyConfigured = secureStore.get(settingsImpl.settings.value.openrouterApiKeyKey) != null,
+        )
+
+    fun isOpenCodeActive(): Boolean =
+        activeProviderId == com.mcpintelligence.fr3k.core.AiProviderPreference.OPENCODE
+
+    val activeProvider: com.mcpintelligence.fr3k.core.AiProvider
+        get() = if (isOpenCodeActive()) openCodeProvider else openRouterProvider
+
+    val activeModelLabel: String
+        get() = if (isOpenCodeActive()) openCodeProvider.selectedModel() else openRouterProvider.selectedModel()
+
+    /** "OpenCode Go (your key)" / "OpenCode Go (zero-key)" / "OpenRouter" — never a bare name. */
+    val activeProviderLabel: String
+        get() = if (isOpenCodeActive())
+            "OpenCode Go" + if (openCodeProvider.usingConfiguredKey()) " (your key)" else " (zero-key free tier)"
+        else "OpenRouter"
+
+    /**
+     * Delegates every call to whichever provider the key rules select right now. The shared agent
+     * session holds this for the life of the process, so switching providers must not require a restart.
+     */
+    inner class ActiveProviderRouter :
+        com.mcpintelligence.fr3k.core.AiProvider,
+        com.mcpintelligence.fr3k.core.tools.AgentSessionBackend {
+        override val id: String get() = activeProvider.id
+        override val displayName: String get() = activeProviderLabel
+        override val capabilities: Set<String> get() = activeProvider.capabilities
+        override val requiresNetwork: Boolean = true
+        override val requiresApiKey: Boolean = false
+        override suspend fun ask(request: com.mcpintelligence.fr3k.protocol.AgentAskRequest) =
+            activeProvider.ask(request)
+        override suspend fun health() = activeProvider.health()
+        override suspend fun complete(
+            messages: org.json.JSONArray,
+            tools: List<com.mcpintelligence.fr3k.core.tools.AgentTool>,
+        ): org.json.JSONObject {
+            val chosen = activeProvider
+            val backend = chosen as? com.mcpintelligence.fr3k.core.tools.AgentSessionBackend
+                ?: throw IllegalStateException("$activeProviderLabel cannot run the shared agent session")
+            return backend.complete(messages, tools)
+        }
+    }
+
+    /** Typed for the session constructor, which wants a backend rather than a plain provider. */
+    val routingProvider: ActiveProviderRouter by lazy { ActiveProviderRouter() }
+
     /** Userland app layer: registry, journal, archive and workflows in one place. */
     val capabilityHost: com.mcpintelligence.fr3k.appcontrol.CapabilityHost by lazy {
         com.mcpintelligence.fr3k.appcontrol.CapabilityHost(this)
@@ -85,7 +158,8 @@ class Fr3kApplication : Application() {
             com.mcpintelligence.fr3k.appcontrol.AndroidPackageInspector(this).inspect(it)
         })
         agentToolBus.register(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveAgentTool(blackwaveBridgeClient))
-        com.mcpintelligence.fr3k.core.tools.SharedAgentSession(agentToolBus, openRouterProvider, identity.deviceId)
+        // The routing provider, not a fixed backend: chat and browser follow the key rules live.
+        com.mcpintelligence.fr3k.core.tools.SharedAgentSession(agentToolBus, routingProvider, identity.deviceId)
     }
 
     /** Hoisted like [openRouterProvider] so the §10 diagnostics panel can probe it directly. */
@@ -171,13 +245,12 @@ class Fr3kApplication : Application() {
     }
 
     /**
-     * Register OpenCode Zen as a second AI provider that defaults to
-     * [OpenCodeZenProvider.DEFAULT_MODEL] = `big-pickle`. This is the
+     * Register OpenCode Go as a second AI provider that defaults to
+     * [OpenCodeGoProvider.DEFAULT_MODEL] = `big-pickle`. This is the
      * "no API key" free path: we talk to opencode.ai/zen with the public
      * bearer key, fetch the live free-model list, and let the user pick.
      */
     private fun registerOpenCode() {
-        val openCodeProvider = com.mcpintelligence.fr3k.integrations.opencode.OpenCodeZenProvider()
         val askCommand = com.mcpintelligence.fr3k.integrations.opencode.AskOpenCodeCommand(
             provider = { openCodeProvider },
         )

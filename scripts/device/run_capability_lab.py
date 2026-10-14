@@ -22,6 +22,7 @@ COMPANIONS = ['org.lsposed.lspatch', 'com.termux.api', 'moe.shizuku.privileged.a
 SCRATCH = Path('/home/parrot/.hermes/cache/scratch')
 
 INSTRUMENTED = [
+    ('com.mcpintelligence.fr3k.ui.ProviderPreferenceDeviceTest', 3),
     ('com.mcpintelligence.fr3k.appcontrol.PatchPlaneDeviceTest', 2),
     ('com.mcpintelligence.fr3k.appcontrol.AppInspectionDeviceTest', 2),
     ('com.mcpintelligence.fr3k.appcontrol.FixtureAgentApprovalDeviceTest', 1),

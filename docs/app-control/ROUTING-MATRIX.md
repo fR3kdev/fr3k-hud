@@ -16,7 +16,10 @@ page, it is not supported, and no claim about it should be made.
 | List an app's private directory names (never file contents) | PRIVILEGED | No | **Yes** | Shell tier refuses with a tier message; root tier grants it. Both verified on an emulator |
 | Disable or enable one component of one package | PRIVILEGED | No | **Yes** | Implemented, root-gated |
 | Change a plain-English goal into a plan you review before it runs | intent compiler | No | No | Verified: unknown goals are refused with the closest matches |
-| Drive any of the above from the user's own agent stack (MCP) | MCP | No | No | Verified: localhost only, token required, 9 closed-schema tools |
+| Drive any of the above from the user's own agent stack (MCP) | MCP | No | No | Verified: localhost only, token required, 10 closed-schema tools |
+| Read the walkthrough for any capability, as a person or as an agent | APP MODS / MCP `get_guides` | No | No | Verified: 18 guides, every registered capability covered, 0 uncovered |
+| See which capabilities this device can actually run right now | APP MODS status panel | No | No | Verified: BRIDGE / SHELL / ROOT chips reflect the live service tiers |
+| Point the app at an OpenCode Go subscription, replacing OpenRouter everywhere | AI provider | No | No | Verified live: endpoint, bearer and `x-opencode-session` header, real tool-calling round trip |
 | Remove ads from the YouTube app | PATCH | Yes | No | **NOT IMPLEMENTED.** Needs a per-version patch set and a device qualification run |
 | Unlock premium features, bypass DRM, spoof Play Integrity, forge a signature | — | — | — | **Refused permanently.** The registry cannot even construct such a capability |
 

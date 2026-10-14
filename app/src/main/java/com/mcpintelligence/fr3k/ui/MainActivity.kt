@@ -114,8 +114,24 @@ class MainActivity : ComponentActivity() {
         // and for deep links from the system Settings "Manage apps"
         // screen so users can land on the right page after granting
         // a permission.
+        openRequestedSurface(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // A deep link delivered to an already-running dashboard must still land: without this, launching
+        // the same shortcut twice silently does nothing.
+        openRequestedSurface(intent)
+    }
+
+    private fun openRequestedSurface(intent: Intent?) {
         if (intent?.getBooleanExtra("open_integrations", false) == true) {
             startActivity(Intent(this, IntegrationsActivity::class.java))
+        }
+        // Same shortcut for the guides, so `adb am start --ez open_mods true` lands on APP MODS.
+        if (intent?.getBooleanExtra("open_mods", false) == true) {
+            startActivity(Intent(this, com.mcpintelligence.fr3k.ui.mods.ModsActivity::class.java))
         }
     }
 
@@ -418,6 +434,9 @@ private fun SecondaryActions(activity: ComponentActivity) {
             }
             SecondaryRow("BLACKWAVE · SETUP/DEVICES") {
                 activity.startActivity(Intent(activity, BlackwaveActivity::class.java))
+            }
+            SecondaryRow("APP MODS · GUIDES + WALKTHROUGHS") {
+                activity.startActivity(Intent(activity, com.mcpintelligence.fr3k.ui.mods.ModsActivity::class.java))
             }
             SecondaryRow("AUTOMATION") { activity.startActivity(Intent(activity, AutomationActivity::class.java)) }
             SecondaryRow("OPEN ON…") { activity.startActivity(Intent(activity, DeviceHandoffActivity::class.java)) }

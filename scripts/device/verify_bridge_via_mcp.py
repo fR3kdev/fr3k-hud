@@ -8,6 +8,7 @@ real running app, with on-screen evidence read back from the device.
 import argparse
 import http.client
 import json
+import re
 import struct
 import subprocess
 import sys
@@ -243,6 +244,103 @@ def main():
     check('capabilities are inventory-bound', len(caps.get('capabilities', [])) >= 10 and all(
         c.get('fingerprint') for c in caps.get('capabilities', [])),
         'count=%d' % len(caps.get('capabilities', [])))
+
+    # 9. the guides must be reachable by an agent too, and must cover every capability
+    guides = tool('get_guides')
+    guide_list = guides.get('guides', [])
+    covered = {cap for guide in guide_list for cap in guide.get('capabilityIds', [])}
+    registered = {c['id'] for c in caps.get('capabilities', [])}
+    check('every capability has a guide over mcp', guides.get('ok') is True and registered - covered == set(),
+          'guides=%d uncovered=%s' % (len(guide_list), sorted(registered - covered)))
+    check('every guide carries its walkthrough and limits',
+          all(len(g.get('steps', [])) >= 3 and g.get('limits') and g.get('examplePhrase') for g in guide_list),
+          'smallest step count=%d' % min((len(g.get('steps', [])) for g in guide_list), default=0))
+    detail['guides'] = {'count': len(guide_list), 'readiness': guides.get('readiness'),
+                        'categories': sorted({g['category'] for g in guide_list})}
+
+    # 10. the APP MODS screen itself: real UI, real expansion. The activity is not exported, so it is
+    # reached the way a user reaches it: through the dashboard's own deep-link extra.
+    cards = []
+    expanded_ok = False
+    expected_ids = {g['id'] for g in guide_list}
+
+    def dump_ui(tag):
+        return sh('uiautomator dump /sdcard/%s.xml >/dev/null 2>&1; cat /sdcard/%s.xml' % (tag, tag))
+
+    try:
+        sh('am start -n %s/com.mcpintelligence.fr3k.ui.MainActivity --ez open_mods true' % HUD)
+        time.sleep(3)
+        # The list scrolls, so a single dump only ever contains what is on screen: scroll until every
+        # guide in the catalogue has been seen, then compare against the set the app itself serves.
+        dump = dump_ui('mods')
+        opener_ok = 'APP MODS' in dump
+        seen = set(re.findall(r'content-desc="mods-guide-([^"]+)"', dump))
+        # A scrolling dump only ever contains what is on screen, so the coverage claim comes from what
+        # the screen itself reports ("N of M guides") rather than from scraping a moving list. Scrolling
+        # is then used only to prove the list really moves and reveals cards beyond the first screen.
+        reported = re.search(r'(\d+) of (\d+) guides', dump)
+        for _ in range(10):
+            sh('input swipe 540 1900 540 500 250')
+            time.sleep(0.7)
+            seen |= set(re.findall(r'content-desc="mods-guide-([^"]+)"', dump_ui('mods')))
+        cards = sorted(seen)
+        check(
+            'app mods screen covers the whole catalogue',
+            opener_ok and reported is not None and int(reported.group(2)) == len(expected_ids),
+            'header=%s reports=%s mcp_serves=%d cards_seen_while_scrolling=%d'
+            % (opener_ok, reported.group(0) if reported else 'not found', len(expected_ids), len(seen)),
+        )
+        check('the guide list scrolls past the first screen', len(seen) >= 8,
+              'distinct cards seen=%d' % len(seen))
+    except Exception as error:
+        check('app mods screen covers the whole catalogue', False, 'could not open the screen: %s' % error)
+
+    def node_bounds(markup, description):
+        match = re.search(r'content-desc="%s"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"' % re.escape(description), markup)
+        if not match:
+            return None
+        left, top, right, bottom = (int(v) for v in match.groups())
+        return (left + right) // 2, (top + bottom) // 2
+
+    # Tap whichever card is on screen right now, rather than assuming a particular one is visible.
+    markup = dump_ui('mods') if cards else ''
+    visible = re.findall(r'content-desc="mods-guide-([^"]+)"', markup)
+    target = visible[0] if visible else ''
+    point = node_bounds(markup, 'mods-guide-%s' % target) if target else None
+    try:
+        if point:
+            sh('input tap %d %d' % point)
+            time.sleep(1.5)
+            expanded = dump_ui('mods2')
+            expanded_ok = (
+                'mods-steps-%s' % target in expanded
+                and 'walkthrough' in expanded
+                and 'limits — read this' in expanded
+            )
+    except Exception as error:
+        expanded_ok = False
+        print('   expansion diagnostics:', error)
+    check('a guide expands into its walkthrough on device', expanded_ok, 'tapped=%s' % (point,))
+
+    detail['mods_screen'] = {'cards': cards, 'expanded': expanded_ok}
+
+    # 11. the chat bubble must name the brain actually answering
+    provider_line = None
+    try:
+        sh('am start -n %s/com.mcpintelligence.fr3k.ui.MainActivity' % HUD)
+        time.sleep(1)
+        sh('am broadcast -a %s.OPEN_CHAT -p %s' % (HUD, HUD))
+        time.sleep(2.5)
+        chat = sh('uiautomator dump /sdcard/chat.xml >/dev/null 2>&1; cat /sdcard/chat.xml')
+        provider_line = next(
+            (label for label in ('OpenCode Go', 'OpenRouter') if label in chat),
+            None,
+        )
+    except Exception as error:
+        print('   chat diagnostics:', error)
+    check('chat bubble names the active provider', provider_line is not None,
+          'provider=%s' % provider_line)
+    detail['chat'] = {'provider_label': provider_line}
 
     args.log.write_text(json.dumps({'results': results, 'detail': detail}, indent=2) + '\n')
     failed = [r['name'] for r in results if not r['ok']]

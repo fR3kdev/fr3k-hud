@@ -55,6 +55,10 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
         loop = null
     }
 
+    /** The application context, used for the live device read the guides report. */
+    private val context: android.content.Context
+        get() = com.mcpintelligence.fr3k.Fr3kApplication.get()
+
     fun toolList(): JSONArray = JSONArray().apply {
         put(tool("list_capabilities", "List registered capabilities for the apps installed on this device", JSONObject()))
         put(tool("get_app_identity", "Read the installed identity (version, signer, APK hashes) of one package",
@@ -68,6 +72,9 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
         put(tool("bridge_status", "Report whether the accessibility bridge is connected and what it may act on", JSONObject()))
         put(tool("explore_app", "Record an app map for an installed package from its deeplink entries",
             JSONObject().put("package", "string").put("entries", "string")))
+        put(tool("get_guides", "Return every guide: what a capability does, what it requires, the walkthrough, " +
+            "the phrase that runs it, its limits and how to undo it",
+            JSONObject().put("category", "string (optional: INSPECT, MODIFY, AUTOMATE, COMBINE, CONNECT)").put("id", "string (optional)")))
     }
 
     private fun tool(name: String, description: String, parameters: JSONObject): JSONObject =
@@ -98,6 +105,25 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
                 put("signerSha256", identity.signerSha256)
                 put("fingerprint", identity.fingerprint)
             }
+        }
+        "get_guides" -> {
+            val wanted = arguments.optString("category").trim().uppercase()
+            val only = arguments.optString("id").trim()
+            var guides = com.mcpintelligence.fr3k.appcontrol.ModGuideCatalogue.all()
+            if (wanted.isNotEmpty()) guides = guides.filter { it.category.label == wanted }
+            if (only.isNotEmpty()) guides = guides.filter { it.id == only }
+            if (guides.isEmpty()) return error("no guide matches that filter")
+            JSONObject().put("ok", true).put("count", guides.size)
+                .put("guides", com.mcpintelligence.fr3k.appcontrol.ModGuideCatalogue.toJson(guides))
+                .put(
+                    "readiness",
+                    JSONObject().let { state ->
+                        val env = com.mcpintelligence.fr3k.appcontrol.ModGuideCatalogue.environment(context)
+                        state.put("bridgeBound", env.bridgeBound)
+                            .put("privilegedShell", env.privilegedShell)
+                            .put("privilegedRoot", env.privilegedRoot)
+                    },
+                )
         }
         "render_plan" -> {
             val goal = arguments.optString("goal")

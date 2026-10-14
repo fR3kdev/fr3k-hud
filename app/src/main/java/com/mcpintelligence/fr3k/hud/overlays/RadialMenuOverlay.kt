@@ -82,6 +82,7 @@ class RadialMenuOverlay(
         addOverlayRow(rows, "OPEN TERMINAL", HudOverlayService.ACTION_OPEN_TERMINAL)
         // Row 4: ask about this (full activity — needed for the share sheet flow)
         addActivityRow(rows, "ASK ABOUT THIS", com.mcpintelligence.fr3k.ui.ask.AskAboutThisActivity::class.java)
+        addActivityRow(rows, "APP MODS", com.mcpintelligence.fr3k.ui.mods.ModsActivity::class.java)
         // Row 5: integrations
         addActivityRow(rows, "INTEGRATIONS · TERMUX/LSPATCH/MORPHE",
             com.mcpintelligence.fr3k.ui.integrations.IntegrationsActivity::class.java)
