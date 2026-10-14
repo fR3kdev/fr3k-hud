@@ -12,6 +12,7 @@ import kotlinx.coroutines.*
 
 /** Explicit local inspection UI; no hook or preparation success is implied. */
 class AppControlActivity : ComponentActivity() {
+    private var preparedForInstall: com.mcpintelligence.fr3k.appcontrol.EmbeddedFixturePatchEngine.Prepared? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val density = resources.displayMetrics.density
@@ -31,7 +32,7 @@ class AppControlActivity : ComponentActivity() {
             typeface = Typeface.MONOSPACE; setPadding(0, pad / 2, 0, pad / 2)
         }
         body.addView(text("fR3k // APP CONTROL", 22f).apply { setTextColor(0xffe879f9.toInt()) })
-        body.addView(text("INSPECTION AVAILABLE\nPATCH ENGINE: NOT QUALIFIED\nLIVE HOOKS: NOT AVAILABLE"))
+        body.addView(text("INSPECTION AVAILABLE\nPATCH / LIVE CONTROL: OWNED FIXTURE LAB ONLY\nTHIRD-PARTY RECIPES: NOT AVAILABLE"))
         val status = text("")
         fun refreshStatus() {
             status.text = if (HudPrivilegedBridge.serviceOrNull() != null)
@@ -95,6 +96,63 @@ class AppControlActivity : ComponentActivity() {
             }
         })
         body.addView(output)
+        body.addView(Button(this).apply {
+            text = "LAB: PREPARE OWNED FIXTURE ON THIS DEVICE"
+            setOnClickListener {
+                isEnabled = false
+                output.text = "Preparing only the bundled owned test fixture. No installed app will be replaced."
+                lifecycleScope.launch {
+                    try {
+                        preparedForInstall = com.mcpintelligence.fr3k.appcontrol.EmbeddedFixturePatchEngine(this@AppControlActivity).prepare()
+                        output.text = "Owned fixture prepared and signed with this installation's AndroidKeyStore key.\nSHA256: ${preparedForInstall!!.sha256}\nNot installed. Use the reviewed installation button."
+                    } catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { output.text = "Preparation failed: ${e.message}" }
+                    finally { isEnabled = true }
+                }
+            }
+        })
+        body.addView(Button(this).apply {
+            text = "LAB: REVIEW OWNED FIXTURE INSTALLATION"
+            setOnClickListener {
+                val candidate = preparedForInstall
+                if (candidate == null) { output.text = "Prepare the owned fixture first."; return@setOnClickListener }
+                android.app.AlertDialog.Builder(this@AppControlActivity)
+                    .setTitle("Install ONLY the owned test fixture?")
+                    .setMessage("Target: com.mcpintelligence.fr3k.patchfixture. Re-signing may require removing the old fixture and loses that fixture's data. HUD never uninstalls it automatically. No third-party application is selected. Continue to Android's installer?")
+                    .setNegativeButton("CANCEL", null)
+                    .setPositiveButton("OPEN ANDROID INSTALLER") { _, _ ->
+                        if (!packageManager.canRequestPackageInstalls()) {
+                            startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                android.net.Uri.parse("package:$packageName")))
+                        } else {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(this@AppControlActivity,
+                                "$packageName.fileprovider", candidate.apk)
+                            startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                .setDataAndType(uri, "application/vnd.android.package-archive")
+                                .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                        }
+                    }.show()
+            }
+        })
+        body.addView(Button(this).apply {
+            text = "LAB: LAUNCH PREPARED OWNED FIXTURE"
+            setOnClickListener {
+                val intent = packageManager.getLaunchIntentForPackage(com.mcpintelligence.fr3k.appcontrol.OwnedFixtureController.TARGET)
+                if (intent != null) startActivity(intent) else output.text = "Install the owned fixture first."
+            }
+        })
+        for (show in listOf(false, true)) body.addView(Button(this).apply {
+            text = if (show) "LAB: RESTORE OWNED FIXTURE BANNER (UNDO)" else "LAB: HIDE OWNED FIXTURE BANNER"
+            setOnClickListener {
+                isEnabled = false
+                lifecycleScope.launch {
+                    try { output.text = com.mcpintelligence.fr3k.appcontrol.OwnedFixtureController(this@AppControlActivity).change(show) }
+                    catch (e: CancellationException) { throw e }
+                    catch (e: Exception) { output.text = "Operation not confirmed: ${e.message}" }
+                    finally { isEnabled = true }
+                }
+            }
+        })
         body.addView(Button(this).apply { text = "CLOSE"; setOnClickListener { finish() } })
         setContentView(ScrollView(this).apply { isFillViewport = true; addView(body) })
         body.requestApplyInsets()

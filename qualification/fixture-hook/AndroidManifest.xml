@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.mcpintelligence.fr3k.fixturehook">
+    <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="35" />
+    <application android:label="fR3k Owned Fixture Hook" android:hasCode="true">
+        <meta-data android:name="xposedmodule" android:value="true" />
+        <meta-data android:name="xposeddescription" android:value="Owned banner fixture qualification only" />
+        <meta-data android:name="xposedminversion" android:value="82" />
+    </application>
+</manifest>

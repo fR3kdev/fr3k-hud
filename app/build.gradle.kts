@@ -13,8 +13,8 @@ android {
         applicationId = "com.mcpintelligence.fr3k.hud"
         minSdk = 31
         targetSdk = 35
-        versionCode = 417
-        versionName = "0.4.17"
+        versionCode = 418
+        versionName = "0.4.18"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -52,11 +52,20 @@ android {
     }
 }
 
+// The pinned source-built engine already carries Gson and the ListenableFuture API.
+// Avoid packaging a second copy from the existing AndroidX/Shizuku graph.
+configurations.configureEach {
+    exclude(group = "com.google.code.gson", module = "gson")
+    exclude(group = "com.google.guava", module = "listenablefuture")
+}
+
 dependencies {
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(project(":transport"))
     implementation(project(":ui"))
+    // Private lab engine, source-built and pinned; limited to the owned fixture.
+    implementation(files("libs/lspatch-fixture-qualified.jar"))
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")

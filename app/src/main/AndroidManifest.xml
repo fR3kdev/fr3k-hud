@@ -12,6 +12,8 @@
     <!-- Tier-0: always-on, non-root Android APIs                        -->
     <!-- ============================================================== -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Explicit user-reviewed installation of the owned lab fixture only. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
