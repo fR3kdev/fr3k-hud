@@ -23,8 +23,11 @@ def main():
     sdk = Path('/usr/lib/android-sdk/build-tools/35.0.1')
     signature = subprocess.check_output([str(sdk/'apksigner'), 'verify', '--verbose', '--print-certs', str(apk)], text=True)
     badging = subprocess.check_output([str(sdk/'aapt'), 'dump', 'badging', str(apk)], text=True)
-    if "versionCode='417'" not in badging or "versionName='0.4.17'" not in badging:
-        raise RuntimeError('Expected the built 0.4.17/417 candidate')
+    import re
+    version_name = re.search(r"versionName='([^']+)'", badging).group(1)
+    version_code = int(re.search(r"versionCode='(\d+)'", badging).group(1))
+    if not re.match(r'^0\.4\.\d+$', version_name) or version_code < 417:
+        raise RuntimeError('Unexpected candidate %s/%s' % (version_name, version_code))
     tests = {}
     for module in ('core', 'app', 'patch-fixture'):
         results = list((root/module/'build/test-results/testDebugUnitTest').glob('TEST-*.xml'))
@@ -42,31 +45,39 @@ def main():
             raise RuntimeError('Missing passing device evidence: ' + name)
     out = args.release_dir.resolve()
     out.mkdir(parents=True, exist_ok=True)
-    dest = out/'fr3k-hud-0.4.17-debug.apk'
+    dest = out/('fr3k-hud-%s-debug.apk' % version_name)
     artifacts = root/'artifacts'
-    for target in (dest, artifacts/'FR3K-HUD-0.4.17.apk'):
+    for target in (dest, artifacts/('FR3K-HUD-%s.apk' % version_name)):
         if target.exists() and sha(target) != sha(apk):
             raise RuntimeError('Refusing to overwrite a different published candidate: ' + str(target))
         shutil.copy2(apk, target)
         assert sha(target) == sha(apk)
-    metadata = {'versionName': '0.4.17', 'versionCode': 417, 'sha256': sha(apk),
+    metadata = {'versionName': version_name, 'versionCode': version_code, 'sha256': sha(apk),
         'bytes': apk.stat().st_size, 'source_commit': subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip(),
         'source_tree': 'Includes preserved pre-existing dirty BLACKWAVE work; not a clean source-tree claim',
         'signature': 'APK_V2_VERIFIED_DEBUG', 'jvm_tests': tests,
-        'emulator_api35_tests': {'embedded_service': 2, 'inspection_ui': 2},
+        'emulator_api35_tests': {'embedded_service': 2, 'inspection_ui': 2, 'on_device_patcher': 1,
+                                 'owned_controller_ui': 1, 'owned_agent_approval': 1},
         'hardware_tested': False, 'launcher_install_tested': False,
-        'capabilities': ['selected_package_identity', 'shell_uid_2000_read_only_service', 'local_inspection_ui', 'agent_inspect_and_plan'],
-        'not_implemented': ['wireless_adb_pairing_ui', 'embedded_apk_patcher', 'target_hook_runtime', 'youtube_recipe', 'apply_and_undo'],
+        'capabilities': ['selected_package_identity', 'shell_uid_2000_read_only_service', 'local_inspection_ui',
+                          'agent_inspect_and_plan', 'on_device_apk_patching_owned_fixture',
+                          'on_device_keystore_signing', 'owned_fixture_live_method_control', 'agent_approved_owned_write'],
+        'not_implemented': ['wireless_adb_pairing_ui', 'third_party_target_recipes', 'signature_bypass',
+                            'youtube_recipe', 'general_apply_and_undo_for_arbitrary_apps'],
         'full_objective': 'OPEN'}
     (out/'validation.json').write_text(json.dumps(metadata, indent=2)+'\n')
     (out/'apksigner.txt').write_text(signature)
     (out/'SHA256SUMS').write_text(''.join(f'{sha(out/name)}  {name}\n' for name in (dest.name, 'validation.json', 'apksigner.txt')))
-    (artifacts/'FR3K-HUD-0.4.17.apk.sha256').write_text(f'{sha(apk)}  FR3K-HUD-0.4.17.apk\n')
-    (artifacts/'FR3K-HUD-0.4.17.apk.meta.json').write_text(json.dumps(metadata, indent=2)+'\n')
+    stem = 'FR3K-HUD-%s.apk' % version_name
+    (artifacts/(stem + '.sha256')).write_text(f'{sha(apk)}  {stem}\n')
+    (artifacts/(stem + '.meta.json')).write_text(json.dumps(metadata, indent=2)+'\n')
     evidence = out/'evidence'
     evidence.mkdir(exist_ok=True)
-    for name in ('hud-final-build.log', 'hud-embedded-instrumentation.txt', 'hud-embedded-default-instrumentation.txt',
-                 'hud-inspect-default-instrumentation.txt', 'hud-app-control-default.png'):
+    for name in ('hud-final-build.log', 'hud-embedded-default-instrumentation.txt',
+                 'hud-AppInspectionDeviceTest-instrumentation.txt', 'hud-FixtureAgentApprovalDeviceTest-instrumentation.txt',
+                 'hud-owned-controller-instrumentation.txt', 'hud-ondevice-patch-instrumentation.txt',
+                 'hud-app-control-default.png', 'hud-app-control-bottom.png',
+                 'owned-banner-hidden.png', 'owned-banner-restored.png'):
         shutil.copy2(scratch/name, evidence/name)
     print(json.dumps(metadata, indent=2))
     print('RELEASE', out)

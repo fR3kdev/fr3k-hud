@@ -1,43 +1,62 @@
-# App control implementation checkpoint — 0.4.17
+# App control implementation checkpoint — 0.4.18
 
-Full objective: **OPEN**. This build does not patch third-party apps or remove YouTube ads.
+Full objective: **OPEN**. HUD controls only its own test fixture today. It does not modify YouTube or any third-party app, and no ad-removal recipe exists.
 
 ## Implemented and exercised
 
-- Local Integrations → APP CONTROL screen: explicit selected-package inspection, clear unsupported engine states, read-only service status and stop action.
-- Installed APK version, certificate SHA256 and ordered APK/split SHA256 inspection, with streaming reads, cancellation, size budget and package-change detection. No private app data is read.
-- Shared `app.control.inspect` and `app.control.plan` agent tools. The provider schema explicitly requires `package` and cannot accept caller-supplied privilege/runtime claims. Existing shared-session review remains enabled. AI chat can use a remote provider; the inspection engine itself is local.
-- Immutable recipe/target identity primitives and bounded in-memory single-use approval grants. They are not yet a complete apply/undo workflow or a trusted signed recipe ingestion system.
-- HUD-owned AIDL service launched from the installed HUD APK by already-authorised ADB as UID2000. No Shizuku manager, LSPatch manager or Termux is needed for this service. Only package metadata inspection and shutdown are exposed; no shell strings, APK install, app code loading or mutation API.
-- Provider publication requires OS DUMP permission and an actual shell/root Binder caller. Server calls require the installed HUD UID, source path and pinned certificate. Binder generation/lifecycle are tracked; service expires after 30 minutes or HUD process death. Current bootstrap entry supports shell UID2000 only, not root or secondary users.
-- Unsupported custom Shizuku transaction numbers and synthetic success output removed. Root presence no longer implies verified privilege; UI probes only after an explicit tap. Stale permission grants cannot resurrect a dead Binder.
+- Local Integrations → APP CONTROL screen: selected-package inspection, clear unsupported states, HUD shell-service status/stop, and an explicitly labelled lab section for the owned fixture. The scrolling root carries the system-bar insets so the last control clears the navigation gesture handle.
+- Installed APK version, certificate SHA256 and ordered APK/split SHA256 inspection with streaming reads, cancellation, a 512 MiB budget and package-change detection. Private app data is never read.
+- Shared `app.control.inspect` and `app.control.plan` agent tools. The provider schema requires `package` and rejects caller-supplied privilege/runtime claims; shared-session approval still gates writes.
+- `app.control.fixture.banner` writes ONLY to the prepared owned fixture and requires visible user approval in the shared session. Immutable recipe/target identity primitives and bounded in-memory single-use approval grants exist; they are not yet a general apply/undo workflow.
+- Embedded, source-built, pinned patch engine (LSPatch `0dc50f42503711b14f5e2bb217c2bdd6321ce5be`), built in isolation with SDK 37 / build-tools 37 / NDK 29.0.14206865 / JDK 25 targeting Java 21. HUD's own build stays on SDK 35 + JDK 17.
+- On-device preparation runs entirely inside HUD: asset digests verified, graded target signature-checked, output signed with a per-install **non-exportable AndroidKeyStore** entry (no bundled or upstream demo keystore), and the result re-verified with `apksigner` before publication to the FileProvider shares path.
+- Fail-closed live control: the installed fixture must be byte-identical to the newest APK this HUD prepared and its signer must match HUD's lab key. Confirmed method changes report the target PID back over an ordered, HUD-signature-protected broadcast.
+- Installation of the prepared fixture happens only through a user-reviewed `PackageInstaller` flow from the lab screen; HUD never uninstalls or silently replaces anything (signature change means the old fixture must be removed by the operator).
+- HUD-owned AIDL service launched from the installed HUD APK by already-authorised ADB as UID 2000: read-only package metadata plus shutdown. Publication needs DUMP plus a real shell/root caller; calls need HUD's UID, source path and pinned certificate; 30-minute bounded lifetime; no shell strings, APK loading or mutation API.
+- Removed fabricated Shizuku IPC success paths, stale-permission resurrection and root-presence privilege claims; unsupported custom transaction numbers are reported as unsupported.
 
 ## Real validation
 
-125 JVM tests pass: core 58, app 66, owned patch fixture 1. Four unique API35 emulator tests pass: embedded service/negative publication/shutdown and selected-app shared-bus/UI inspection. Both ATD and standard AOSP emulator runs exercised the service; the ATD profile contained no Shizuku/LSPatch/Termux packages. Standard AOSP had pre-existing companion packages, which the new service did not use. ATD screenshot was black and was rejected as visual evidence; the standard emulator produced a visually reviewed readable dark/magenta screen with actual fixture inspection output.
+125 JVM tests pass: core 58, app 66, owned patch fixture 1.
 
-APK v2 debug signature verified. Physical-phone acceptance, ARM64/OEM behaviour, root bootstrap, reboot/wireless-pairing recovery and live model inference are not claimed. The emulator was launched read-only; no personal phone was connected or modified.
+On-device run on the disposable API 35 emulator (`sdk_phone64_x86_64-userdebug`, launched read-only), with `org.lsposed.lspatch`, `com.termux.api` and `moe.shizuku.privileged.api` **uninstalled** — companion packages present: NONE:
 
-## Artifact
+| Test | Result |
+|---|---|
+| EmbeddedFixturePatcherDeviceTest | OK (1 test) |
+| OwnedFixtureControllerDeviceTest | OK (1 test) |
+| FixtureAgentApprovalDeviceTest | OK (1 test) |
+| AppInspectionDeviceTest | OK (2 tests) |
+| EmbeddedPrivilegeDeviceTest | OK (2 tests) |
 
-`/home/parrot/repos/fr3k-hud/artifacts/FR3K-HUD-0.4.17.apk`
+Screenshots reviewed: the fixture banner is absent when set false and present when restored, with the same fixture PID as the authenticated broadcast receipt; the app-control screen and its scrolled-bottom state are legible and unclipped. Reproduce with `python3 scripts/device/run_embedded_lab.py --serial <explicit-serial> --apk-dir app/build/outputs/apk --log <summary.json>` — order matters, because preparing republishes the fixture.
 
-SHA256: `b55f7804a965b9ec86dbbc168f215e6dc7333fcbabf403284cff9706d6a5f276`
+APK v2 debug signature verified. Not verified: physical phone, ARM64/OEM behaviour, reboot/wireless-pairing recovery, root (UID 0) bootstrap, live model inference, and anything involving a non-owned target.
 
-Selected benchmark copy: `/home/parrot/FR3K-BENCHMARK/hud-latest-debug.apk`. All 17 current benchmark hashes pass. The active selection/sync implementation is in `/home/parrot/worktrees/blackwave-unified-20261012`; the original BLACKWAVE repository's selection is stale. Original non-HUD firmware candidates and operator test results were preserved; the previous HUD was archived before refresh.
+## Honest capability boundary
 
-Release/evidence: `/home/parrot/worktrees/blackwave-unified-20261012/releases/app-control-2026-10-14/hud/`.
+Everything above is *owned-fixture* capability. The gap between "HUD patches its own test app and toggles one of its methods" and "HUD silences ads in the installed YouTube build" is the whole remaining problem, not a detail:
 
-Source implementation commit: `1db80f8`. Existing dirty BLACKWAVE changes were preserved and included in compilation, so this is not a clean-tree reproducibility claim. APK binaries remain local, not committed or uploaded.
+1. Rootless hooking needs the target APK re-signed and reinstalled, which destroys the installed app's signature-protected data unless the operator accepts removal, and needs an exact per-version recipe.
+2. Signature bypass exists in the engine but is deliberately not exposed: it would forge another developer's app identity. Not implemented, not planned as a default.
+3. Real in-process instrumentation requires the target to be started from the prepared APK. HUD cannot silently mutate a running third-party process from an ordinary app install.
+4. No story for integrity-checked apps, Play Integrity, or server-side feature evaluation.
+
+So "full dominion over every app, instantly" is not achievable from an ordinary APK, and this build does not claim it.
 
 ## Remaining work, in order
 
-1. Finish isolated native LSPatch source qualification; initial source checkout failed because libxposed/api and libxposed/service returned 404. Exact gitlink commits were recovered from JingMatrix mirrors, not substituted with current mirror HEADs.
-2. Build the pinned native/loader assets with isolated SDK37/build-tools37, both upstream-required NDK29 revisions and JDK25 targeting Java21, keeping HUD's SDK35/JDK17 build unchanged. Initial Gradle qualification reached the core daemon and failed on its different NDK revision/license lookup. Existing accepted workstation licence files were copied into the isolated SDK; no new licence acceptance was invented.
-3. Review GPL distribution obligations before bundling the engine. No GPL engine is included in this APK.
-4. Prove manager-free loader operation and true/false/true method behaviour on the owned fixture, including authenticated live control, same-PID evidence and Undo.
-5. Add staged/verified APK preparation and user-reviewed PackageInstaller flow, then support version-specific recipes. Wireless ADB pairing UI, target runtime and apply/undo remain absent.
-6. Qualify any YouTube recipe independently against exact app/version/splits and real playback behaviour. Do not conflate generic patcher compilation with ad-removal capability.
+1. Staged, verified preparation of a user-selected APK with an explicit per-app warning and a documented undo (archive original; reinstall needs user confirmation).
+2. Recipe model: exactly one recipe per package+versionCode+signer+splits set, each with written qualification evidence, loaded from signed local data — never generated on the fly.
+3. A first genuinely useful recipe on a target the operator owns, with real before/after evidence.
+4. Wireless ADB pairing UI for the privileged bootstrap, plus reboot recovery.
+5. Decide the GPL distribution question deliberately: the engine is GPL-3.0-derived and currently ships as an asset inside the HUD debug build. Review obligations, or move the engine behind an optional component, before any public release.
+
+## Artifact
+
+Release directory: `/home/parrot/worktrees/blackwave-unified-20261012/releases/app-control-2026-10-14/hud/` — `validation.json`, `SHA256SUMS`, `apksigner.txt` and the reviewed screenshots sit beside the selected APK. `SHA256SUMS` is the authority for the paused candidate hash; re-read it rather than trusting a copied digest. Selected benchmark copy: `/home/parrot/FR3K-BENCHMARK/hud-latest-debug.apk`; all benchmark hashes verify. The active selection/sync implementation is `/home/parrot/worktrees/blackwave-unified-20261012` — the original BLACKWAVE repository's selection is stale, so do not run its sync blindly.
+
+Source: commit `HEAD` of `/home/parrot/repos/fr3k-hud` (exact SHA recorded in `validation.json`). Unrelated pre-existing BLACKWAVE work is preserved in the tree, so this is not a clean-tree reproducibility claim. APK binaries stay local; nothing is uploaded.
 
 ## Reproduce current checks
 
@@ -45,9 +64,8 @@ From `/home/parrot/repos/fr3k-hud`:
 
     JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ANDROID_HOME=/usr/lib/android-sdk ./gradlew :core:testDebugUnitTest :app:testDebugUnitTest :patch-fixture:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest :patch-fixture:assembleDebug --console=plain
 
-On an explicitly selected disposable emulator, install the three generated APKs, then run:
+Then, on an explicitly selected disposable emulator:
 
-    python3 scripts/device/test_embedded_privilege.py --serial <explicit-serial> --output <evidence-file>
-    adb -s <explicit-serial> shell am instrument -w -e class com.mcpintelligence.fr3k.appcontrol.AppInspectionDeviceTest com.mcpintelligence.fr3k.hud.test/androidx.test.runner.AndroidJUnitRunner
+    python3 scripts/device/run_embedded_lab.py --serial <explicit-serial> --apk-dir app/build/outputs/apk --log /home/parrot/.hermes/cache/scratch/hud-embedded-lab-summary.json
 
-Require instrumentation `OK (2 tests)` for each invocation; adb exit status alone does not prove a passing test. The host helper starts the privileged service only while its instrumentation process is alive. No automatic reconnect or network ADB listener is enabled.
+Expect `RESULT PASS` with every class reporting `OK (…)` and `companion packages present: NONE` when the manager apps are absent. Require the instrumentation text (`OK (n tests)` and no `FAILURES`) for each class; adb exit status alone does not prove a passing test. The host helper in `scripts/device/test_embedded_privilege.py` starts the privileged service only while its instrumentation process is alive. No automatic reconnect or network ADB listener is enabled.

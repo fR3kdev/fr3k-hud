@@ -58,12 +58,29 @@ class AppInspectionDeviceTest {
             } while (android.os.SystemClock.elapsedRealtime() < deadline)
             assertTrue(result.get(), result.get().contains("Package: com.mcpintelligence.fr3k.patchfixture"))
             assertTrue(result.get().contains("Recipe: UNSUPPORTED"))
-            val bitmap = instrument.uiAutomation.takeScreenshot()
-            assertNotNull(bitmap)
-            File(instrument.targetContext.getExternalFilesDir(null), "app-control.png").outputStream().use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+            fun save(name: String) {
+                val bitmap = instrument.uiAutomation.takeScreenshot()
+                assertNotNull(bitmap)
+                File(instrument.targetContext.getExternalFilesDir(null), name).outputStream().use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                bitmap.recycle()
             }
-            bitmap.recycle()
+            save("app-control.png")
+            val scroll = activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as android.widget.ScrollView
+            instrument.runOnMainSync { scroll.fullScroll(View.FOCUS_DOWN) }
+            Thread.sleep(300)
+            val close = views(activity.window.decorView).filterIsInstance<Button>()
+                .single { it.text.toString().trim() == "CLOSE" }
+            val buttonRect = android.graphics.Rect()
+            val windowRect = android.graphics.Rect()
+            instrument.runOnMainSync {
+                close.getGlobalVisibleRect(buttonRect)
+                activity.window.decorView.getWindowVisibleDisplayFrame(windowRect)
+            }
+            assertTrue("Last control clipped by system bars: $buttonRect within $windowRect",
+                buttonRect.height() > 0 && buttonRect.bottom <= windowRect.bottom && buttonRect.top >= windowRect.top)
+            save("app-control-bottom.png")
         } finally { instrument.runOnMainSync { activity.finish() } }
     }
 }

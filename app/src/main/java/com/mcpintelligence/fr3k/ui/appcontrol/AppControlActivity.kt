@@ -22,11 +22,8 @@ class AppControlActivity : ComponentActivity() {
             setPadding(pad, pad, pad, pad)
             setBackgroundColor(0xff0a0a14.toInt())
         }
-        body.setOnApplyWindowInsetsListener { view, insets ->
-            val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
-            view.setPadding(pad + bars.left, pad + bars.top, pad + bars.right, pad + bars.bottom)
-            insets
-        }
+        // Insets belong on the scrolling root so the last control clears the navigation gesture handle.
+        val scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
         fun text(value: String, size: Float = 14f) = TextView(this).apply {
             text = value; textSize = size; setTextColor(0xffe5e7eb.toInt())
             typeface = Typeface.MONOSPACE; setPadding(0, pad / 2, 0, pad / 2)
@@ -154,7 +151,14 @@ class AppControlActivity : ComponentActivity() {
             }
         })
         body.addView(Button(this).apply { text = "CLOSE"; setOnClickListener { finish() } })
-        setContentView(ScrollView(this).apply { isFillViewport = true; addView(body) })
-        body.requestApplyInsets()
+        scroll.addView(body)
+        scroll.setOnApplyWindowInsetsListener { view, insets ->
+            val bars = insets.getInsets(android.view.WindowInsets.Type.systemBars())
+            view.setPadding(0, bars.top, 0, bars.bottom)
+            body.setPadding(pad + bars.left, pad, pad + bars.right, pad)
+            insets
+        }
+        setContentView(scroll)
+        scroll.requestApplyInsets()
     }
 }

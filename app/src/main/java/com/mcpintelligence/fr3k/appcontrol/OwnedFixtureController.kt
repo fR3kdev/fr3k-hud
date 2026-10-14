@@ -13,10 +13,13 @@ import kotlin.coroutines.resumeWithException
 class OwnedFixtureController(private val context: Context) {
     companion object { const val TARGET = "com.mcpintelligence.fr3k.patchfixture" }
     suspend fun change(visible: Boolean): String = withContext(Dispatchers.IO) {
+        // Fail closed: the installed fixture must be byte-identical to the newest APK this HUD prepared.
         val expected = context.getSharedPreferences("app-control.lab", Context.MODE_PRIVATE)
             .getString("prepared.sha256", null) ?: error("Prepare and install the owned fixture first")
         val before = AndroidPackageInspector(context).inspect(TARGET)
-        check(before.splitSha256 == listOf(expected)) { "Installed fixture is not this HUD's prepared APK" }
+        check(before.splitSha256 == listOf(expected)) {
+            "Installed fixture is not the latest prepared APK. Install the newest prepared APK from APP CONTROL, then launch it."
+        }
         val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         val certificate = store.getCertificate("fr3k.owned-fixture.signer.v1") ?: error("Fixture signing identity unavailable")
         val signer = java.security.MessageDigest.getInstance("SHA-256").digest(certificate.encoded)
