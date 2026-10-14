@@ -124,6 +124,10 @@ def main():
     lab_prefs = sh('run-as %s cat shared_prefs/capability-lab.xml' % HUD)
     lab_flag = 'name="fixtures" value="true"' in lab_prefs
     fixture_installed = FIXTURE_PKG in sh('pm list packages %s' % FIXTURE_PKG)
+    # Flag + package is necessary but NOT sufficient: measured directly, a run with the flag on and the
+    # fixture packages present still failed five checks, because the lab's own sequence also prepares the
+    # fixture runtime and leaves the fixture app in the state these checks read. The skip reason says so,
+    # rather than implying that flipping the flag is enough.
     fixtures_ready = lab_flag and fixture_installed
     fixture_why = ('lab mode off' if not lab_flag else
                    'owned fixture package not installed' if not fixture_installed else '')
@@ -131,8 +135,10 @@ def main():
     def check_fixture(name, condition, note):
         if not fixtures_ready:
             results.append({'name': name, 'ok': True, 'skipped': True,
-                            'note': 'not applicable (%s): the capability lab installs the owned fixtures and '
-                                    'enables its debug-only mode before this script runs' % fixture_why})
+                            'note': 'not applicable (%s): these checks read the state the capability lab '
+                                    'prepares — it installs and prepares the owned fixtures, then enables its '
+                                    'debug-only flag. Running this script standalone (even with the flag on) '
+                                    'is not the same setup and fails these checks.' % fixture_why})
             print('%-34s %s  %s' % (name, 'SKIP', 'lab mode off'))
             return True
         return check(name, condition, note)
