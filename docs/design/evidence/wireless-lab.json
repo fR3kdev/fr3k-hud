@@ -1,0 +1,29 @@
+{
+  "results": {
+    "wireless debugging setting enabled": {
+      "ok": true,
+      "note": "adb_wifi_enabled=1"
+    },
+    "live pairing code and ports available": {
+      "ok": true,
+      "note": "code=True pairingPort=36787 connectionPort=41883"
+    },
+    "real Android pairing \u2192 UID2000 SHELL \u2192 reconnect": {
+      "ok": true,
+      "note": "Real Android pairing PASS; encrypted identity reload PASS; Binder UID 2000 SHELL PASS; disconnect/reconnect PASS. No PIN or private key stored in evidence."
+    },
+    "selected real app: controls, guides, real app-op write and inverse": {
+      "ok": true,
+      "note": "service=HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2"
+    }
+  },
+  "detail": {
+    "pairing_sheet": {
+      "code_seen": true,
+      "port_seen": true,
+      "screen": "\n\n\n\n\n\n\n\nPair with device\n\n\n\n\n\n\nWi\u2011Fi pairing code\n105699\nIP address & Port\n10.0.2.16:36787\n\n\nCANCEL"
+    },
+    "wireless_evidence": "Real Android pairing PASS; encrypted identity reload PASS; Binder UID 2000 SHELL PASS; disconnect/reconnect PASS. No PIN or private key stored in evidence.",
+    "privileged_bootstrap": "HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2"
+  }
+}

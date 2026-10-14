@@ -135,20 +135,25 @@ Two boundaries this measurement makes explicit, because they are real and not wo
   time and Android asked whether Termux may post notifications. HUD does not click through another app's
   permission dialog on the operator's behalf; the harness declines it and records that it did.
 
-## 4c. Real wireless pairing — conditionally runnable, not re-run in this pass
+## 4c. Real wireless pairing — PASS
 
-`WirelessAndSelectedAppsDeviceTest` performs a **real Android wireless-debugging pairing** (it takes the
-live `pairingCode`, `pairingPort` and `connectionPort` as instrumentation arguments, pairs, starts HUD's
-shell service, asserts `serverUid == 2000` and `tier == SHELL`, inspects a real package over the binder,
-then shuts down and reconnects). Its own guard reads *"Host must open Android's live pairing-code sheet"*,
-which is exactly the precondition.
+`scripts/device/run_wireless_lab.py` → `WIRELESS_LAB_RESULT PASS`
+(`docs/design/evidence/wireless-lab.json`). It supplies both preconditions the test class demands, and then
+runs both of its halves:
 
-In this pass that sheet was not opened, so the class was **not re-run green here** and no result is
-claimed for it. What was verified instead, on the same build: the **SHELL tier at UID2000** and the ROOT
-tier at UID0 by the capability lab (`HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2`), and the
-wireless UI rows by the release UI suite. Wireless debugging was enabled on the emulator
-(`adb_wifi_enabled=1`, `wlan0 10.0.2.16`) but the pairing sheet was not driven. Treat the live pairing
-acceptance as **conditionally runnable, previously green, not confirmed in this pass**.
+| Check | Result |
+|---|---|
+| Wireless debugging enabled on the device | `adb_wifi_enabled=1` |
+| Live pairing sheet read by driving SystemUI's own `WifiDebuggingActivity` | code + pairing port + connection port observed on screen |
+| **Real Android pairing → encrypted identity reload → UID2000 SHELL → disconnect/reconnect** | PASS (`files/ui-audit/wireless.txt`: *"Real Android pairing PASS; encrypted identity reload PASS; Binder UID 2000 SHELL PASS; disconnect/reconnect PASS. No PIN or private key stored in evidence."*) |
+| Selected real app: 41 executable controls, a guide for each, a **real app-op write** and its **inverse restore** | PASS, with HUD's privileged service bootstrapped from the host as `uid=2000 tier=SHELL protocol=2` |
+
+The two preconditions are real and are handled, not faked: the pairing half needs Android's **live
+pairing-code sheet** open (the test's own guard reads *"Host must open Android's live pairing-code sheet"*),
+and the selected-app half needs HUD's privileged service started **from the host while the HUD process is
+alive** — instrumentation cannot start it. The runner opens the sheet through SystemUI's activity (with
+polling, so a slow screen is waited for) and starts the service in that order. It never invents a code, and
+a half that cannot run is recorded as not run.
 
 ## 5. What is NOT verified, or cannot be claimed
 

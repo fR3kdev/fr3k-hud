@@ -30,7 +30,7 @@ instrumented capability lab, which is debug-only and off by default.
 | Real third-party app through the product surface | Termux: **8 screen controls mapped**, **49 capabilities** over MCP, selection removable | System apps are refused as mapping targets by design |
 | Capability lab, four planes (bridge / patch / shell UID2000 / root UID0) | **PASS**, companions uninstalled (`[]`) | Emulator only; the same planes on hardware still need a physical run |
 | Controlled palette contrast | 41 pairs AA, minimum 5.28:1 | Not a rendered-pixel audit of every surface |
-| Real wireless pairing/start/shutdown/reconnect and selected-app controls | `OK (2 tests)` | Backend test duration, not human pairing task time |
+| Real Android wireless pairing (live pairing sheet), UID2000 SHELL, reconnect, selected-app controls with a real app-op write and inverse | **`WIRELESS_LAB_RESULT PASS`** | Emulator; pairing sheet driven by the harness, not by a human hand |
 | Live OpenCode Go health + real tool-call round trip | `OK` | Real network; `/responses` and `/messages` models excluded (cannot carry tool calls) |
 
 Defects found by the new accessibility lab and fixed rather than documented away: seven unnamed clickable
