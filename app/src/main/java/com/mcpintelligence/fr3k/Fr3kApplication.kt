@@ -59,6 +59,24 @@ class Fr3kApplication : Application() {
         )
     }
 
+    /** Userland app layer: registry, journal, archive and workflows in one place. */
+    val capabilityHost: com.mcpintelligence.fr3k.appcontrol.CapabilityHost by lazy {
+        com.mcpintelligence.fr3k.appcontrol.CapabilityHost(this)
+    }
+
+    /** Localhost-only capability surface, started on demand and bounded by the process lifetime. */
+    val mcpServer: com.mcpintelligence.fr3k.mcp.Fr3kMcpServer by lazy {
+        com.mcpintelligence.fr3k.mcp.Fr3kMcpServer(capabilityHost)
+    }
+
+    @Synchronized
+    fun startMcp(): Int = if (mcpServer.running) mcpServer.port() else mcpServer.start()
+
+    @Synchronized
+    fun stopMcp() {
+        if (mcpServer.running) mcpServer.stop()
+    }
+
     val agentSession by lazy {
         agentToolBus.register(com.mcpintelligence.fr3k.core.appcontrol.AppControlPlanTool())
         agentToolBus.register(com.mcpintelligence.fr3k.appcontrol.OwnedFixtureAgentTool(

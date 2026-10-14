@@ -15,7 +15,7 @@ class StepGrammarTest {
         Step.AssertPresent(sel),
         Step.AssertAbsent(sel),
         Step.Mask(sel),
-        Step.Unmask(sel),
+        Step.Unmask,
         Step.Observe(250),
         Step.Broadcast("com.mcpintelligence.fr3k.hud.SOMETHING", mapOf("k" to "v")),
         Step.PrivilegedOp("com.x.y", "WAKE_LOCK", "deny"),

@@ -43,14 +43,21 @@ class SelectorFingerprintTest {
         assertEquals(0.9, hit.confidence, 0.0001)
     }
 
-    @Test fun classNamePlusTextReachesThreshold() {
-        val hit = found(SelectorFingerprint(className = "android.widget.Button", textRegex = "(?i)skip(\\s+ad(s)?)?"))
-        assertEquals(0.8, hit.confidence, 0.0001)
+    @Test fun everyDeclaredCriterionMustHold() {
+        val both = found(SelectorFingerprint(className = "android.widget.Button", textRegex = "(?i)skip(\\s+ad(s)?)?"))
+        assertEquals(1.0, both.confidence, 0.0001)
+        // The right class with the wrong text satisfies half of a two-criterion selector, so it is refused.
+        val half = SelectorMatcher.find(tree, SelectorFingerprint(className = "android.widget.Button", textRegex = "(?i)nosuchlabel"))
+        assertTrue("a half-satisfied selector must not match: $half", half is MatchOutcome.NotFound)
     }
 
-    @Test fun textOnlyIsBelowThresholdAndNotFound() {
-        val outcome = SelectorMatcher.find(tree, SelectorFingerprint(textRegex = "(?i)decoy"))
-        assertTrue("weak evidence must not match: $outcome", outcome is MatchOutcome.NotFound)
+    @Test fun aSingleDeclaredCriterionIsSatisfiableOnItsOwn() {
+        val hit = found(SelectorFingerprint(contentDescRegex = "ad-demo-skip"))
+        assertEquals(1.0, hit.confidence, 0.0001)
+        assertEquals("ad-demo-skip", hit.node.contentDescription)
+        // Two nodes satisfying the same single criterion is ambiguous, and that is the real guard.
+        val ambiguous = SelectorMatcher.find(tree, SelectorFingerprint(contentDescRegex = "(?i)ad-demo-(skip|decoy)"))
+        assertTrue(ambiguous is MatchOutcome.Ambiguous)
     }
 
     @Test fun ambiguityRefusesInsteadOfClickingFirst() {

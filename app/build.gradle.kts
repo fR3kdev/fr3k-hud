@@ -13,8 +13,8 @@ android {
         applicationId = "com.mcpintelligence.fr3k.hud"
         minSdk = 31
         targetSdk = 35
-        versionCode = 418
-        versionName = "0.4.18"
+        versionCode = 419
+        versionName = "0.4.19"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -60,6 +60,7 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation(project(":capability"))
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(project(":transport"))

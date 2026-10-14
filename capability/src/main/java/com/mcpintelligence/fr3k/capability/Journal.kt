@@ -5,12 +5,15 @@ import org.json.JSONObject
 
 sealed class InverseOp {
     data class ReinstallArchived(val archivePath: String, val sha256: String) : InverseOp()
+    /** Undo a reversible bridge change by running the paired capability again. */
+    data class RunCapability(val capabilityId: String) : InverseOp()
     data class RestorePrivilegedOp(val packageName: String, val op: String, val mode: String) : InverseOp()
     object NoStateChange : InverseOp()
 
     fun toJson(): JSONObject = when (this) {
         is ReinstallArchived -> JSONObject().put("kind", "reinstall").put("path", archivePath).put("sha256", sha256)
         is RestorePrivilegedOp -> JSONObject().put("kind", "restore_op").put("packageName", packageName).put("op", op).put("mode", mode)
+        is RunCapability -> JSONObject().put("kind", "run_capability").put("capabilityId", capabilityId)
         NoStateChange -> JSONObject().put("kind", "none")
     }
 
@@ -18,6 +21,7 @@ sealed class InverseOp {
         fun fromJson(json: JSONObject): InverseOp = when (json.getString("kind")) {
             "reinstall" -> ReinstallArchived(json.getString("path"), json.getString("sha256"))
             "restore_op" -> RestorePrivilegedOp(json.getString("packageName"), json.getString("op"), json.getString("mode"))
+            "run_capability" -> RunCapability(json.getString("capabilityId"))
             "none" -> NoStateChange
             else -> throw IllegalArgumentException("unknown inverse kind")
         }

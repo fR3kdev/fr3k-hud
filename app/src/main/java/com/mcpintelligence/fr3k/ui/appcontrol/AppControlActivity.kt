@@ -113,6 +113,12 @@ class AppControlActivity : ComponentActivity() {
             setOnClickListener {
                 val candidate = preparedForInstall
                 if (candidate == null) { output.text = "Prepare the owned fixture first."; return@setOnClickListener }
+                val sheet = candidate.sheet
+                if (!sheet.installable) {
+                    output.text = "This build has ${sheet.warnings.size} warning(s) that must be acknowledged:" +
+                        sheet.warnings.joinToString("") { "\n  - $it" } +
+                        "\nAcknowledge them in the review dialog before installing."
+                }
                 android.app.AlertDialog.Builder(this@AppControlActivity)
                     .setTitle("Install ONLY the owned test fixture?")
                     .setMessage("Target: com.mcpintelligence.fr3k.patchfixture. Re-signing may require removing the old fixture and loses that fixture's data. HUD never uninstalls it automatically. No third-party application is selected. Continue to Android's installer?")

@@ -15,7 +15,11 @@ import java.util.zip.ZipFile
 /** Private lab qualification only. No arbitrary targets, install, root, signature bypass or private data. */
 class EmbeddedFixturePatchEngine(private val context: Context) {
     companion object { private val SIGNER_LOCK = Any() }
-    data class Prepared(val apk: File, val sha256: String)
+    data class Prepared(
+        val apk: File,
+        val sha256: String,
+        val sheet: PreparationSheet,
+    )
     suspend fun prepare(): Prepared = withContext(Dispatchers.IO) {
         val task = currentCoroutineContext()[Job]
         val root = File(context.noBackupFilesDir, "app-control/jobs/${UUID.randomUUID()}")
@@ -63,8 +67,43 @@ class EmbeddedFixturePatchEngine(private val context: Context) {
             .putString("prepared.sha256", sha).commit().also { check(it) }
         File(shares, "owned-fixture-latest.json").writeText(JSONObject()
             .put("path", published.absolutePath).put("sha256", sha).toString())
-        Prepared(published, sha)
+        // The original installed fixture is archived so this preparation stays undoable.
+        val installed = AndroidIdentityReader.of(context, "com.mcpintelligence.fr3k.patchfixture")
+        val installedApks = listOf(File(installedBasePath()))
+        val archived = runCatching {
+            OriginalArchive(context).store(
+                StagedTarget(
+                    installed.packageName,
+                    installedApks.first(),
+                    emptyList(),
+                    installed.splitSha256,
+                    installed,
+                ),
+            )
+        }.getOrNull()
+        val sheet = PreparationSheet(
+            packageName = installed.packageName,
+            appFingerprint = installed.fingerprint,
+            engineId = "fixture-lab",
+            engineVersion = "lspatch-1.2.1-embedded",
+            patchIds = listOf(module.name),
+            patchBundleDigest = digest(module),
+            sourceSha256 = digest(source),
+            outputSha256 = sha,
+            archivePath = archived?.files?.firstOrNull()?.absolutePath ?: source.absolutePath,
+            archiveSha256 = archived?.files?.firstOrNull()?.let { digest(it) } ?: digest(source),
+            warnings = listOf(
+                "Replacing the installed fixture with a re-signed build changes its signing identity.",
+                "A differently signed build only installs after the old fixture is removed.",
+                "Removing it deletes that fixture's private data.",
+            ),
+            acknowledged = false,
+        )
+        Prepared(published, sha, sheet)
     }
+
+    private fun installedBasePath(): String =
+        context.packageManager.getPackageInfo("com.mcpintelligence.fr3k.patchfixture", 0).applicationInfo!!.sourceDir
     private fun signingEntry(): java.security.KeyStore.PrivateKeyEntry = synchronized(SIGNER_LOCK) {
         val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         val alias = "fr3k.owned-fixture.signer.v1"

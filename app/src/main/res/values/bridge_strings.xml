@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown by the Android accessibility settings screen before the service can be enabled. -->
+    <string name="bridge_service_description">fR3k app control reads the current screen so it can run the changes you approved, one step at a time. It never reads password fields, never acts on system screens, and never changes an app you did not select.</string>
+</resources>

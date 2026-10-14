@@ -120,6 +120,38 @@
             android:name="com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity"
             android:exported="false" />
 
+        <!-- Bridge plane: user-enabled accessibility service. It only ever acts on packages in the
+             active reviewed plan, and never reads credential fields. -->
+        <service
+            android:name="com.mcpintelligence.fr3k.bridge.Fr3kBridgeService"
+            android:exported="true"
+            android:label="fR3k app control (user enabled)"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/bridge_service_config" />
+        </service>
+
+        <receiver
+            android:name="com.mcpintelligence.fr3k.mcp.McpControlReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.mcpintelligence.fr3k.hud.START_MCP" />
+                <action android:name="com.mcpintelligence.fr3k.hud.STOP_MCP" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="com.mcpintelligence.fr3k.workflow.WorkflowTriggerReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.mcpintelligence.fr3k.hud.RUN_WORKFLOW" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="com.mcpintelligence.fr3k.integrations.privileged.HudPrivilegedProvider"
             android:authorities="${applicationId}.privileged"

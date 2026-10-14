@@ -61,16 +61,23 @@ object SelectorMatcher {
             if (node.viewId == wantedId) return 1.0
             if (node.viewId.endsWith("/" + wantedId.substringAfterLast("/"))) return 0.9
         }
+        // A password node is never evidence, so its text and description can never satisfy a criterion.
         if (node.password) return 0.0
-        var score = 0.0
-        fingerprint.className?.let { if (it == node.className) score += 0.4 }
+        // Ratio of satisfied declared criteria: every criterion the caller asked for must hold, and a
+        // selector that declares only one criterion is fully satisfiable by it. Ambiguity, not a low
+        // score, is what protects against clicking the wrong thing.
+        var declared = 0
+        var matched = 0
+        fingerprint.className?.let { declared++; if (it == node.className) matched++ }
         fingerprint.textRegex?.let { pattern ->
-            if (node.text != null && Regex(pattern).containsMatchIn(node.text)) score += 0.4
+            declared++
+            if (node.text != null && Regex(pattern).containsMatchIn(node.text)) matched++
         }
         fingerprint.contentDescRegex?.let { pattern ->
-            if (node.contentDescription != null && Regex(pattern).containsMatchIn(node.contentDescription)) score += 0.4
+            declared++
+            if (node.contentDescription != null && Regex(pattern).containsMatchIn(node.contentDescription)) matched++
         }
-        return score
+        return if (declared == 0) 0.0 else matched.toDouble() / declared
     }
 
     fun find(root: UiNode, fingerprint: SelectorFingerprint): MatchOutcome {

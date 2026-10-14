@@ -4,11 +4,32 @@
     </queries>
     <application android:label="fR3k Patch Fixture" android:allowBackup="false"
         android:theme="@android:style/Theme.Material.NoActionBar">
-        <activity android:name=".AdSkipDemoActivity" android:exported="true" />
+        <activity android:name=".AdSkipDemoActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fr3kfixture" android:host="ads" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".NotesActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fr3kfixture" android:host="notes" />
+            </intent-filter>
+        </activity>
         <activity android:name=".FixtureActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="fr3kfixture" android:host="home" />
             </intent-filter>
         </activity>
     </application>

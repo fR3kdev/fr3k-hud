@@ -7,7 +7,7 @@ import com.mcpintelligence.fr3k.privileged.IHudPrivilegedService
 object HudPrivilegedBridge {
     @Volatile private var current: IHudPrivilegedService? = null
     @Synchronized internal fun attach(service: IHudPrivilegedService) {
-        require(service.protocolVersion == 1) { "Unsupported privileged service protocol" }
+        require(service.protocolVersion >= 2) { "Unsupported privileged service protocol" }
         require(service.serverUid in setOf(0, 2000)) { "Not a privileged service" }
         require(service.generation.isNotBlank())
         val binder = service.asBinder()

@@ -1,0 +1,148 @@
+{
+  "results": [
+    {
+      "name": "accessibility service bound",
+      "ok": true,
+      "note": "dumpsys accessibility reports a bound fR3k service"
+    },
+    {
+      "name": "mcp surface started",
+      "ok": true,
+      "note": "{'port': 8791, 'token': 'f275dd518b674650ac1e4165568a155a', 'pid': 5708}"
+    },
+    {
+      "name": "mcp rejects a missing token",
+      "ok": true,
+      "note": "status=401"
+    },
+    {
+      "name": "mcp lists closed-schema tools",
+      "ok": true,
+      "note": "tools=9"
+    },
+    {
+      "name": "bridge reports a live connection",
+      "ok": true,
+      "note": "foreground=com.mcpintelligence.fr3k.hud"
+    },
+    {
+      "name": "unknown goal is refused",
+      "ok": true,
+      "note": "no registered capability matches 'reticulate the splines of the owned fixture'; the closest were fixture.demo.open (2.0)"
+    },
+    {
+      "name": "ad skip reached content on screen",
+      "ok": true,
+      "note": "note=completed 1 capability step(s)"
+    },
+    {
+      "name": "mask darkens the covered region",
+      "ok": true,
+      "note": "bounds=[84, 211, 1080, 337] luma 83.8 -> 0.0"
+    },
+    {
+      "name": "unmask clears the overlay",
+      "ok": true,
+      "note": "maskCount=0"
+    },
+    {
+      "name": "app map records the owned screens as commands",
+      "ok": true,
+      "note": "screens=[home, ads, notes] commands=69"
+    },
+    {
+      "name": "fused workflow runs across two apps",
+      "ok": true,
+      "note": "records=2 packages=['com.mcpintelligence.fr3k.patchfixture', 'com.mcpintelligence.fr3k.patchfixturetwo']"
+    },
+    {
+      "name": "workflow records a tested inverse",
+      "ok": true,
+      "note": "inverses=['run_capability', 'none']"
+    },
+    {
+      "name": "capabilities are inventory-bound",
+      "ok": true,
+      "note": "count=11"
+    }
+  ],
+  "detail": {
+    "mcp": {
+      "device_port": 8791,
+      "pid": 5708
+    },
+    "skip": {
+      "ok": true,
+      "note": "completed 1 capability step(s)",
+      "steps": 5
+    },
+    "mask": {
+      "plan": {
+        "ok": true,
+        "note": "completed 1 capability step(s)",
+        "steps": 4
+      },
+      "status": {
+        "connected": true,
+        "foregroundPackage": "com.mcpintelligence.fr3k.patchfixture",
+        "maskCount": 1,
+        "lastMaskBounds": [
+          84,
+          211,
+          1080,
+          337
+        ]
+      },
+      "bounds": [
+        84,
+        211,
+        1080,
+        337
+      ],
+      "before_luma": 83.82103015235545,
+      "after_luma": 0.0
+    },
+    "appmap": {
+      "ok": true,
+      "screens": "[home, ads, notes]",
+      "commands": "[map.patchfixture.home, map.patchfixture.ads, map.patchfixture.notes]",
+      "notes": "[]"
+    },
+    "workflow": {
+      "note": "completed 2 capability step(s)",
+      "records": [
+        {
+          "operationId": "30d9c4e3-b319-47ac-b8c2-a7650ec12cba",
+          "capabilityId": "fixture.banner.hide",
+          "appFingerprint": "4db07c805e4c43e1a90426cf1a8b20ef7c4ebfaa0093652471bb2363180b49f2",
+          "packageName": "com.mcpintelligence.fr3k.patchfixture",
+          "startedAtMillis": 1791967711397,
+          "durationMs": 1017,
+          "status": "SUCCEEDED",
+          "beforeSha256": "",
+          "afterSha256": "",
+          "inverse": {
+            "kind": "run_capability",
+            "capabilityId": "fixture.banner.show"
+          },
+          "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK"
+        },
+        {
+          "operationId": "ccd963ef-8977-41a6-b78c-f769e0089f89",
+          "capabilityId": "target.two.acknowledge",
+          "appFingerprint": "f316dfdc3bedc0c77e8aaf4a72c7fa1cb058a3f19219cef55459db33d04da0f5",
+          "packageName": "com.mcpintelligence.fr3k.patchfixturetwo",
+          "startedAtMillis": 1791967713024,
+          "durationMs": 1627,
+          "status": "SUCCEEDED",
+          "beforeSha256": "",
+          "afterSha256": "",
+          "inverse": {
+            "kind": "none"
+          },
+          "note": "launch:OK; wait_for:OK; broadcast:OK; observe:OK; assert_absent:OK; launch:OK; wait_for:OK; click:OK; observe:OK; assert_present:OK"
+        }
+      ]
+    }
+  }
+}

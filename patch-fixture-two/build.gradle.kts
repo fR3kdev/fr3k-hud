@@ -1,11 +1,12 @@
 plugins {
     id("com.android.application")
-    kotlin("android")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
     namespace = "com.mcpintelligence.fr3k.patchfixturetwo"
     compileSdk = 35
+    buildToolsVersion = "35.0.1"
     defaultConfig {
         applicationId = "com.mcpintelligence.fr3k.patchfixturetwo"
         minSdk = 31
@@ -17,6 +18,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    kotlinOptions { jvmTarget = "17" }
 }
 
 dependencies {
