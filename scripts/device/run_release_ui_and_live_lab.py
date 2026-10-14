@@ -24,6 +24,10 @@ from pathlib import Path
 HUD = 'com.mcpintelligence.fr3k.hud'
 RUNNER = 'com.mcpintelligence.fr3k.hud.test/androidx.test.runner.AndroidJUnitRunner'
 
+# WirelessAndSelectedAppsDeviceTest is deliberately NOT here: its pairing test needs the operator to open
+# Android's live pairing-code sheet, and its selected-app test needs HUD's privileged service started from
+# the host while the HUD process publishes the provider. Run it from the capability lab's privileged phase,
+# not from a suite that would have to fake those preconditions.
 CLASSES = [
     'com.mcpintelligence.fr3k.ui.RedesignUiDeviceTest',
     'com.mcpintelligence.fr3k.ui.FloatingWorkspaceDeviceTest',

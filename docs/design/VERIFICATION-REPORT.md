@@ -135,6 +135,21 @@ Two boundaries this measurement makes explicit, because they are real and not wo
   time and Android asked whether Termux may post notifications. HUD does not click through another app's
   permission dialog on the operator's behalf; the harness declines it and records that it did.
 
+## 4c. Real wireless pairing — conditionally runnable, not re-run in this pass
+
+`WirelessAndSelectedAppsDeviceTest` performs a **real Android wireless-debugging pairing** (it takes the
+live `pairingCode`, `pairingPort` and `connectionPort` as instrumentation arguments, pairs, starts HUD's
+shell service, asserts `serverUid == 2000` and `tier == SHELL`, inspects a real package over the binder,
+then shuts down and reconnects). Its own guard reads *"Host must open Android's live pairing-code sheet"*,
+which is exactly the precondition.
+
+In this pass that sheet was not opened, so the class was **not re-run green here** and no result is
+claimed for it. What was verified instead, on the same build: the **SHELL tier at UID2000** and the ROOT
+tier at UID0 by the capability lab (`HUD_PRIVILEGED_READY uid=2000 tier=SHELL protocol=2`), and the
+wireless UI rows by the release UI suite. Wireless debugging was enabled on the emulator
+(`adb_wifi_enabled=1`, `wlan0 10.0.2.16`) but the pairing sheet was not driven. Treat the live pairing
+acceptance as **conditionally runnable, previously green, not confirmed in this pass**.
+
 ## 5. What is NOT verified, or cannot be claimed
 
 - **Any arbitrary third-party app, anything, instantly.** Not achievable from an ordinary APK and not
