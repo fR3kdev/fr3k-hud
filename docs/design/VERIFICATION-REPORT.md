@@ -57,7 +57,11 @@ Honest limits of this section:
 > conditions the lab sets up — its debug-only flag **and** the two fixture packages installed. Worse, the
 > flag was matched with a substring test that always matched (`name="fixtures" value="false"` contains
 > `fixtures`). They are now skipped **with the reason** (`not applicable (lab mode off)`) instead of counted
-> as regressions; release-mode run: 19 checks, 0 failing, 7 skipped. (2) "The guide list scrolls past the
+> as regressions; release-mode run: 19 checks, 0 failing, 7 skipped. **Measured limit of that shortcut:** a
+> run with the flag **on** and the fixture packages present still failed five of those checks, because the
+> lab's sequence also *prepares* the fixture runtime and leaves the fixture app in the state the checks read.
+> Flag plus package is necessary but not sufficient — the capability lab's own run is the authoritative one.
+> (2) "The guide list scrolls past the
 > first screen" asserted an absolute count of 8 cards, which is a property of the 18-guide lab catalogue and
 > therefore failed in release mode (9 guides) while the list scrolled perfectly well. It now compares against
 > what was on screen **before** scrolling: *"distinct cards seen=7, 0 of them already on the first screen"*.
