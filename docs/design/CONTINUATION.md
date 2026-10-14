@@ -123,6 +123,10 @@ Created `RESEARCH.md`, `DESIGN-SYSTEM.md`, `IA-AND-FLOWS.md`, `MOTION.md`, `SCRE
 
 ## Step log (append after each work step)
 
+- Step: **correction to a claim I had already reported.** I reported the capability lab as PASS after reading `cap-lab-summary.json`, but the lab writes its result to the `--log` path and that summary file was left over from an earlier session (21:34 vs the run's 23:48). The run in question actually ended `CAPABILITY_RESULT FAIL` on a single check: `chat bubble names the active provider` (`provider_label=None`), because the check sampled the overlay once, 2.5 s after opening it. Fixed the check to poll for up to 18 s and to record the on-screen text when the label is missing. Also fixed `~/.hermes/scripts/fr3k-banner.sh` (`$((MIN % 8))` aborted on a zero-padded minute such as `09` — invalid octal — and then tripped `set -u`; now `10#$MIN`).
+  - Re-ran the whole lab from a clean state: **`CAPABILITY_RESULT PASS`** — 13/13 checks, `bridge-plane-via-mcp PASS checks=19`, shells at UID2000 and UID0, companions NONE, lab mode left disabled. Evidence `.hermes/cache/scratch/cap-lab-final.log`, `docs/design/evidence/*`.
+  - The other four device claims in the report were re-checked against their own evidence files at the same time and are backed by fresh runs: release UI `failed: []` (6 classes, 20 tests), a11y all checks ok (cold start 1569 ms), real-app path no failures (8 controls mapped), wireless lab 4/4.
+
 - Step: final device verification of 0.4.21 and benchmark packaging. Every suite below ran against the APK
   whose SHA256 is recorded in the manifest — the packaged artifact is the artifact that was verified.
   - **322 JVM tests, 0 failures** (app 103, capability 45, core 155, patch-fixture 1, protocol 4, transport 14); `BUILD SUCCESSFUL`. Added `ModGuideCoverageTest.everyReleaseJourneyIsCompleteAndNeverFixtureBound` to guard the release catalogue itself.

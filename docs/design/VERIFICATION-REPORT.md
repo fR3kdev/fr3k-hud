@@ -52,6 +52,17 @@ Honest limits of this section:
 
 ## 3. Capability planes on device
 
+> **Correction, and how it was caught.** An earlier draft of this report called the capability lab PASS on
+> the strength of `cap-lab-summary.json` — a file left over from an earlier session. The lab writes its
+> result to the path given as `--log`, and that stale file did not describe the run in question: the actual
+> run had exactly one failing check (`chat bubble names the active provider`, `provider_label=None`), and
+> therefore ended `CAPABILITY_RESULT FAIL`. The check had sampled the overlay once, 2.5 s after opening it,
+> which fails whenever the WindowManager overlay is slow to attach; it now polls for up to 18 s and records
+> the screen text when the label is absent. Re-run from a clean state: **`CAPABILITY_RESULT PASS`**, 13/13
+> checks, `bridge-plane-via-mcp PASS checks=19`. Evidence: `.hermes/cache/scratch/cap-lab-final.log` and
+> `artifacts/capability-lab-evidence.json`. The lesson is recorded in the skill: verify which run a summary
+> file came from before quoting it.
+
 `scripts/device/run_capability_lab.py --serial emulator-5582` → `CAPABILITY_RESULT PASS`
 (`artifacts/capability-lab-evidence.json`, `docs/design/evidence/capability-lab.log`).
 

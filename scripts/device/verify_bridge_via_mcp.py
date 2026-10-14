@@ -355,12 +355,19 @@ def main():
                 break
             sh('input swipe 850 1450 850 850 300')
         sh('am broadcast -a %s.OPEN_CHAT -p %s' % (HUD, HUD))
-        time.sleep(2.5)
-        chat = sh('uiautomator dump /sdcard/chat.xml >/dev/null 2>&1; cat /sdcard/chat.xml')
-        provider_line = next(
-            (label for label in ('OpenCode Go', 'OpenRouter') if label in chat),
-            None,
-        )
+        # The bubble is a WindowManager overlay; give it time to appear and be reported, instead of one
+        # fixed wait — a single 2.5 s sample made this check fail whenever the overlay was slow to attach.
+        for attempt in range(12):
+            time.sleep(1.5)
+            chat = sh('uiautomator dump /sdcard/chat.xml >/dev/null 2>&1; cat /sdcard/chat.xml')
+            provider_line = next(
+                (label for label in ('OpenCode Go', 'OpenRouter') if label in chat),
+                None,
+            )
+            if provider_line:
+                break
+        if not provider_line:
+            detail['chat_dump_texts'] = [t for t in re.findall(r'text="([^"]{4,60})"', chat)][:12]
     except Exception as error:
         print('   chat diagnostics:', error)
     check('chat bubble names the active provider', provider_line is not None,
