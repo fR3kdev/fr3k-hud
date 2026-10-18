@@ -32,3 +32,11 @@ Operator already paired HUD with Wireless debugging and wants Termux independent
 - APK signing identity/upgrade must be accepted by the phone. UI start does not prove installed update.
 
 OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD.
+
+## Release and physical transfer checkpoint
+
+- Final signed debug APK uploaded to private FR3K research release hud-0.4.24-termux-adb-rc-20261019.
+- APK size 105137862 bytes; SHA-256 d68dd5ffb0aa228f29405d12690f48ba428f83ecc7b72b380f9520060de92f9b.
+- On owned OnePlus 7 Pro, authenticated GitHub release download SHA-256 PASS. Termux-to-Android-Downloads copied APK SHA-256 PASS, exact same bytes.
+- Android package installer VIEW intent dispatched from Termux. Initial installed package hash still 82bd88b6dcb9313edaf00e413d2bf60ab2931d186fbd540e4da53f36f9df02ac (previous 0.4.23 candidate), so 0.4.24 installation NOT VERIFIED at that check. Do not confuse intent dispatch with installed APK.
+- Termux ADB v37 executable works. Separate Termux pairing status remains NOT CONNECTED. HUD pairing was not modified.
