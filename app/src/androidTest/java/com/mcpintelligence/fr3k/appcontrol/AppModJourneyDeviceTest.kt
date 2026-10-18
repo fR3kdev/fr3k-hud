@@ -27,7 +27,24 @@ class AppModJourneyDeviceTest {
         fun describe(node: AccessibilityNodeInfo?, depth: Int = 0): String = if (node == null || depth > 30) "" else
             "${node.text}|${node.contentDescription}|enabled=${node.isEnabled}|click=${node.isClickable}\n" + (0 until node.childCount).joinToString("") { describe(node.getChild(it), depth + 1) }
         diagnose()
+        // The tree dump is chunked and logcat drops most of it, so the page's text is also logged as one
+        // compact line: a failure then says whether the expected label is absent or merely unreachable.
+        android.util.Log.i("APPMODDBG", "page=${pageText().take(3000)}")
         assertTrue("Condition not reached: " + describe(instrumentation.uiAutomation.rootInActiveWindow), predicate())
+    }
+    /** Every window's text and descriptions as one line, for diagnosing a missing label. */
+    private fun pageText(): String {
+        val parts = ArrayList<String>()
+        windows().forEach { root ->
+            fun walk(node: AccessibilityNodeInfo?, depth: Int) {
+                if (node == null || depth > 30 || parts.size > 300) return
+                node.text?.toString()?.takeIf { it.isNotBlank() }?.let { parts += it }
+                node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts += it }
+                for (index in 0 until node.childCount) walk(node.getChild(index), depth + 1)
+            }
+            walk(root, 0)
+        }
+        return parts.distinct().joinToString(" | ")
     }
     /** Full bounded tree with bounds, chunked to logcat: the assertion message alone was not diagnostic enough. */
     private fun diagnose() {
@@ -69,22 +86,51 @@ class AppModJourneyDeviceTest {
             .filter { it.isEnabled && it.text?.toString()?.equals(text, true) == true }
         return platform.firstOrNull { it.isVisibleToUser } ?: platform.firstOrNull() ?: matchNode(root, text)
     }
-    /** Real touch swipe: semantics ACTION_SCROLL_FORWARD can act on a nested container and never move the page. */
+    /** A cheap position fingerprint of the active page: text and bounds, so a real scroll is observable. */
+    private fun pageStamp(): Int {
+        val root = instrumentation.uiAutomation.rootInActiveWindow ?: return 0
+        val text = StringBuilder()
+        val bounds = android.graphics.Rect()
+        fun walk(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 30) return
+            node.getBoundsInScreen(bounds)
+            node.text?.toString()?.takeIf { it.isNotBlank() }?.let { text.append(it).append(bounds).append('|') }
+            node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { text.append(it).append('|') }
+            for (index in 0 until node.childCount) walk(node.getChild(index), depth + 1)
+        }
+        walk(root, 0)
+        return text.toString().hashCode()
+    }
+    /**
+     * The accessibility scroll is tried first, but it is only accepted when the page actually moved: an
+     * editable text field also reports itself as scrollable and acknowledges the action without scrolling
+     * the page. When it does not move, a real timed gesture is dispatched instead.
+     */
     private fun swipe(forward: Boolean) {
         val root = instrumentation.uiAutomation.rootInActiveWindow ?: return
+        val before = pageStamp()
+        if (scroll(root, forward)) {
+            Thread.sleep(200)
+            if (pageStamp() != before) { Thread.sleep(150); return }
+        }
         val window = android.graphics.Rect(); root.getBoundsInScreen(window)
         val x = window.exactCenterX()
         val from = window.top + window.height() * (if (forward) 0.8f else 0.2f)
         val to = window.top + window.height() * (if (forward) 0.2f else 0.8f)
         val start = android.os.SystemClock.uptimeMillis()
-        fun event(action: Int, y: Float, at: Long): android.view.MotionEvent =
-            android.view.MotionEvent.obtain(start, at, action, x, y, 0).apply { source = android.view.InputDevice.SOURCE_TOUCHSCREEN }
-        val events = ArrayList<android.view.MotionEvent>()
-        events += event(android.view.MotionEvent.ACTION_DOWN, from, start)
-        repeat(7) { step -> events += event(android.view.MotionEvent.ACTION_MOVE, from + (to - from) * (step + 1) / 8f, start + 20L * (step + 1)) }
-        events += event(android.view.MotionEvent.ACTION_UP, to, start + 180L)
-        try { events.forEach { instrumentation.uiAutomation.injectInputEvent(it, true) } }
-        finally { events.forEach { it.recycle() } }
+        fun send(action: Int, y: Float) {
+            val event = android.view.MotionEvent.obtain(start, android.os.SystemClock.uptimeMillis(), action, x, y, 0)
+                .apply { source = android.view.InputDevice.SOURCE_TOUCHSCREEN }
+            try { check(instrumentation.uiAutomation.injectInputEvent(event, true)) }
+            finally { event.recycle() }
+        }
+        send(android.view.MotionEvent.ACTION_DOWN, from)
+        repeat(8) { step ->
+            Thread.sleep(20)
+            send(android.view.MotionEvent.ACTION_MOVE, from + (to - from) * (step + 1) / 8f)
+        }
+        Thread.sleep(20)
+        send(android.view.MotionEvent.ACTION_UP, to)
     }
     private fun click(text: String, timeout: Long = 30000) {
         android.util.Log.i("APPMODDBG", "click '$text' timeout=$timeout")
@@ -95,23 +141,12 @@ class AppModJourneyDeviceTest {
         }
         // A target that is scrolled far away can be dropped from the accessibility tree entirely, so a missing
         // node sweeps the page instead of scrolling away from it forever.
+        val systemControl = text in setOf("Cancel", "Install", "Update", "Done")
         var missing = 0
         var tries = 0
         var forward = true
         var stalled = 0
-        fun labelStamp(): Int {
-            val root = instrumentation.uiAutomation.rootInActiveWindow ?: return 0
-            val text = StringBuilder()
-            fun walk(node: AccessibilityNodeInfo?, depth: Int) {
-                if (node == null || depth > 30) return
-                val bounds = android.graphics.Rect(); node.getBoundsInScreen(bounds)
-                node.text?.toString()?.takeIf { it.isNotBlank() }?.let { text.append(it).append(bounds).append('|') }
-                node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { text.append(it).append('|') }
-                for (index in 0 until node.childCount) walk(node.getChild(index), depth + 1)
-            }
-            walk(root, 0)
-            return text.toString().hashCode()
-        }
+        var backedOut = false
         waitUntil(timeout) {
             val root = instrumentation.uiAutomation.rootInActiveWindow
             tries++
@@ -122,31 +157,74 @@ class AppModJourneyDeviceTest {
                 // Only the HUD's own scrollable pages are swept. A system dialog (package installer) has fixed
                 // buttons, and an injected swipe there was measured dismissing the confirmation.
                 missing++
-                if (root?.packageName?.toString() != app.packageName) { Thread.sleep(250); return@waitUntil false }
+                if (systemControl || root?.packageName?.toString() != app.packageName) {
+                    // The product has controls that hand off to Settings (the removal review), so a wait that
+                    // finds Settings in front instead of the product is recovered with one back action rather
+                    // than timing out; the picker and installer windows are legitimately not the product's.
+                    if (!systemControl && !backedOut && root?.packageName?.toString() == "com.android.settings") {
+                        backedOut = true
+                        android.util.Log.i("APPMODDBG", "click '$text' found Settings in front; returning to the product")
+                        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+                        Thread.sleep(700)
+                    } else Thread.sleep(250)
+                    return@waitUntil false
+                }
                 // Review pages grow downward; sweep down, and only re-anchor (one swipe up) if the page stopped
                 // changing, so a long 200%-font page is never abandoned by an early direction flip.
                 if (stalled >= 4) { stalled = 0; forward = !forward }
-                val before = labelStamp()
+                val before = pageStamp()
                 swipe(forward)
                 Thread.sleep(250)
-                if (before == labelStamp()) stalled++ else stalled = 0
+                if (before == pageStamp()) stalled++ else stalled = 0
                 if (tries % 8 == 0) android.util.Log.i("APPMODDBG", "iter=$tries missing=$missing stalled=$stalled")
                 return@waitUntil false
             }
-            val window = android.graphics.Rect(0, 0, app.resources.displayMetrics.widthPixels, app.resources.displayMetrics.heightPixels)
-            val bounds = android.graphics.Rect(); node.getBoundsInScreen(bounds)
+            // The app window minus the system bars. A label's own box can be a one-line sliver clipped by the
+            // navigation bar, and a tap there is delivered to the system instead of the control: measured as
+            // silently dropped taps on the basket switches, the radio rows and the review buttons.
+            val safe = safeViewport()
+            var bounds = android.graphics.Rect(); node.getBoundsInScreen(bounds)
+            var control: AccessibilityNodeInfo? = node
+            while (control != null && !control.isClickable) control = control.parent
+            if (control != null) control.getBoundsInScreen(bounds)
             // Compose can acknowledge ACTION_CLICK on an off-screen, stale semantics node
             // without invoking the current button. Bring the target into the viewport first.
-            if (bounds.isEmpty || !node.isVisibleToUser || !window.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())) {
-                swipe(bounds.isEmpty || bounds.exactCenterY() >= window.exactCenterY())
+            if (bounds.isEmpty || !node.isVisibleToUser || !safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())) {
+                if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
                 Thread.sleep(250)
                 return@waitUntil false
             }
-            // Dispatch a real pointer gesture. Some system dialogs execute ACTION_CLICK
-            // yet report false while closing, and off-screen Compose nodes can report true
+            // A tap injected while the page is still settling from a swipe is consumed stopping the scroll, and
+            // a held node's bounds are a snapshot from when it was fetched: the control is re-found after the
+            // page stops moving, because tapping stale bounds was measured landing on the neighbouring control
+            // and following its action instead (the verification step opened Settings instead of confirming).
+            settle()
+            val fresh = (listOfNotNull(instrumentation.uiAutomation.rootInActiveWindow) + instrumentation.uiAutomation.windows.mapNotNull { it.root })
+                .firstNotNullOfOrNull { findTarget(it, text) }
+            if (fresh == null || !fresh.isVisibleToUser) { Thread.sleep(200); return@waitUntil false }
+            bounds = android.graphics.Rect(); fresh.getBoundsInScreen(bounds)
+            control = fresh
+            while (control != null && !control.isClickable) control = control.parent
+            if (control != null) control.getBoundsInScreen(bounds)
+            if (bounds.isEmpty || !safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())) {
+                if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
+                Thread.sleep(250)
+                return@waitUntil false
+            }
+            // DocumentsUI rows expose a clickable ancestor; its action selects the URI even when
+            // the filename text's pointer bounds overlap the roots drawer during a transition.
+            if (node.packageName?.toString()?.contains("documentsui", ignoreCase = true) == true) {
+                if (control?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) {
+                    Thread.sleep(250)
+                    return@waitUntil true
+                }
+            }
+            // Dispatch a real pointer gesture at the owning control's centre. Some system dialogs execute
+            // ACTION_CLICK yet report false while closing, and off-screen Compose nodes can report true
             // without invoking their callback. Result assertions remain in each scenario.
             val now = android.os.SystemClock.uptimeMillis()
             val x = bounds.exactCenterX(); val y = bounds.exactCenterY()
+            android.util.Log.i("APPMODDBG", "tap '$text' at=$x,$y control=${control?.className} enabled=${control?.isEnabled} window=${control?.windowId} bounds=$bounds safe=$safe")
             val down = android.view.MotionEvent.obtain(now, now, android.view.MotionEvent.ACTION_DOWN, x, y, 0).apply { source = android.view.InputDevice.SOURCE_TOUCHSCREEN }
             val up = android.view.MotionEvent.obtain(now, now + 60, android.view.MotionEvent.ACTION_UP, x, y, 0).apply { source = android.view.InputDevice.SOURCE_TOUCHSCREEN }
             try {
@@ -159,20 +237,27 @@ class AppModJourneyDeviceTest {
         }
     }
     private fun edit(label: String, value: String) {
+        fun setText(target: AccessibilityNodeInfo?): Boolean = target?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
+        }) == true
+        fun editableFields(): List<AccessibilityNodeInfo> = allNodes()
+            .filter { it.isEditable || it.actionList.any { action -> action.id == AccessibilityNodeInfo.ACTION_SET_TEXT } }
+        // The visible label is a child of the field, so the field is found by the label inside its own
+        // subtree; the label node itself is not editable and used to make this helper give up.
+        fun labelledField(): AccessibilityNodeInfo? {
+            fun holdsLabel(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+                if (node == null || depth > 30) return false
+                if (node.text?.toString() == label || node.contentDescription?.toString() == label) return true
+                return (0 until node.childCount).any { holdsLabel(node.getChild(it), depth + 1) }
+            }
+            val fields = editableFields()
+            return fields.firstOrNull { it.contentDescription?.toString() == label }
+                ?: fields.firstOrNull { holdsLabel(it, 0) }
+                ?: fields.firstOrNull { it.isFocused }
+                ?: fields.singleOrNull()
+        }
         click(label, 60000)
-        fun editable(node: AccessibilityNodeInfo?): AccessibilityNodeInfo? {
-            if (node == null) return null
-            if (node.isEditable || node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_SET_TEXT }) return node
-            for (index in 0 until node.childCount) editable(node.getChild(index))?.let { return it }
-            return null
-        }
-        waitUntil(10000) {
-            val root = instrumentation.uiAutomation.rootInActiveWindow
-            val target = editable(matchNode(root, label)) ?: root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-            target?.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, android.os.Bundle().apply {
-                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value)
-            }) == true
-        }
+        waitUntil(30000) { setText(labelledField()) }
         Thread.sleep(500)
         if (instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
             instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
@@ -187,6 +272,99 @@ class AppModJourneyDeviceTest {
         }
         return contains(instrumentation.uiAutomation.rootInActiveWindow)
     }
+
+    /** Every window's tree: a system dialog is not always the active window. */
+    private fun windows(): List<AccessibilityNodeInfo> =
+        listOfNotNull(instrumentation.uiAutomation.rootInActiveWindow) + instrumentation.uiAutomation.windows.mapNotNull { it.root }
+
+    private fun allNodes(): List<AccessibilityNodeInfo> {
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        fun walk(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 30) return
+            nodes += node
+            for (index in 0 until node.childCount) walk(node.getChild(index), depth + 1)
+        }
+        windows().forEach { walk(it, 0) }
+        return nodes
+    }
+
+    /** The window area that receives touches: the app window minus the system bars. */
+    private fun safeViewport(): android.graphics.Rect {
+        val manager = app.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val metrics = manager.currentWindowMetrics
+        val bars = metrics.windowInsets.getInsetsIgnoringVisibility(android.view.WindowInsets.Type.systemBars())
+        return android.graphics.Rect(bars.left, bars.top, metrics.bounds.width() - bars.right, metrics.bounds.height() - bars.bottom)
+    }
+
+    /**
+     * Waits for the page to stop moving. A tap injected while the page is still settling from a swipe is
+     * consumed stopping the scroll instead of pressing the control: measured as silently dropped taps
+     * immediately after a sweep brought the target into view.
+     */
+    private fun settle(quiet: Long = 350, timeout: Long = 3000) {
+        val deadline = android.os.SystemClock.elapsedRealtime() + timeout
+        var previous = pageStamp()
+        var stillSince = android.os.SystemClock.elapsedRealtime()
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            Thread.sleep(120)
+            val current = pageStamp()
+            if (current != previous) { previous = current; stillSince = android.os.SystemClock.elapsedRealtime() }
+            else if (android.os.SystemClock.elapsedRealtime() - stillSince >= quiet) return
+        }
+    }
+
+    /** A product message is evidence of a control's effect, so it is observed rather than clicked. */
+    private fun shown(text: String, timeout: Long = 30000, sweep: Boolean = true): Boolean {
+        // A manual tree walk is the effective search here: the platform text search was measured returning
+        // nothing for a message that the walk finds in the same window.
+        fun found() = allNodes().any { node ->
+            node.text?.toString()?.contains(text, true) == true || node.contentDescription?.toString()?.contains(text, true) == true }
+        val deadline = android.os.SystemClock.elapsedRealtime() + timeout
+        var forward = true
+        var stalled = 0
+        var sweeps = 0
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            if (found()) return true
+            // Off-viewport Compose nodes leave the accessibility tree, so the page is swept while looking.
+            if (!sweep || instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() != app.packageName) { Thread.sleep(150); continue }
+            val before = pageStamp()
+            swipe(forward)
+            Thread.sleep(150)
+            sweeps++
+            if (before == pageStamp()) { if (++stalled >= 3) { stalled = 0; forward = !forward } } else stalled = 0
+        }
+        val result = found()
+        if (!result) {
+            // Scroll back to the top and report the page's own text, so a refusal is visible in evidence.
+            var previous = 0
+            var current = pageStamp()
+            while (current != previous) { previous = current; swipe(false); Thread.sleep(120); current = pageStamp() }
+            val visible = allNodes().mapNotNull { node -> node.text?.toString()?.takeIf { it.isNotBlank() } }.joinToString(" | ")
+            android.util.Log.i("APPMODDBG", "shown '$text' missing; page='${visible.take(3000)}'")
+        }
+        android.util.Log.i("APPMODDBG", "shown '$text' found=$result sweeps=$sweeps forward=$forward")
+        return result
+    }
+
+    /**
+     * Drives a real control until its observable effect appears. A tap dropped by a transient
+     * re-layout was measured being accepted silently, so the control is re-driven while the
+     * effect is still missing; the effect assertion itself stays in the caller.
+     */
+    private fun clickUntil(text: String, timeout: Long = 60000, attempts: Int = 4, effect: () -> Boolean) {
+        var tries = 0
+        waitUntil(timeout) {
+            if (effect()) return@waitUntil true
+            if (tries++ < attempts) { runCatching { click(text, 15000) }; Thread.sleep(400) }
+            effect()
+        }
+    }
+
+    /** The persisted draft for an analysis: the real product state the basket controls write. */
+    private fun draftSelection(analysisId: String): JSONObject? =
+        app.modificationStore.record("draft", analysisId)?.optString("selection")?.let { runCatching { JSONObject(it) }.getOrNull() }
+
+    private fun draftMode(analysisId: String): String? = app.modificationStore.record("draft", analysisId)?.optString("mode")
 
     @Test fun actualReviewInstallerAndModifiedBehavior() = runBlocking {
         val workflow = app.appModWorkflow
@@ -216,25 +394,19 @@ class AppModJourneyDeviceTest {
         val apiResult = AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
         assertEquals("AWAITING_USER_REVIEW", apiResult.getString("status"))
         assertNull(workflow.store.record("outputs", id))
-        click("Approve exact changes and prepare copy")
-        waitUntil(60000) { workflow.store.getJob(id)?.stage in setOf(ModificationStage.PREPARED, ModificationStage.FAILED) }
+        clickUntil("Approve exact changes and prepare copy") { workflow.store.getJob(id)?.stage in setOf(ModificationStage.PREPARED, ModificationStage.FAILED) }
         assertEquals(workflow.store.getJob(id)?.error, ModificationStage.PREPARED, workflow.store.getJob(id)?.stage)
         click("Review in Android installer")
         // Wait for the system installer dialog to settle before acting: a tap during the open animation was
         // measured cancelling the session ("User rejected permissions"). Matching is exact because the HUD's own
         // review text also contains the substring "Install". The semantics click is used so a dialog button that
-        // is clipped by a large font scale is still actuated.
-        waitUntil(30000) {
-            val root = instrumentation.uiAutomation.rootInActiveWindow
-            listOf("Install", "Update").any { label -> root?.findAccessibilityNodeInfosByText(label)?.any { n ->
-                n.isEnabled && n.text?.toString()?.equals(label, true) == true } == true }
-        }
+        // is clipped by a large font scale is still actuated. Every window is searched because the dialog is not
+        // always the active window, and API31 can deliver PENDING_USER_ACTION well after the request.
+        fun installerButton(act: Boolean): Boolean = windows().any { root -> listOf("Install", "Update").any { label ->
+            root.findAccessibilityNodeInfosByText(label).any { node -> node.isEnabled && node.text?.toString()?.equals(label, true) == true && (!act || node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) } } }
+        waitUntil(75000) { installerButton(false) }
         Thread.sleep(600)
-        waitUntil(30000) {
-            val root = instrumentation.uiAutomation.rootInActiveWindow
-            listOf("Install", "Update").any { label -> root?.findAccessibilityNodeInfosByText(label)?.any { n ->
-                n.isEnabled && n.text?.toString()?.equals(label, true) == true && n.performAction(AccessibilityNodeInfo.ACTION_CLICK) } == true }
-        }
+        waitUntil(30000) { installerButton(true) }
         waitUntil(90000) { workflow.store.getJob(id)?.installerStatus == InstallationStatus.INSTALLED }
         assertTrue(AppModInstaller.verifyInstalled(app, workflow, id))
         val component = ComponentName("com.mcpintelligence.fr3k.patchfixture.hudmod", "com.mcpintelligence.fr3k.patchfixture.ModLabActivity")
@@ -246,11 +418,10 @@ class AppModJourneyDeviceTest {
         val job = workflow.store.getJob(id)!!
         workflow.store.saveJob(job.copy(stage = ModificationStage.COMPLETED, verification = VerificationStatus.BEHAVIOR_VERIFIED, updatedAtMillis = System.currentTimeMillis()))
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
-        click("Check installed artifact", 60000)
-        click("Installed artifact matches the expected hashes and signer.", 60000)
-        assertTrue(visible("Installed artifact matches the expected hashes and signer."))
-        click("I checked the changed behavior", 60000)
-        waitUntil { workflow.store.getJob(id)?.verification == VerificationStatus.USER_CONFIRMED }
+        clickUntil("Check installed artifact", timeout = 150000) { shown("Installed artifact matches the expected hashes and signer.", 20000) }
+        assertTrue(shown("Installed artifact matches the expected hashes and signer.", 15000))
+        clickUntil("I checked the changed behavior") { workflow.store.getJob(id)?.verification == VerificationStatus.USER_CONFIRMED }
+        assertNotNull(workflow.store.record("install_session", id))
         click("Review removing the separate app", 60000)
         waitUntil { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == "com.android.settings" }
         instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
@@ -416,28 +587,33 @@ class AppModJourneyDeviceTest {
         val selected = w.suggestions(report.analysisId).single { it.title.contains("gallery_caption") }
         app.getSharedPreferences("appmod.ui", 0).edit().putString("analysis", report.analysisId).putString("source", source.id).remove("preview").commit()
         fun launch() = app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        // The expansion control's own label is the page's state, so the state is read with a plain observation:
+        // a sweeping observation scrolls the page back to its top when it gives up, which loses the list it is
+        // looking at and makes the next attempt start over from the entry form.
+        fun expansionState(): String? = listOf("Show top eight", "Show all suggestions (up to twenty)")
+            .firstOrNull { shown(it, 300, sweep = false) }
+        fun setExpanded(on: Boolean) {
+            val wanted = if (on) "Show top eight" else "Show all suggestions (up to twenty)"
+            clickUntil(if (on) "Show all suggestions (up to twenty)" else "Show top eight", 90000) { expansionState() == wanted }
+        }
         fun filterToCaption() {
-            click("Show all suggestions (up to twenty)", 60000)
+            setExpanded(true)
             edit("Search suggestions", "gallery_caption")
         }
         launch()
         filterToCaption()
-        click("Select ${selected.title}", 60000)
-        waitUntil { w.store.record("draft", report.analysisId)?.optString("selection")?.let { JSONObject(it).has(selected.suggestionId) } == true }
-        click("Select ${selected.title}", 60000)
-        waitUntil { w.store.record("draft", report.analysisId)?.optString("selection")?.let { !JSONObject(it).has(selected.suggestionId) } == true }
-        click("Select ${selected.title}", 60000)
+        clickUntil("Select ${selected.title}") { draftSelection(report.analysisId)?.has(selected.suggestionId) == true }
+        clickUntil("Select ${selected.title}") { draftSelection(report.analysisId)?.has(selected.suggestionId) == false }
+        clickUntil("Select ${selected.title}") { draftSelection(report.analysisId)?.has(selected.suggestionId) == true }
         val label = "Replacement value for ${selected.title}"
         edit(label, "Basket caption")
-        waitUntil { w.store.record("draft", report.analysisId)?.getString("selection")?.let { JSONObject(it).optString(selected.suggestionId) == "Basket caption" } == true }
-        click("Show executable suggestions only", 60000)
-        waitUntil { matchNode(instrumentation.uiAutomation.rootInActiveWindow, "Show executable suggestions only")?.isChecked == true }
-        click("Show executable suggestions only", 60000)
-        waitUntil { matchNode(instrumentation.uiAutomation.rootInActiveWindow, "Show executable suggestions only")?.isChecked == false }
-        click("Show top eight", 60000)
+        waitUntil { draftSelection(report.analysisId)?.optString(selected.suggestionId) == "Basket caption" }
+        fun executableOnly(on: Boolean) = allNodes().any { it.contentDescription?.toString() == "Show executable suggestions only" && it.isChecked == on }
+        clickUntil("Show executable suggestions only") { executableOnly(true) }
+        clickUntil("Show executable suggestions only") { executableOnly(false) }
+        setExpanded(false)
         for (mode in listOf("same_package", "side_by_side", "auto")) {
-            click("Installation ${mode.replace('_', ' ')}", 60000)
-            waitUntil { w.store.record("draft", report.analysisId)?.optString("mode") == mode }
+            clickUntil("Installation ${mode.replace('_', ' ')}") { draftMode(report.analysisId) == mode }
         }
         launch()
         filterToCaption()

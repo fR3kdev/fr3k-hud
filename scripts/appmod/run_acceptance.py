@@ -25,10 +25,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--work', type=Path, default=Path('/home/parrot/.cache/hud-appmod/runs'))
     parser.add_argument('--live-github', action='store_true')
+    # Diagnostic narrowing only: a filtered run never satisfies the acceptance contract because the
+    # validator requires every frozen scenario, so it cannot be promoted or packaged.
+    parser.add_argument('--only', help='comma-separated scenario names for a diagnostic subset')
+    parser.add_argument('--api', type=int, action='append', help='restrict a diagnostic run to one API level')
     args = parser.parse_args()
+    subset = [name.strip() for name in args.only.split(',')] if args.only else []
+    if any(name not in SCENARIOS for name in subset):
+        raise SystemExit('unknown scenario in --only: ' + ','.join(n for n in subset if n not in SCENARIOS))
     run = args.work / (datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + uuid.uuid4().hex[:8])
     run.mkdir(parents=True)
     manifest = dict(live={}, schema='hud-appmod-run/2', status='RUNNING', source=snapshot(), artifacts={}, evidence={}, scenarios={}, jvm={}, coverage={})
+    if subset or args.api:
+        manifest['diagnostic'] = dict(scenarios=subset or list(SCENARIOS), apis=args.api or [31, 35],
+                                      note='narrowed diagnostic run: not a complete frozen acceptance run; cannot satisfy evidence.py validate()')
     def save():
         with STATE_LOCK:
             write_json(run / 'run-manifest.json', manifest)
@@ -98,6 +108,10 @@ def main():
                 permission = adb('shell', 'appops', 'get', PACKAGE, 'REQUEST_INSTALL_PACKAGES', check=False)
                 overlay_permission = adb('shell', 'appops', 'get', PACKAGE, 'SYSTEM_ALERT_WINDOW', check=False)
                 adb('shell', 'am', 'force-stop', PACKAGE)
+                # The HUD's own app-modification store survives a reinstall, and the preview digest is
+                # deterministic, so a previous run's job record would be replayed instead of exercised.
+                # Every frozen run therefore starts from a clean product install, like the fixtures below.
+                adb('uninstall', PACKAGE, check=False)
                 adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP'); adb('shell', 'wm', 'dismiss-keyguard')
                 adb('shell', 'input', 'keyevent', 'KEYCODE_BACK')
                 adb('install', '-r', str(REPO / ARTIFACTS[0])); adb('install', '-r', str(REPO / ARTIFACTS[1]))
@@ -108,7 +122,7 @@ def main():
                 adb('uninstall', 'com.mcpintelligence.fr3k.patchfixture.hudmod', check=False)
                 logcat = subprocess.Popen([ADB, '-s', serial, 'logcat', '-v', 'threadtime', '-T', '1'], stdout=(run / prefix / 'platform.log').open('w'), stderr=subprocess.STDOUT)
                 try:
-                    for name, (klass, expected, markers) in SCENARIOS.items():
+                    for name, (klass, expected, markers) in ([(n, SCENARIOS[n]) for n in subset] if subset else list(SCENARIOS.items())):
                         key = f'{prefix}/{name}'; log = f'{key}.log'
                         result = dict(status='RUNNING', log=log, candidate=manifest['artifacts'])
                         manifest['scenarios'][key] = result; save()
@@ -146,11 +160,16 @@ def main():
                                     if process.poll() is None:
                                         process.terminate(); process.wait(timeout=10)
                             if name == 'performance':
-                                startup = adb('shell', 'am', 'start', '-W', '-S', '-n', PACKAGE + '/com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity')
+                                # The app-modification surface is not exported, so a shell cold start of it is
+                                # refused by the platform. Cold process startup is measured on the exported
+                                # entry point; the app-mod surface's own warm startup, scroll frames and
+                                # main-thread disk I/O are asserted inside AppModPerformanceDeviceTest.
+                                startup = adb('shell', 'am', 'start', '-W', '-S', '-n', PACKAGE + '/com.mcpintelligence.fr3k.ui.MainActivity')
                                 measured = re.search(r'TotalTime: (\d+)', startup)
                                 if 'Status: ok' not in startup or not measured or int(measured.group(1)) >= 10000:
                                     raise RuntimeError('cold startup missing or exceeds 10s emulator budget')
                                 result['coldStartMs'] = int(measured.group(1))
+                                result['coldStartSurface'] = 'com.mcpintelligence.fr3k.ui.MainActivity (exported launcher)'
                             if name == 'small_200':
                                 adb('shell', 'wm', 'size', '720x1280'); adb('shell', 'wm', 'density', '320')
                                 adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0')
@@ -219,7 +238,7 @@ def main():
                         raise RuntimeError('installation permission restoration failed')
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-            futures = [pool.submit(device, api, serial) for api, serial in ((31, 'emulator-5586'), (35, 'emulator-5584'))]
+            futures = [pool.submit(device, api, serial) for api, serial in ((31, 'emulator-5586'), (35, 'emulator-5584')) if not args.api or api in args.api]
             for future in futures:
                 future.result()
         if snapshot() != manifest['source'] or any(sha256(REPO / p) != h for p, h in manifest['artifacts'].items()):
