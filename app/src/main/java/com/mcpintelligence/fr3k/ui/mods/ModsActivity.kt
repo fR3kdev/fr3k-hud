@@ -62,6 +62,8 @@ import com.mcpintelligence.fr3k.ui.Fr3kBadge
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kPanel
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
+import com.mcpintelligence.fr3k.ui.CopyTermuxCommand
+import com.mcpintelligence.fr3k.ui.TermuxSetupCommands
 import kotlinx.coroutines.launch
 
 /** Real screen for the final action of a walkthrough. No placeholder destinations. */
@@ -469,6 +471,18 @@ private fun GuideCard(
                 }
                 Section("limits — read this", guide.limits, Fr3kPalette.Warn)
                 Section("undo", guide.reversible, Fr3kPalette.Ok)
+                if (guideDestination(guide) == GuideDestination.WIRELESS) {
+                    Text("TERMUX · SEPARATE WIRELESS ADB IDENTITY", color = Fr3kPalette.Accent)
+                    Text("After HUD pairing, repeat pairing once for Termux. These commands belong in Termux only. The new pairing code must be typed privately when requested.", color = Fr3kPalette.TextDim)
+                    CopyTermuxCommand(Fr3kApplication.get(), "Install Termux ADB tools",
+                        TermuxSetupCommands.UPDATE_ADB, "guide-adb-tools")
+                    CopyTermuxCommand(Fr3kApplication.get(), "Pair Termux with a new pairing code",
+                        TermuxSetupCommands.SETUP, "guide-pair")
+                    CopyTermuxCommand(Fr3kApplication.get(), "Check Termux connection",
+                        TermuxSetupCommands.STATUS, "guide-status")
+                    CopyTermuxCommand(Fr3kApplication.get(), "Reconnect without changing HUD identity",
+                        TermuxSetupCommands.RECONNECT, "guide-connect")
+                }
                 Button(
                     onClick = onNavigate,
                     modifier = Modifier.fillMaxWidth()

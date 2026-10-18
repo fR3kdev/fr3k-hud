@@ -5,6 +5,8 @@ import android.widget.*
 import android.view.*
 import com.mcpintelligence.fr3k.integrations.privileged.WirelessDebugging
 import com.mcpintelligence.fr3k.hud.overlays.*
+import com.mcpintelligence.fr3k.Fr3kApplication
+import com.mcpintelligence.fr3k.ui.TermuxSetupCommands
 import kotlinx.coroutines.*
 
 class WirelessDebuggingPanel(private val context: Context) {
@@ -64,6 +66,50 @@ class WirelessDebuggingPanel(private val context: Context) {
             runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 .onFailure { status.text="Enable Developer options by tapping Build number seven times in About phone." }
         } })
+        body.addView(label("SECOND PAIRING · TERMUX (SEPARATE FROM HUD)"))
+        body.addView(label("HUD may already be paired; do not forget or re-pair its identity. Open a NEW Android pairing-code sheet for Termux, then use its pairing port and six-digit code. The regular connection port is different."))
+        fun copyCommand(title:String, command:String) {
+            body.addView(label(title + "\n" + command))
+            body.addView(Button(context).apply {
+                text="COPY COMMAND"
+                contentDescription="copy-termux-" + title.lowercase().replace(Regex("[^a-z0-9]+"), "-")
+                setOnClickListener {
+                    TermuxSetupCommands.copy(context,command)
+                    text="COPIED · PASTE IN TERMUX"
+                }
+            })
+        }
+        copyCommand("Install Termux ADB package", TermuxSetupCommands.UPDATE_ADB)
+        copyCommand("Allow Downloads access (once)", TermuxSetupCommands.STORAGE)
+        copyCommand("Install the bundled helper after exporting it from onboarding",
+            TermuxSetupCommands.INSTALL_HELPER)
+        copyCommand("Pair Termux ADB (different identity)", TermuxSetupCommands.SETUP)
+        copyCommand("Verify Termux ADB", TermuxSetupCommands.STATUS)
+        copyCommand("Reconnect Termux ADB", TermuxSetupCommands.RECONNECT)
+        body.addView(Button(context).apply {
+            text="OPEN TERMUX"
+            setOnClickListener {
+                val intent=context.packageManager.getLaunchIntentForPackage("com.termux")
+                if(intent!=null) context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                else status.text="TERMUX NOT INSTALLED"
+            }
+        })
+        body.addView(Button(context).apply {
+            text="VERIFY TERMUX ADB · SEPARATE CHECK"
+            setOnClickListener {
+                isEnabled=false
+                scope.launch {
+                    try {
+                        val result=Fr3kApplication.get().termuxBridge.runRaw(TermuxSetupCommands.STATUS, 8_000)
+                        status.text=if(result.exitCode==0 &&
+                            result.stdout.contains("CONNECTED") &&
+                            result.stdout.contains("Android shell UID 2000"))
+                            "TERMUX ADB VERIFIED · HUD pairing unchanged"
+                        else "TERMUX ADB NOT VERIFIED · pair and connect via Termux; RUN_COMMAND permission may be required"
+                    } finally { isEnabled=true }
+                }
+            }
+        })
         body.addView(status)
 
         fun dp(n:Int)=(n*context.resources.displayMetrics.density).toInt()

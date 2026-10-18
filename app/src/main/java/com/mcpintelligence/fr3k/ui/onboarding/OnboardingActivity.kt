@@ -62,6 +62,8 @@ import com.mcpintelligence.fr3k.hud.HudOverlayService
 import com.mcpintelligence.fr3k.permissions.PermissionRegistry
 import com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
+import com.mcpintelligence.fr3k.ui.CopyTermuxCommand
+import com.mcpintelligence.fr3k.ui.TermuxSetupCommands
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import com.mcpintelligence.fr3k.ui.settings.SettingsActivity
 
@@ -169,6 +171,9 @@ private fun OnboardingScreen(
     var aiOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var aiStatus by remember { mutableStateOf("Select provider and refresh the model catalogue.") }
     var termuxStatus by remember { mutableStateOf("NOT CHECKED") }
+    var termuxAdbStatus by remember { mutableStateOf("NOT CHECKED") }
+    var termuxAdbReady by remember { mutableStateOf(false) }
+    var termuxExportStatus by remember { mutableStateOf("") }
     var mcpStatus by remember { mutableStateOf("NOT TESTED") }
     var mcpReveal by remember { mutableStateOf(false) }
     LaunchedEffect(step, overlayReturnCheck) {
@@ -177,6 +182,13 @@ private fun OnboardingScreen(
             termuxStatus = com.mcpintelligence.fr3k.integrations.termux.TermuxHealth.statusLabel(
                 com.mcpintelligence.fr3k.integrations.termux.TermuxHealth.probe(activity, app.termuxBridge)
             ).label
+            val probe = app.termuxBridge.runRaw(TermuxSetupCommands.STATUS, 8_000)
+            termuxAdbReady = probe.exitCode == 0 &&
+                probe.stdout.contains("CONNECTED") &&
+                probe.stdout.contains("Android shell UID 2000")
+            termuxAdbStatus = if (termuxAdbReady) "VERIFIED · Termux ADB shell UID 2000"
+                else if (probe.exitCode == 127) "BLOCKED · Grant HUD Termux RUN_COMMAND permission"
+                else "NOT PAIRED/CONNECTED · Termux must use its own ADB identity"
         }
     }
     val permissionRefresh = overlayReturnCheck + activity.permissionRevision.intValue
@@ -288,9 +300,51 @@ private fun OnboardingScreen(
                     val shellReady = runCatching {
                         com.mcpintelligence.fr3k.integrations.privileged.HudPrivilegedBridge.serviceOrNull() != null
                     }.getOrDefault(false)
-                    PermissionRow("WIRELESS ADB / HUD SHELL", if (shellReady) "CONNECTED, verified service" else "Pair in Android Wireless debugging, then connect and verify shell", shellReady) {
+                    Text("WIRELESS DEBUGGING · TWO SEPARATE PAIRINGS", color = Fr3kPalette.Accent)
+                    Text("STEP 1/2 · HUD. If HUD is already connected, leave its pairing identity untouched.", color = Fr3kPalette.Text)
+                    PermissionRow("HUD ADB SHELL", if (shellReady) "VERIFIED · HUD shell bridge connected" else "Connect HUD's already-paired identity or pair HUD once", shellReady) {
                         activity.startActivity(Intent(activity, com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingActivity::class.java))
                     }
+                    Text("STEP 2/2 · TERMUX. This is a DIFFERENT ADB identity. Android must issue a NEW pairing code and pairing port for Termux. Pairing HUD does not pair Termux.", color = Fr3kPalette.Text)
+                    PermissionRow("TERMUX WIRELESS ADB", termuxAdbStatus, termuxAdbReady) {
+                        val intent = activity.packageManager.getLaunchIntentForPackage("com.termux")
+                        if (intent != null) activity.startActivity(intent)
+                    }
+                    Text("To keep BOTH online: leave Wireless debugging enabled. Use the six-digit code and pairing port from the temporary pairing sheet; use the different connection port on the main page. Termux does not need HUD's key or code.", color = Fr3kPalette.TextDim)
+                    OutlinedButton(onClick = {
+                        activity.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS))
+                    }, modifier = Modifier.fillMaxWidth()) { Text("OPEN ANDROID WIRELESS DEBUGGING SETTINGS") }
+                    OutlinedButton(onClick = {
+                        termuxExportStatus = runCatching { TermuxSetupCommands.exportHelper(activity) }
+                            .getOrElse { "EXPORT BLOCKED: " + (it.message ?: "Unknown error") }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("EXPORT TERMUX ADB HELPER TO DOWNLOADS") }
+                    if (termuxExportStatus.isNotBlank()) Text(termuxExportStatus, color = Fr3kPalette.TextDim)
+                    CopyTermuxCommand(activity, "Install or update the required Termux ADB package",
+                        TermuxSetupCommands.UPDATE_ADB, "install-adb")
+                    CopyTermuxCommand(activity, "Grant Termux access to Downloads (once)",
+                        TermuxSetupCommands.STORAGE, "storage")
+                    CopyTermuxCommand(activity, "Install the FR3K Termux ADB helper from Downloads",
+                        TermuxSetupCommands.INSTALL_HELPER, "helper-install")
+                    CopyTermuxCommand(activity, "Pair Termux's own ADB identity (prompts for ports and code)",
+                        TermuxSetupCommands.SETUP, "pair-termux")
+                    CopyTermuxCommand(activity, "Verify Termux's ADB connection",
+                        TermuxSetupCommands.STATUS, "status-termux")
+                    CopyTermuxCommand(activity, "Reconnect after Wireless debugging changes port",
+                        TermuxSetupCommands.RECONNECT, "reconnect-termux")
+                    OutlinedButton(onClick = {
+                        workScope.launch {
+                            val probe = app.termuxBridge.runRaw(TermuxSetupCommands.STATUS, 8_000)
+                            termuxAdbReady = probe.exitCode == 0 &&
+                                probe.stdout.contains("CONNECTED") &&
+                                probe.stdout.contains("Android shell UID 2000")
+                            termuxAdbStatus = if (termuxAdbReady) "VERIFIED · separate Termux ADB shell"
+                                else "NOT CONNECTED · check Termux pairing and RUN_COMMAND permission"
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("RECHECK TERMUX ADB CONNECTION") }
+                    Text("READY TOGETHER: " + if (shellReady && termuxAdbReady)
+                        "HUD + TERMUX VERIFIED" else
+                        "NOT YET · HUD=" + shellReady + ", TERMUX=" + termuxAdbReady,
+                        color = if (shellReady && termuxAdbReady) Fr3kPalette.Ok else Fr3kPalette.Warn)
                     PermissionRow("TERMUX COMMAND BRIDGE", termuxStatus + " · real echo probe", termuxStatus == "CONNECTED") {
                         activity.startActivity(Intent(activity, com.mcpintelligence.fr3k.ui.integrations.IntegrationsActivity::class.java))
                     }
