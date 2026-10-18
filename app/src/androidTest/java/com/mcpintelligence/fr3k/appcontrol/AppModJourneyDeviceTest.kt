@@ -67,8 +67,22 @@ class AppModJourneyDeviceTest {
     }
     private fun scroll(node: AccessibilityNodeInfo?, forward: Boolean = true): Boolean {
         if (node == null) return false
-        if (node.isScrollable && node.performAction(if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) return true
-        return (0 until node.childCount).any { scroll(node.getChild(it), forward) }
+        // The page nests scrollables (lists inside the page column), and the first one found is often an inner
+        // list: scrolling that instead of the page was measured leaving the sweep oscillating inside the list and
+        // never reaching the control. The largest scrollable is the page.
+        val scrollables = ArrayList<AccessibilityNodeInfo>()
+        fun collect(current: AccessibilityNodeInfo?, depth: Int) {
+            if (current == null || depth > 30) return
+            if (current.isScrollable) scrollables += current
+            for (index in 0 until current.childCount) collect(current.getChild(index), depth + 1)
+        }
+        collect(node, 0)
+        val box = android.graphics.Rect()
+        val page = scrollables.maxByOrNull { candidate ->
+            candidate.getBoundsInScreen(box)
+            box.width().toLong() * box.height().toLong()
+        }
+        return page?.performAction(if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) == true
     }
     private fun matchNode(node: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
         if (node == null) return null
@@ -147,9 +161,18 @@ class AppModJourneyDeviceTest {
         var forward = true
         var stalled = 0
         var backedOut = false
+        var dismissedKeyboard = false
         waitUntil(timeout) {
             val root = instrumentation.uiAutomation.rootInActiveWindow
             tries++
+            // An open keyboard covers the lower part of the page and swallows taps there: measured as a tap on
+            // the repository confirmation never reaching the product while the field's keyboard was still up.
+            if (!dismissedKeyboard && instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
+                dismissedKeyboard = true
+                instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+                Thread.sleep(700)
+                return@waitUntil false
+            }
             // A system dialog (package installer) is not always the active window, so every window is searched.
             val node = (listOfNotNull(root) + instrumentation.uiAutomation.windows.mapNotNull { it.root })
                 .firstNotNullOfOrNull { findTarget(it, text) }
@@ -253,8 +276,12 @@ class AppModJourneyDeviceTest {
         click(label, 60000)
         waitUntil(30000) { setText(labelledField()) }
         Thread.sleep(500)
-        if (instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
+        fun keyboardUp() = instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+        if (keyboardUp()) {
             instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+            // The keyboard covers every control below the field and swallows taps aimed at them, so it is waited
+            // out here rather than assumed dismissed by the back action.
+            runCatching { waitUntil(5000) { !keyboardUp() } }
         }
     }
 
@@ -582,12 +609,12 @@ class AppModJourneyDeviceTest {
             app.settings.update { it.copy(consentProfile = ConsentLevel.LOCAL_ONLY) }
             edit("Confirm public repository: owner/repository", "owned/gallery")
             click("Confirm repository and research requests", 60000)
-            waitUntil { visible("Local-only consent is enabled") }
+            waitUntil(60000) { shown("Local-only consent is enabled", 3000) }
             assertNull(app.modificationStore.record("research", report.analysisId))
             click("Resume source analysis", 60000)
             waitUntil(60000) { app.getSharedPreferences("appmod.ui", 0).getString("analysis", null) != report.analysisId }
             click("Suggest with configured AI", 60000)
-            waitUntil { visible("Local-only consent is enabled") }
+            waitUntil(60000) { shown("Local-only consent is enabled", 3000) }
             val current = app.getSharedPreferences("appmod.ui", 0).getString("analysis", null)!!
             assertNull(app.modificationStore.record("ai_summary", current))
         } finally { app.settings.update { it.copy(consentProfile = oldConsent) } }
