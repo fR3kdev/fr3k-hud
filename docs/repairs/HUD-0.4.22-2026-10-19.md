@@ -54,3 +54,12 @@ OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD.
 - Android emulator UI smoke test: filtered 'Inspect an installed app' -> expanded walkthrough -> GO TO APP CONTROL -> real App Control screen with INSPECT SELECTED APP and BROWSE INSTALLED APPS visible. PASS.
 - APK picker regression: initially BLOCKED when test fixture file was absent from Downloads. After pushing the owned fixture APK to Download, AppModJourneyDeviceTest#documentPickerImportsWithoutStoragePermission passed OK (1 test), confirming the real DocumentsUI import path with fixture.
 - Source/build artifact SHA256 (post-navigation): eb437fca02df90aa7f0c515f9672f3ef147bab6742522877d497bb2322fa6bf2
+
+## Phone candidate handoff — observation, not installation verification
+
+- Private authenticated asset upload completed with 104,972,932 bytes and matching server SHA-256.
+- The OnePlus 7 Pro Termux environment downloaded the release candidate. Termux SHA-256 verification PASS.
+- A second SHA-256 check after copying the APK to Android Downloads also PASS; exact SHA: eb437fca02df90aa7f0c515f9672f3ef147bab6742522877d497bb2322fa6bf2.
+- Android package-installer VIEW intent was invoked through Termux with exit status zero.
+- **INSTALL/DEVICE BEHAVIOUR: UNKNOWN**. Android's approval, signing-identity acceptance, and real on-phone functionality were not observed. No existing app uninstall, forced replacement, or data clearing was performed.
+- A shell tool's successful intent dispatch is not proof that the package was installed or its functionality verified.
