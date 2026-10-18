@@ -50,3 +50,18 @@ Operating loop: OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD
 - Android package-installer VIEW intent accepted (termux-open exit code 0).
 - Operator approval and signed update acceptance: UNKNOWN. No uninstall, application-data deletion, or hidden privilege escalation was attempted.
 - The previous screenshot contained an old bearer token; the 0.4.23 code now rotates the bearer when the server is restarted. Do not publish the new bearer.
+
+## Phone post-install confirmation (2026-10-19 Brisbane)
+
+Source: authorized Desktop Commander terminal on the OnePlus 7 Pro; user-supplied screenshot with a bearer token was observed in chat, and is NOT copied to this repository.
+
+- Android product: GM1913. Package: com.mcpintelligence.fr3k.hud.
+- SHA-256 of the installed Android base APK: 82bd88b6dcb9313edaf00e413d2bf60ab2931d186fbd540e4da53f36f9df02ac.
+- SHA-256 of the Downloads candidate: identical. VERIFIED FACT: installed APK bytes match 0.4.23.
+- Phone localhost MCP: unauthenticated GET /tools -> HTTP/1.1 401, body contains error token required. The bearer gate rejects requests without a token.
+- Operator-provided in-app screenshot: MCP RUNNING on 127.0.0.1:8791, AUTHENTICATED HTTP 200 and 22 tools after tapping Verify. This is an OBSERVATION of the on-device self-test, not an independently verified authenticated tool sweep.
+- ADB devices from Termux: zero; run-as: permission denied; root su not available; Android settings query: permission denied. Live external Android UI instrumentation/privileged logs are BLOCKED.
+- Individual phone MCP tool calls, UI outcomes across all screens, live AI backend, and all buttons: UNKNOWN on physical device. Emulator observations do not count as phone verification.
+- Bearer value withheld from all source files, commands and logs. Token rotation recommended after screenshot disclosure.
+
+Next acceptance: authorize an on-device private test harness or trusted ADB connection, execute 22-tool read-only and separately approved action cases and UI matrix, collect redacted outcomes. An HTTP 200 or activity inventory does not mean all features work.
