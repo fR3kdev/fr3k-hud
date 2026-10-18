@@ -155,7 +155,9 @@ class AppModJourneyDeviceTest {
             settle()
             if (pageStamp() != before) return
         }
-        val window = android.graphics.Rect(); root.getBoundsInScreen(window)
+        // During IME dismissal Android can keep the panned root at a negative screen origin. Gesture
+        // coordinates belong to the physical viewport; using that root produced an ACTION_DOWN at y=-100.
+        val window = safeViewport()
         val x = window.exactCenterX()
         val from = window.top + window.height() * (if (forward) 0.8f else 0.2f)
         val to = window.top + window.height() * (if (forward) 0.2f else 0.8f)
@@ -563,15 +565,15 @@ class AppModJourneyDeviceTest {
         returnToProduct()
         click("Open analysis, saved jobs and offline guides", 60000)
         Thread.sleep(500)
-        // A clipped Compose control may acknowledge ACTION_CLICK without changing the screen. The
-        // navigation control disappears on success; re-drive it while the old page still exposes it.
-        clickUntil("Open analysis, saved jobs and offline guides") {
-            !visible("Open analysis, saved jobs and offline guides")
+        // A clipped control may acknowledge a click without navigating. Require the destination's
+        // own entry control: absence of the old label also occurs when it merely scrolls off screen.
+        clickUntil("Open analysis, saved jobs and offline guides", timeout = 150000) {
+            visible("Offline walkthrough and recovery")
         }
         click("Review saved preview / resume", 60000)
         Thread.sleep(500)
-        clickUntil("Review saved preview / resume") {
-            !visible("Review saved preview / resume")
+        clickUntil("Review saved preview / resume", timeout = 150000) {
+            visible("Review exact modification")
         }
         click("Digest: ${preview.getString("digest")}", 60000)
         assertTrue(visible(preview.getString("digest")))
@@ -773,7 +775,7 @@ class AppModJourneyDeviceTest {
         launch()
         filterToCaption()
         click("Basket caption", 60000)
-        if (instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        // click() owns dismissal and waits for the IME; a separate Back here raced its window pan.
         click("Preview selected changes", 60000)
         waitUntil { w.store.listJobs().any { it.analysisId == report.analysisId && it.previewId != null } }
         val job = w.store.listJobs().single { it.analysisId == report.analysisId && it.previewId != null }

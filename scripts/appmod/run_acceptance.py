@@ -123,6 +123,10 @@ def main():
                 logcat = subprocess.Popen([ADB, '-s', serial, 'logcat', '-v', 'threadtime', '-T', '1'], stdout=(run / prefix / 'platform.log').open('w'), stderr=subprocess.STDOUT)
                 try:
                     for name, (klass, expected, markers) in ([(n, SCENARIOS[n]) for n in subset] if subset else list(SCENARIOS.items())):
+                        # Timing on software-rendered AVDs must not overlap another device's workload.
+                        # Run the identical performance assertions serially after both suites restore state.
+                        if name == 'performance':
+                            continue
                         key = f'{prefix}/{name}'; log = f'{key}.log'
                         result = dict(status='RUNNING', log=log, candidate=manifest['artifacts'])
                         manifest['scenarios'][key] = result; save()
@@ -159,17 +163,6 @@ def main():
                                     timeout.cancel()
                                     if process.poll() is None:
                                         process.terminate(); process.wait(timeout=10)
-                            if name == 'performance':
-                                # The app-modification surface is not exported, so a shell cold start of it is
-                                # refused by the platform. Cold process startup is measured on the exported
-                                # entry point; the app-mod surface's own warm startup, scroll frames and
-                                # main-thread disk I/O are asserted inside AppModPerformanceDeviceTest.
-                                startup = adb('shell', 'am', 'start', '-W', '-S', '-n', PACKAGE + '/com.mcpintelligence.fr3k.ui.MainActivity')
-                                measured = re.search(r'TotalTime: (\d+)', startup)
-                                if 'Status: ok' not in startup or not measured or int(measured.group(1)) >= 10000:
-                                    raise RuntimeError('cold startup missing or exceeds 10s emulator budget')
-                                result['coldStartMs'] = int(measured.group(1))
-                                result['coldStartSurface'] = 'com.mcpintelligence.fr3k.ui.MainActivity (exported launcher)'
                             if name == 'small_200':
                                 adb('shell', 'wm', 'size', '720x1280'); adb('shell', 'wm', 'density', '320')
                                 adb('shell', 'settings', 'put', 'system', 'font_scale', '2.0')
@@ -241,6 +234,53 @@ def main():
             futures = [pool.submit(device, api, serial) for api, serial in ((31, 'emulator-5586'), (35, 'emulator-5584')) if not args.api or api in args.api]
             for future in futures:
                 future.result()
+        if not subset or 'performance' in subset:
+            manifest['performanceScheduling'] = 'serial after both device suites and setting restoration; unchanged timing and I/O assertions'
+            for api, serial in ((31, 'emulator-5586'), (35, 'emulator-5584')):
+                if args.api and api not in args.api:
+                    continue
+                key = f'api{api}/performance'
+                klass, expected, markers = SCENARIOS['performance']
+                result = dict(status='RUNNING', log=key + '.log', candidate=manifest['artifacts'])
+                manifest['scenarios'][key] = result; save()
+                counter = 0
+                def perf_adb(*argv, check=True):
+                    nonlocal counter
+                    counter += 1
+                    return command([ADB, '-s', serial, *argv], f'api{api}/performance-setup-{counter:03}.log', timeout=180, check=check).strip()
+                original_font = None
+                perf_logcat = None
+                try:
+                    original_font = perf_adb('shell', 'settings', 'get', 'system', 'font_scale')
+                    perf_adb('shell', 'settings', 'put', 'system', 'font_scale', '1.0')
+                    result['measurementContext'] = dict(fontScale='1.0', size=perf_adb('shell', 'wm', 'size'),
+                                                        density=perf_adb('shell', 'wm', 'density'), otherTaskInstrumentation='finished')
+                    perf_logcat = subprocess.Popen([ADB, '-s', serial, 'logcat', '-v', 'threadtime', '-T', '1'],
+                                                  stdout=(run / f'api{api}/performance-platform.log').open('w'), stderr=subprocess.STDOUT)
+                    # Shell cold start uses the exported launcher. The test measures the app-mod surface's
+                    # warm startup, actual scroll frames and main-thread I/O with 100 retained history jobs.
+                    startup = perf_adb('shell', 'am', 'start', '-W', '-S', '-n', PACKAGE + '/com.mcpintelligence.fr3k.ui.MainActivity')
+                    measured = re.search(r'TotalTime: (\d+)', startup)
+                    if 'Status: ok' not in startup or not measured or int(measured.group(1)) >= 10000:
+                        raise RuntimeError('cold startup missing or exceeds 10s emulator budget')
+                    result['coldStartMs'] = int(measured.group(1))
+                    result['coldStartSurface'] = 'com.mcpintelligence.fr3k.ui.MainActivity (exported launcher)'
+                    content = command([ADB, '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+                                       'com.mcpintelligence.fr3k.appcontrol.' + klass,
+                                       PACKAGE + '.test/androidx.test.runner.AndroidJUnitRunner'], result['log'], timeout=600)
+                    result.update(status='PASS', tests=instrument_count(content, expected, markers))
+                except Exception as failure:
+                    result.update(status='FAIL', error=str(failure))
+                    perf_adb('shell', 'am', 'force-stop', PACKAGE, check=False)
+                finally:
+                    if perf_logcat is not None:
+                        perf_logcat.terminate(); perf_logcat.wait(timeout=10)
+                    if original_font is not None:
+                        perf_adb('shell', 'settings', 'delete' if original_font == 'null' else 'put', 'system', 'font_scale',
+                                 *([] if original_font == 'null' else [original_font]))
+                        if perf_adb('shell', 'settings', 'get', 'system', 'font_scale') != original_font:
+                            raise RuntimeError('performance font restoration failed')
+                    save()
         if snapshot() != manifest['source'] or any(sha256(REPO / p) != h for p, h in manifest['artifacts'].items()):
             raise RuntimeError('frozen candidate changed')
         manifest['status'] = 'PASS' if all(s['status'] == 'PASS' for s in manifest['scenarios'].values()) else 'FAIL'
