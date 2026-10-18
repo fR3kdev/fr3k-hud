@@ -1,3 +1,5 @@
+> Latest recovery checkpoint: [session 3 continuation](HANDOVER-CONTINUATION-2026-10-18-SESSION-3.md). Read it first; the entries below are historical. No new APK has been promoted yet.
+
 # Continuation — app-mod harness and runner repair (2026-10-18, session 2)
 
 Runner hardening in scripts/appmod/run_acceptance.py: every frozen run now uninstalls the product before installing the artifacts, because the app-mod store survives reinstall and the deterministic preview digest replayed a previous run's job record instead of exercising it (the root cause of the run3 journey/update failures). Cold start now measures the exported launcher com.mcpintelligence.fr3k.ui.MainActivity (`am start -W -S`, refuses a missing `Status: ok` or TotalTime >=10000); the app-mod surface is not exported so the platform refuses to start it. `--only`, `--api` and `--work` exist to shorten the diagnostic loop only and record `diagnostic` in the manifest: a filtered run can never satisfy the coverage contract, so it is never promotable.
