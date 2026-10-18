@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.appcontrol.*
 import com.mcpintelligence.fr3k.capability.appmod.*
@@ -190,7 +191,9 @@ private fun LazyListScope.section(key: String, content: @Composable ColumnScope.
     val listState = rememberLazyListState()
     // A saved preview opens at its source and digest, rather than inheriting the history's scroll offset.
     LaunchedEffect(reviewOnly) { listState.scrollToItem(0) }
-    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars), state = listState,
+    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).semantics {
+        paneTitle = if (reviewOnly) "Review exact modification" else "Find app improvements"
+    }, state = listState,
         contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         section("heading") {
         Text("Find app improvements", style = MaterialTheme.typography.headlineSmall)
@@ -231,6 +234,11 @@ private fun LazyListScope.section(key: String, content: @Composable ColumnScope.
         section("discovery-navigation") {
         if (vm.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Button(vm::cancel) { Text("Cancel current work") } }
         OutlinedButton({ showGuide = !showGuide }) { Text("Offline walkthrough and recovery") }
+        vm.preview?.optString("previewId")?.takeIf { it.isNotBlank() }?.let { id ->
+            OutlinedButton({ vm.openPreview(id); reviewOnly = true }, enabled = !vm.busy) {
+                Text("Review saved preview / resume")
+            }
+        }
         }
         if (showGuide) appModGuides().forEach { guide ->
             section("guide-${guide.id}") {

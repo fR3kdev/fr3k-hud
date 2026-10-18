@@ -140,7 +140,25 @@ class AppModJourneyDeviceTest {
             for (index in 0 until node.childCount) walk(node.getChild(index), depth + 1)
         }
         walk(root, 0)
-        return text.toString().hashCode()
+        var fingerprint = text.toString().hashCode()
+        // A long Text (the exact changes JSON at 200% font) can fill many viewports. Accessibility
+        // keeps its full text and clips its bounds to the same rectangle while its visible lines move.
+        // Include sampled viewport pixels so a real scroll inside that node is not mistaken for an edge.
+        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+            try {
+                val safe = safeViewport()
+                val left = safe.left.coerceIn(0, bitmap.width - 1)
+                val top = safe.top.coerceIn(0, bitmap.height - 1)
+                val width = safe.right.coerceIn(left + 1, bitmap.width) - left
+                val height = safe.bottom.coerceIn(top + 1, bitmap.height) - top
+                repeat(64) { row -> repeat(48) { column ->
+                    val x = left + ((column + .5f) * width / 48).toInt()
+                    val y = top + ((row + .5f) * height / 64).toInt()
+                    fingerprint = 31 * fingerprint + bitmap.getPixel(x, y)
+                } }
+            } finally { bitmap.recycle() }
+        }
+        return fingerprint
     }
     /**
      * The accessibility scroll is tried first, but it is only accepted when the page actually moved: an
@@ -224,12 +242,12 @@ class AppModJourneyDeviceTest {
                 }
                 if (!anchored) {
                     anchored = true
-                    // The preceding action can leave a field just above the viewport. Search upwards
-                    // before traversing a potentially twenty-card list below it, checking each viewport.
+                    // Check nearby fields above before searching downward. Rewinding an entire long JSON
+                    // review here delayed the installer button directly below the current viewport.
                     var previous = 0
                     var current = pageStamp()
                     var rewind = 0
-                    while (current != previous && rewind++ < 40) {
+                    while (current != previous && rewind++ < 2) {
                         previous = current; swipe(false); current = pageStamp()
                         if (findTarget(instrumentation.uiAutomation.rootInActiveWindow, text) != null) break
                     }
@@ -364,6 +382,34 @@ class AppModJourneyDeviceTest {
             return (0 until node.childCount).any { contains(node.getChild(it)) }
         }
         return contains(instrumentation.uiAutomation.rootInActiveWindow)
+    }
+
+    /** The active accessibility pane identifies a destination even when its heading is off screen. */
+    private var lastPaneDescription: String? = null
+    private fun paneIs(title: String): Boolean {
+        val panes = ArrayList<Pair<String, Boolean>>()
+        fun find(node: AccessibilityNodeInfo?, depth: Int): Boolean {
+            if (node == null || depth > 30) return false
+            node.paneTitle?.toString()?.let { panes += it to node.isVisibleToUser }
+            if (node.isVisibleToUser && node.paneTitle?.toString() == title) return true
+            return (0 until node.childCount).any { find(node.getChild(it), depth + 1) }
+        }
+        val found = find(instrumentation.uiAutomation.rootInActiveWindow, 0)
+        val description = panes.toString()
+        if (description != lastPaneDescription) {
+            android.util.Log.i("APPMODDBG", "active panes=$description")
+            lastPaneDescription = description
+        }
+        return found
+    }
+
+    private fun paneShown(title: String): Boolean {
+        val deadline = android.os.SystemClock.elapsedRealtime() + 3000
+        while (android.os.SystemClock.elapsedRealtime() < deadline) {
+            if (paneIs(title)) return true
+            Thread.sleep(100)
+        }
+        return paneIs(title)
     }
 
     /** Every window's tree: a system dialog is not always the active window. */
@@ -565,15 +611,15 @@ class AppModJourneyDeviceTest {
         returnToProduct()
         click("Open analysis, saved jobs and offline guides", 60000)
         Thread.sleep(500)
-        // A clipped control may acknowledge a click without navigating. Require the destination's
-        // own entry control: absence of the old label also occurs when it merely scrolls off screen.
+        // Require the destination's active accessibility pane. A text heading can be below the viewport
+        // at 200% font; absence of the old label also occurs when it merely scrolls off screen.
         clickUntil("Open analysis, saved jobs and offline guides", timeout = 150000) {
-            visible("Offline walkthrough and recovery")
+            paneShown("Find app improvements")
         }
         click("Review saved preview / resume", 60000)
         Thread.sleep(500)
         clickUntil("Review saved preview / resume", timeout = 150000) {
-            visible("Review exact modification")
+            paneShown("Review exact modification")
         }
         click("Digest: ${preview.getString("digest")}", 60000)
         assertTrue(visible(preview.getString("digest")))
