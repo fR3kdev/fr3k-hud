@@ -7,9 +7,9 @@ This is the current recovery checkpoint requested by the user before a usage lim
 - Repository: `/home/parrot/repos/fr3k-hud`; branch `checkpoint/2026-10-18-hud`.
 - Latest implementation commit: `f897aa5`, already pushed to the private checkpoint repository.
 - No new APK has been promoted. The benchmark still selects the previous qualified HUD APK.
-- Current diagnostic run: `20261018T111303Z-332421f2` under `/home/parrot/.cache/hud-appmod/runs/`.
-- At this checkpoint its manifest is RUNNING: API 31 and 35 complete journeys PASS; baskets running; updates pending. Read the manifest for newer results.
-- Runner output: `/home/parrot/.cache/hud-appmod/continuation-preflight-7.log`; command: `python3 scripts/appmod/run_acceptance.py --only journey,basket,update`.
+- Current COMPLETE acceptance run: `20261018T112043Z-c63c71f1` under `/home/parrot/.cache/hud-appmod/runs/`, started 21:20 AEST. RUNNING at this checkpoint; read its manifest for newer results.
+- Runner output: `/home/parrot/.cache/hud-appmod/continuation-full-2.log`; command: `python3 scripts/appmod/run_acceptance.py --live-github`. Do not launch another runner or edit frozen sources/artifacts while it is active.
+- Diagnostic `20261018T111303Z-332421f2` finished: all six selected journey/basket/update records PASS on both APIs. Its overall FAIL is the mandatory rejection of incomplete diagnostic coverage; it cannot qualify a release. Output: `continuation-preflight-7.log`.
 - Frozen candidate HUD APK SHA-256: `fa73b23d684bbbe828e50ea13c3475b8070850f4b8b077b0b67d33c58d9875e7`.
 - Test APK SHA-256: `71f904d6f02aec433043193cfbbaad070e1008a0a8cb70842ea7f03ae1df34e8`.
 - Build `continuation-build-20.log` passed. JVM gates: 66 capability + 81 core + 69 debug app + 69 release app executions; host contracts: 9 PASS.
@@ -34,8 +34,8 @@ All logs are under `/home/parrot/.cache/hud-appmod`; keep failed runs intact.
 
 ## Immediate next actions
 
-1. Wait for current diagnostic runner to finish and restore settings. Read `run-manifest.json` and scenario logs; do not instrument a device concurrently.
-2. If all six selected journey/basket/update records PASS, run a fresh COMPLETE frozen acceptance:
+1. Wait for the current complete acceptance run `20261018T112043Z-c63c71f1` to finish and restore settings. Read `run-manifest.json` and scenario logs; do not instrument a device concurrently.
+2. The focused preflight passed all six records. The following complete command is ALREADY RUNNING; repeat only if another fresh run becomes necessary after a diagnosed failure:
 
    ```bash
    cd /home/parrot/repos/fr3k-hud
@@ -103,7 +103,7 @@ Prepend authoritative final status, keeping historical results:
 - `docs/app-control/USAGE-LIMIT-HANDOVER-2026-10-18.md`
 - `docs/app-control/HANDOVER-NEXT-AGENT-2026-10-18.md`
 - `docs/app-control/APP-MODIFICATION-VERIFICATION.md`
-- `AGENT-CONTINUATION.md` (locate its actual path)
+- `docs/app-control/AGENT-CONTINUATION.md`
 - `/home/parrot/FR3K-BENCHMARK/AGENT-HANDOFF.md`
 - This checkpoint and GitHub backup/index documents.
 
