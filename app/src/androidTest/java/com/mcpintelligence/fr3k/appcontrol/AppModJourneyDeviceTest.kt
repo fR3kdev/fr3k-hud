@@ -84,6 +84,8 @@ class AppModJourneyDeviceTest {
             candidate.getBoundsInScreen(box)
             box.width().toLong() * box.height().toLong()
         }
+        page?.getBoundsInScreen(box)
+        android.util.Log.i("APPMODDBG", "scroll forward=$forward candidates=${scrollables.size} page=${page?.className} bounds=$box")
         return page?.performAction(if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) == true
     }
     private fun matchNode(node: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
@@ -99,31 +101,31 @@ class AppModJourneyDeviceTest {
     private fun findTarget(root: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
         if (root == null) return null
         val platform = root.findAccessibilityNodeInfosByText(text).orEmpty()
-        val exact = platform.firstOrNull { it.isEnabled && it.text?.toString()?.equals(text, true) == true }
-        if (exact != null) return exact
+        val walked = ArrayList<AccessibilityNodeInfo>()
+        fun collect(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 30) return
+            if (node.isEnabled && (node.text?.toString()?.contains(text, true) == true ||
+                    node.contentDescription?.toString()?.contains(text, true) == true)) walked += node
+            for (index in 0 until node.childCount) collect(node.getChild(index), depth + 1)
+        }
+        collect(root, 0)
+        val candidates = (platform + walked).filter { it.isEnabled }
+        val exact = candidates.filter { it.text?.toString()?.equals(text, true) == true ||
+            it.contentDescription?.toString()?.equals(text, true) == true }
+        if (exact.isNotEmpty()) return exact.firstOrNull { it.isVisibleToUser } ?: exact.first()
         // A control's node can carry its row's other text once the layout merges it, measured at a large font
         // scale as a button that exists never matching its own exact label. A containing match is the fallback,
         // taken from the shortest candidate so the most specific control wins, and never for the system dialog
         // labels: the product's own "Review in Android installer" contains "Install".
         if (text in SYSTEM_CONTROLS) return matchNode(root, text)
-        val containing = platform
-            .filter { it.isEnabled && it.text?.toString()?.contains(text, true) == true }
-            .minByOrNull { it.text?.toString()?.length ?: Int.MAX_VALUE }
-        // The platform text search was measured returning nothing for a long message while the same window's
-        // tree contained it, so a manual walk is the last fallback and it matches containment, not equality.
-        // A window can also carry a stale copy of the page, measured as a tap on a hidden node that the product
-        // never received, so a visible candidate always wins over one that is not on screen.
-        val fallback = containing ?: walkMatch(root, text)
-        return containing?.takeIf { it.isVisibleToUser } ?: fallback?.takeIf { it.isVisibleToUser } ?: fallback
-    }
-
-    /** A manual substring walk, for long labels the platform text search does not return. */
-    private fun walkMatch(node: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
-        if (node == null) return null
-        val label = node.text?.toString() ?: node.contentDescription?.toString()
-        if (node.isEnabled && label != null && label.contains(text, true)) return node
-        for (index in 0 until node.childCount) walkMatch(node.getChild(index), text)?.let { return it }
-        return null
+        // Search both sources before accepting containment. A JSON block returned by platform search can
+        // contain the requested digest while the manual tree exposes the exact, separate digest label.
+        return candidates.filter { node ->
+            node.text?.toString()?.contains(text, true) == true || node.contentDescription?.toString()?.contains(text, true) == true
+        }.minWithOrNull(compareBy<AccessibilityNodeInfo> { node ->
+            listOfNotNull(node.text?.toString(), node.contentDescription?.toString())
+                .filter { it.contains(text, true) }.minOf { it.length }
+        }.thenByDescending { it.isVisibleToUser })
     }
     /** A cheap position fingerprint of the active page: text and bounds, so a real scroll is observable. */
     private fun pageStamp(): Int {
@@ -149,8 +151,9 @@ class AppModJourneyDeviceTest {
         val root = instrumentation.uiAutomation.rootInActiveWindow ?: return
         val before = pageStamp()
         if (scroll(root, forward)) {
-            Thread.sleep(200)
-            if (pageStamp() != before) { Thread.sleep(150); return }
+            Thread.sleep(400)
+            settle()
+            if (pageStamp() != before) return
         }
         val window = android.graphics.Rect(); root.getBoundsInScreen(window)
         val x = window.exactCenterX()
@@ -170,6 +173,8 @@ class AppModJourneyDeviceTest {
         }
         Thread.sleep(20)
         send(android.view.MotionEvent.ACTION_UP, to)
+        Thread.sleep(400)
+        settle()
     }
     private fun click(text: String, timeout: Long = 30000) {
         android.util.Log.i("APPMODDBG", "click '$text' timeout=$timeout")
@@ -187,6 +192,7 @@ class AppModJourneyDeviceTest {
         var stalled = 0
         var backedOut = false
         var dismissedKeyboard = false
+        var anchored = false
         waitUntil(timeout) {
             val root = instrumentation.uiAutomation.rootInActiveWindow
             tries++
@@ -214,6 +220,19 @@ class AppModJourneyDeviceTest {
                     if (!systemControl && !backedOut) { backedOut = true; returnToProduct() } else Thread.sleep(250)
                     return@waitUntil false
                 }
+                if (!anchored) {
+                    anchored = true
+                    // The preceding action can leave a field just above the viewport. Search upwards
+                    // before traversing a potentially twenty-card list below it, checking each viewport.
+                    var previous = 0
+                    var current = pageStamp()
+                    var rewind = 0
+                    while (current != previous && rewind++ < 40) {
+                        previous = current; swipe(false); current = pageStamp()
+                        if (findTarget(instrumentation.uiAutomation.rootInActiveWindow, text) != null) break
+                    }
+                    return@waitUntil false
+                }
                 // Review pages grow downward; sweep down, and only re-anchor (one swipe up) if the page stopped
                 // changing, so a long 200%-font page is never abandoned by an early direction flip.
                 if (stalled >= 4) {
@@ -224,6 +243,9 @@ class AppModJourneyDeviceTest {
                     var rewind = 0
                     while (current != previous && rewind++ < 40) { previous = current; swipe(false); Thread.sleep(80); current = pageStamp() }
                     stalled = 0; forward = true
+                    // Search the rewound viewport before moving again. An immediate forward page skipped
+                    // every label near the top, including the guide toggle and the saved preview digest.
+                    return@waitUntil false
                 }
                 val before = pageStamp()
                 swipe(forward)
@@ -269,7 +291,10 @@ class AppModJourneyDeviceTest {
             // A control that is only partly on screen can sit under the page's own bar, where a coordinate tap was
             // measured landing on the bar instead of the control at a large font scale: the control's own click
             // action is performed instead of guessing a screen point.
-            if (!safe.contains(bounds) && control?.isClickable == true) {
+            // Accessibility clips a partly visible control's bounds to the viewport. Such a rectangle is
+            // technically contained in `safe` even when only a five-pixel sliver remains above the page.
+            val minimumTouch = (48 * app.resources.displayMetrics.density).toInt()
+            if ((!safe.contains(bounds) || bounds.height() < minimumTouch || bounds.width() < minimumTouch) && control?.isClickable == true) {
                 android.util.Log.i("APPMODDBG", "semantics click '$text' clipped=$bounds safe=$safe")
                 if (control.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { Thread.sleep(250); return@waitUntil true }
             }
@@ -410,13 +435,13 @@ class AppModJourneyDeviceTest {
     }
 
     /** A product message is evidence of a control's effect, so it is observed rather than clicked. */
-    private fun shown(text: String, timeout: Long = 30000, sweep: Boolean = true, restore: Boolean = true): Boolean {
+    private fun shown(text: String, timeout: Long = 30000, sweep: Boolean = true, restore: Boolean = true, searchForward: Boolean = true): Boolean {
         // A manual tree walk is the effective search here: the platform text search was measured returning
         // nothing for a message that the walk finds in the same window.
         fun found() = allNodes().any { node ->
             node.text?.toString()?.contains(text, true) == true || node.contentDescription?.toString()?.contains(text, true) == true }
         val deadline = android.os.SystemClock.elapsedRealtime() + timeout
-        var forward = true
+        var forward = searchForward
         var stalled = 0
         var sweeps = 0
         while (android.os.SystemClock.elapsedRealtime() < deadline) {
@@ -435,6 +460,7 @@ class AppModJourneyDeviceTest {
                     var rewind = 0
                     while (current != previous && rewind++ < 40) { previous = current; swipe(false); Thread.sleep(80); current = pageStamp() }
                     stalled = 0; forward = true
+                    continue
                 }
             } else stalled = 0
         }
@@ -526,15 +552,27 @@ class AppModJourneyDeviceTest {
         val job = workflow.store.getJob(id)!!
         workflow.store.saveJob(job.copy(stage = ModificationStage.COMPLETED, verification = VerificationStatus.BEHAVIOR_VERIFIED, updatedAtMillis = System.currentTimeMillis()))
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
-        clickUntil("Check installed artifact", timeout = 150000) { shown("Installed artifact matches the expected hashes and signer.", 20000) }
-        assertTrue(shown("Installed artifact matches the expected hashes and signer.", 15000))
+        // The fixture is explicitly COMPLETED above. A successful UI verification changes it to INSTALLED;
+        // observe that durable effect without sweeping away from the button before it has been pressed.
+        clickUntil("Check installed artifact", timeout = 150000) { workflow.store.getJob(id)?.stage == ModificationStage.INSTALLED }
+        assertTrue(shown("Installed artifact matches the expected hashes and signer.", 30000, searchForward = false))
         clickUntil("I checked the changed behavior") { workflow.store.getJob(id)?.verification == VerificationStatus.USER_CONFIRMED }
         assertNotNull(workflow.store.record("install_session", id))
         click("Review removing the separate app", 60000)
         waitUntil { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == "com.android.settings" }
         returnToProduct()
         click("Open analysis, saved jobs and offline guides", 60000)
+        Thread.sleep(500)
+        // A clipped Compose control may acknowledge ACTION_CLICK without changing the screen. The
+        // navigation control disappears on success; re-drive it while the old page still exposes it.
+        clickUntil("Open analysis, saved jobs and offline guides") {
+            !visible("Open analysis, saved jobs and offline guides")
+        }
         click("Review saved preview / resume", 60000)
+        Thread.sleep(500)
+        clickUntil("Review saved preview / resume") {
+            !visible("Review saved preview / resume")
+        }
         click("Digest: ${preview.getString("digest")}", 60000)
         assertTrue(visible(preview.getString("digest")))
         status("APPMOD_BEHAVIOR_PASS job=$id sha256=${job.outputSha256} sdk=${android.os.Build.VERSION.SDK_INT}")
@@ -702,8 +740,13 @@ class AppModJourneyDeviceTest {
         // The expansion control's own label is the page's state, but the control can be off the viewport, so the
         // state is read by sweeping the page while never scrolling it back to the top: that scroll loses the
         // list being read and makes the next attempt start over from the entry form.
-        fun expansionState(): String? = listOf("Show top eight", "Show all suggestions (up to twenty)")
-            .firstOrNull { shown(it, 6000, sweep = true, restore = false) }
+        fun expansionState(): String? {
+            val labels = listOf("Show top eight", "Show all suggestions (up to twenty)")
+            // Both states occupy the same row. Observe the row before sweeping for a different state;
+            // otherwise checking the absent label scrolls the present label out of view.
+            return labels.firstOrNull { shown(it, 100, sweep = false, restore = false) }
+                ?: labels.firstOrNull { shown(it, 6000, sweep = true, restore = false) }
+        }
         fun setExpanded(on: Boolean) {
             val wanted = if (on) "Show top eight" else "Show all suggestions (up to twenty)"
             clickUntil(if (on) "Show all suggestions (up to twenty)" else "Show top eight", 90000) { expansionState() == wanted }
@@ -810,6 +853,9 @@ class AppModJourneyDeviceTest {
             fun navigateOnce(): Boolean {
                 app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+                // Starting an activity is asynchronous. Backing out of the old fixture window while
+                // this launch is in flight was measured destroying the newly resumed discovery activity.
+                waitUntil(15000) { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == app.packageName }
                 click("Choose APK or base + split APKs")
                 if (!fileListed()) runCatching { click("Show roots", 6000) }
                 if (!fileListed()) runCatching { click(BUILD_MODEL, 6000) }

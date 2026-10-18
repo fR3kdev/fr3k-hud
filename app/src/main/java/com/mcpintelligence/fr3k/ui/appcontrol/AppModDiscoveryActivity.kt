@@ -11,8 +11,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -159,6 +161,10 @@ class AppModDiscoveryActivity : ComponentActivity() {
     }
 }
 
+private fun LazyListScope.section(key: String, content: @Composable ColumnScope.() -> Unit) {
+    item(key = key) { Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp), content = content) }
+}
+
 @Composable private fun DiscoveryScreen(vm: AppModViewModel, pick: () -> Unit, allowInstall: () -> Unit, initialReviewOnly: Boolean) {
     var reviewOnly by rememberSaveable { mutableStateOf(initialReviewOnly) }
     var pkg by rememberSaveable { mutableStateOf("") }; var goal by rememberSaveable { mutableStateOf("") }
@@ -181,10 +187,17 @@ class AppModDiscoveryActivity : ComponentActivity() {
         }
     }
     LaunchedEffect(selection, mode, goal) { if (loadedDraft == vm.report?.analysisId && loadedDraft != null) vm.saveDraft(selection, mode, goal) }
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val listState = rememberLazyListState()
+    // A saved preview opens at its source and digest, rather than inheriting the history's scroll offset.
+    LaunchedEffect(reviewOnly) { listState.scrollToItem(0) }
+    LazyColumn(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars), state = listState,
+        contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        section("heading") {
         Text("Find app improvements", style = MaterialTheme.typography.headlineSmall)
         Text(vm.message, Modifier.testTag("appmod-status"))
+        }
         if (reviewOnly) {
+            section("review") {
             vm.preview?.let { preview ->
                 Text("Review exact modification", style = MaterialTheme.typography.titleLarge)
                 Text("Source: ${preview.getJSONObject("spec").getString("identityFingerprint")}")
@@ -208,18 +221,26 @@ class AppModDiscoveryActivity : ComponentActivity() {
                     }
                 }
             }
+            }
+            section("review-navigation") {
             TextButton({ reviewOnly = false }) { Text("Open analysis, saved jobs and offline guides") }
             OutlinedButton(allowInstall) { Text("Allow Android installation from HUD") }
-            return@Column
+            }
+            return@LazyColumn
         }
+        section("discovery-navigation") {
         if (vm.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Button(vm::cancel) { Text("Cancel current work") } }
         OutlinedButton({ showGuide = !showGuide }) { Text("Offline walkthrough and recovery") }
+        }
         if (showGuide) appModGuides().forEach { guide ->
+            section("guide-${guide.id}") {
             Text(guide.title, style = MaterialTheme.typography.titleMedium)
             guide.steps.forEachIndexed { index, step -> Text("${index + 1}. $step") }
             Text("Expected: complete the stated action and inspect its real status/receipt. ${guide.limits}")
             Text("Recovery: ${guide.reversible}")
+            }
         }
+        section("source-and-research") {
         OutlinedButton(allowInstall) { Text("Allow Android installation from HUD") }
         OutlinedButton({ (vm.getApplication<Application>() as Fr3kApplication).startActivity(Intent(vm.getApplication(), SelectedAppPatchActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text("Expert: import compatible Xposed module") }
         Button(pick, enabled = !vm.busy) { Text("Choose APK or base + split APKs") }
@@ -239,14 +260,18 @@ class AppModDiscoveryActivity : ComponentActivity() {
         Text("Public lookup sends the repository name. AI receives a bounded summary of package, technology and evidence categories; APKs and full code stay local.")
         Button({ vm.research(repository, goal, false) }, enabled = vm.report != null && repository.isNotBlank() && !vm.busy) { Text("Confirm repository and research requests") }
         OutlinedButton({ vm.research("", goal, true) }, enabled = vm.report != null && !vm.busy) { Text("Suggest with configured AI") }
+        }
         vm.report?.let { report ->
+            section("suggestion-search") {
             Text("${report.artifact.packageName} · ${report.artifact.fingerprint}")
             Text("Coverage: ${report.limits.joinToString("; ")}")
             OutlinedTextField(search, { search = it }, label = { Text("Search suggestions") }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search suggestions" })
             Row { Switch(onlyExecutable, { onlyExecutable = it }, modifier = Modifier.semantics { contentDescription = "Show executable suggestions only" }); Text("Executable suggestions only") }
             TextButton({ showAll = !showAll }) { Text(if (showAll) "Show top eight" else "Show all suggestions (up to twenty)") }
-            vm.suggestions.filter { (!onlyExecutable || it.readiness in setOf(Readiness.READY, Readiness.CAN_GENERATE)) &&
-                (it.title.contains(search, true) || it.proposedChange.contains(search, true)) }.take(if (showAll) 20 else 8).forEach { suggestion ->
+            }
+            items(vm.suggestions.filter { (!onlyExecutable || it.readiness in setOf(Readiness.READY, Readiness.CAN_GENERATE)) &&
+                (it.title.contains(search, true) || it.proposedChange.contains(search, true)) }.take(if (showAll) 20 else 8),
+                key = { "suggestion-${it.suggestionId}" }, contentType = { "suggestion" }) { suggestion ->
                 Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(suggestion.title, style = MaterialTheme.typography.titleMedium)
                     Text("${suggestion.readiness} · ${suggestion.provenance} · ${suggestion.route}")
@@ -269,6 +294,7 @@ class AppModDiscoveryActivity : ComponentActivity() {
                     }
                 } }
             }
+            section("evidence-and-preview") {
             OutlinedTextField(evidenceQuery, { evidenceQuery = it }, label = { Text("Search local feature evidence") }, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Search local feature evidence" })
             OutlinedButton({ vm.searchEvidence(evidenceQuery) }, enabled = !vm.busy) { Text("Inspect feature map") }
             vm.evidenceResults.forEach { evidence -> Text("${evidence.kind} · ${evidence.evidenceId}\n${evidence.feature}") }
@@ -278,8 +304,10 @@ class AppModDiscoveryActivity : ComponentActivity() {
                 chosen.keys().forEach { array.put(JSONObject().put("suggestionId", it).put("replacement", chosen.getString(it))) }
                 vm.makePreview(array, mode)
             }, enabled = JSONObject(selection).length() > 0 && !vm.busy) { Text("Preview selected changes") }
+            }
         }
         vm.preview?.let { preview ->
+            section("preview") {
             Card { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Review modification", style = MaterialTheme.typography.titleLarge)
                 Text("Digest: ${preview.getString("digest")}"); Text("Mode: ${preview.getString("installationMode")}")
@@ -287,9 +315,10 @@ class AppModDiscoveryActivity : ComponentActivity() {
                 Text(preview.getJSONArray("warnings").toString(2))
                 Button(vm::prepare, enabled = !vm.busy, modifier = Modifier.testTag("appmod-approve")) { Text("Approve exact changes and prepare copy") }
             } }
+            }
         }
-        Text("Durable jobs", style = MaterialTheme.typography.titleLarge)
-        vm.jobs.take(20).forEach { job -> Card { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item(key = "jobs-heading") { Text("Durable jobs", style = MaterialTheme.typography.titleLarge) }
+        items(vm.jobs.take(20), key = { "job-${it.jobId}" }, contentType = { "job" }) { job -> Card { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("${job.artifact?.packageName} · ${job.stage}\n${job.jobId}\n${job.verification} · ${job.installerStatus}")
             job.error?.let { Text(it) }
             if (job.patchSpec == null) OutlinedButton({ vm.reopenAnalysis(job.jobId) }, enabled = !vm.busy) { Text("Reopen analysis / resume interrupted analysis") }
