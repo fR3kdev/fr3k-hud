@@ -70,9 +70,11 @@ import com.mcpintelligence.fr3k.ui.settings.SettingsActivity
  * Plus the orb / Quick Settings tile entry point.
  */
 class MainActivity : ComponentActivity() {
+    private val requestedDeckTab = androidx.compose.runtime.mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedDeckTab.value = intent?.getStringExtra("fr3k.deck.tab")
         // §9 first-run gate: a fresh install (onboardingDone = false) is sent
         // to the setup wizard. We deliberately DON'T finish(): the dashboard
         // inflates underneath and is revealed the moment setup completes.
@@ -87,6 +89,7 @@ class MainActivity : ComponentActivity() {
                         activity = activity,
                         onOpenPalette = { activity.startActivity(Intent(activity, CommandPaletteActivity::class.java)) },
                         onAskAboutThis = { activity.startActivity(Intent(activity, AskAboutThisActivity::class.java)) },
+                        requestedTab = requestedDeckTab.value,
                     )
                 }
             }
@@ -120,6 +123,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        requestedDeckTab.value = intent.getStringExtra("fr3k.deck.tab")
         // A deep link delivered to an already-running dashboard must still land: without this, launching
         // the same shortcut twice silently does nothing.
         openRequestedSurface(intent)

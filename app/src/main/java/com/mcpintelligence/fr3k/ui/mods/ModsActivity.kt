@@ -64,6 +64,35 @@ import com.mcpintelligence.fr3k.ui.Fr3kPanel
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
 import kotlinx.coroutines.launch
 
+/** Real screen for the final action of a walkthrough. No placeholder destinations. */
+internal enum class GuideDestination(val buttonText: String) {
+    APP_IMPROVEMENTS("GO TO APP IMPROVEMENTS →"),
+    APP_CONTROL("GO TO APP CONTROL →"),
+    PATCH_MODULE("GO TO PATCH MODULE →"),
+    WIRELESS("GO TO WIRELESS PAIRING →"),
+    AI_SETTINGS("GO TO AI / MODELS →"),
+    WORKFLOWS("GO TO WORKFLOWS →"),
+    MCP("GO TO MCP CONTROLS ↓"),
+}
+
+internal fun guideDestination(guide: ModGuide): GuideDestination = when (guide.id) {
+    "mod.discovery", "mod.preparation", "mod.install.restore" -> GuideDestination.APP_IMPROVEMENTS
+    "mod.modify.own.app" -> GuideDestination.PATCH_MODULE
+    "mod.shell" -> GuideDestination.WIRELESS
+    "mod.ai.go" -> GuideDestination.AI_SETTINGS
+    "mod.agent", "mod.agent.access" -> GuideDestination.MCP
+    "mod.inspect.app", "mod.controls", "mod.maps", "mod.appops",
+    "mod.root", "mod.root.extras", "mod.priv.bootstrap" -> GuideDestination.APP_CONTROL
+    "mod.workflows", "mod.autorun.taps", "mod.combine.apps", "mod.skip.ads",
+    "mod.ask.plain.english" -> GuideDestination.WORKFLOWS
+    else -> when (guide.category) {
+        ModCategory.CONNECT -> GuideDestination.APP_CONTROL
+        ModCategory.AUTOMATE, ModCategory.COMBINE -> GuideDestination.WORKFLOWS
+        ModCategory.INSPECT -> GuideDestination.APP_CONTROL
+        ModCategory.MODIFY -> GuideDestination.WORKFLOWS
+    }
+}
+
 /**
  * APP MODS — every capability this build has, each with the walkthrough that gets you to it.
  *
@@ -95,6 +124,29 @@ private fun ModsScreen(onClose: () -> Unit) {
     var expanded by remember { mutableStateOf<String?>(null) }
     var mcpStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val pageScroll = rememberScrollState()
+    fun goToGuide(guide: ModGuide) {
+        val destination = guideDestination(guide)
+        if (destination == GuideDestination.MCP) {
+            scope.launch { pageScroll.animateScrollTo(pageScroll.maxValue) }
+            return
+        }
+        val target = when (destination) {
+            GuideDestination.APP_IMPROVEMENTS -> com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java
+            GuideDestination.APP_CONTROL -> com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity::class.java
+            GuideDestination.PATCH_MODULE -> com.mcpintelligence.fr3k.ui.appcontrol.SelectedAppPatchActivity::class.java
+            GuideDestination.WIRELESS -> com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingActivity::class.java
+            GuideDestination.AI_SETTINGS -> com.mcpintelligence.fr3k.ui.settings.SettingsActivity::class.java
+            GuideDestination.WORKFLOWS -> com.mcpintelligence.fr3k.ui.MainActivity::class.java
+            GuideDestination.MCP -> return
+        }
+        val intent = Intent(app, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (destination == GuideDestination.WORKFLOWS) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            intent.putExtra("fr3k.deck.tab", "Workflows")
+        }
+        app.startActivity(intent)
+    }
 
     var guides by remember { mutableStateOf(if (com.mcpintelligence.fr3k.appcontrol.CapabilityCatalogue.labMode(app)) ModGuideCatalogue.all() else com.mcpintelligence.fr3k.appcontrol.releaseProcedures()) }
     LaunchedEffect(Unit) { guides = withContext(Dispatchers.IO) { app.capabilityHost.registry(true); ModGuideCatalogue.all(app) } }
@@ -106,7 +158,7 @@ private fun ModsScreen(onClose: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.systemBars)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(pageScroll)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -196,6 +248,7 @@ private fun ModsScreen(onClose: () -> Unit) {
                 environment = environment,
                 expanded = expanded == guide.id,
                 onToggle = { expanded = if (expanded == guide.id) null else guide.id },
+                onNavigate = { goToGuide(guide) },
             ) }
         }
 
@@ -318,6 +371,7 @@ private fun GuideCard(
     environment: ModEnvironment,
     expanded: Boolean,
     onToggle: () -> Unit,
+    onNavigate: () -> Unit,
 ) {
     val readiness = ModGuideStatus.readiness(guide, environment)
     val missing = ModGuideStatus.missing(guide, environment)
@@ -415,6 +469,19 @@ private fun GuideCard(
                 }
                 Section("limits — read this", guide.limits, Fr3kPalette.Warn)
                 Section("undo", guide.reversible, Fr3kPalette.Ok)
+                Button(
+                    onClick = onNavigate,
+                    modifier = Modifier.fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .semantics { contentDescription = "mods-go-${guide.id}" },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Fr3kPalette.Accent,
+                        contentColor = Fr3kPalette.Bg,
+                    ),
+                ) {
+                    Text(guideDestination(guide).buttonText, fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

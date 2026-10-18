@@ -31,7 +31,7 @@ Date (Brisbane): 2026-10-19. Source: this repository. DEBUG candidate, not a pro
 - Android emulator AppModMcpDeviceTest OK (1 test); unapproved preparation rejected.
 - Android emulator ChatTranscriptRegressionDeviceTest OK (1 test); twenty lines retained; second reply accepted.
 - First-run onboarding emulator navigation: welcome → permissions → connections → AI; inline key/model controls visible.
-- SHA-256 APK: 5cfd712b161324e36c8d6de9d0fc6f86685e03df62c7da675d611ba8165b68d5.
+- SHA-256 APK: eb437fca02df90aa7f0c515f9672f3ef147bab6742522877d497bb2322fa6bf2.
 - Debug signing cert SHA-256: a28ac772fc0088cee4c30465382084fe6fa2aa4531b7f5a60624e0f2a33816a4.
 
 ## Unknown / blocked
@@ -44,3 +44,13 @@ Date (Brisbane): 2026-10-19. Source: this repository. DEBUG candidate, not a pro
 - This is a privately distributed debug candidate, not a public production release.
 
 OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD.
+
+## Walkthrough navigation follow-up
+
+- Every expanded APP MODS guide now ends in a GO TO FEATURE destination button.
+- Destinations are resolved from the guide id: import/preview/install -> App Mod; owned-module patch -> exact module screen; wireless setup -> pairing screen; AI -> model/provider settings; agent MCP -> scroll to active MCP controls; app identity/control -> App Control; workflow/capability guides -> direct Workflows tab.
+- The Workflows destination is honoured on MainActivity initial launch and onNewIntent.
+- GuideNavigationContractTest asserts production procedure destinations plus the lab/capability-guide action labels.
+- Android emulator UI smoke test: filtered 'Inspect an installed app' -> expanded walkthrough -> GO TO APP CONTROL -> real App Control screen with INSPECT SELECTED APP and BROWSE INSTALLED APPS visible. PASS.
+- APK picker regression: initially BLOCKED when test fixture file was absent from Downloads. After pushing the owned fixture APK to Download, AppModJourneyDeviceTest#documentPickerImportsWithoutStoragePermission passed OK (1 test), confirming the real DocumentsUI import path with fixture.
+- Source/build artifact SHA256 (post-navigation): eb437fca02df90aa7f0c515f9672f3ef147bab6742522877d497bb2322fa6bf2

@@ -53,9 +53,15 @@ private val surfaces = listOf(
 )
 
 @Composable
-fun CommandDeck(activity: ComponentActivity, onOpenPalette: () -> Unit, onAskAboutThis: () -> Unit) {
+fun CommandDeck(activity: ComponentActivity, onOpenPalette: () -> Unit, onAskAboutThis: () -> Unit,
+                requestedTab: String? = null) {
     val app = Fr3kApplication.get()
     var tab by rememberSaveable { mutableStateOf("Deck") }
+    LaunchedEffect(requestedTab) {
+        if (requestedTab in listOf("Deck", "Planes", "Workflows", "Agent", "Journal", "Tools")) {
+            tab = requestedTab!!
+        }
+    }
     var guideCount by remember { mutableIntStateOf(releaseProcedures().size) }
     var env by remember { mutableStateOf(ModEnvironment()) }
     var hudRunning by remember { mutableStateOf(false) }
