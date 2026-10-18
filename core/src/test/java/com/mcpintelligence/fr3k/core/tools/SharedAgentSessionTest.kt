@@ -90,4 +90,47 @@ class SharedAgentSessionTest {
         session.send("second request")
         assertTrue(tool.contexts.isEmpty())
     }
+    @Test fun allowAllIsTaskScopedAndTheFollowingTurnNeedsApprovalAgain() = runTest {
+        val tool = Tool("termux.exec", "termux")
+        val bus = AgentToolBus().apply { register(tool) }
+        var callIndex = 0
+        val backend = AgentSessionBackend { _, _ ->
+            when (callIndex++) {
+                0 -> call("a1", tool.id, mapOf("command" to "echo first"))
+                1 -> call("a2", tool.id, mapOf("command" to "echo second"))
+                2 -> answer("First task finished.")
+                3 -> call("b1", tool.id, mapOf("command" to "echo next"))
+                else -> answer("Second task done.")
+            }
+        }
+        val session = SharedAgentSession(bus, backend, "phone")
+        val first = launch { session.send("task one") }
+        runCurrent()
+        val pending = session.approval.value!!
+        session.decide(pending.id, true, allowAllThisTask = true)
+        first.join()
+        assertEquals(2, tool.contexts.size)
+        assertNull(session.approval.value)
+        val second = launch { session.send("task two") }
+        runCurrent()
+        assertNotNull("A new user turn MUST ask again", session.approval.value)
+        assertEquals("echo next", session.approval.value!!.arguments["command"])
+        assertEquals(2, tool.contexts.size)
+        session.decide(session.approval.value!!.id, false)
+        second.join()
+        assertEquals(2, tool.contexts.size)
+    }
+
+    @Test fun duplicateCallsStopDispatchingAndToolRoundsRemainBounded() = runTest {
+        val tool = Tool("blackwave.status", "blackwave")
+        val session = SharedAgentSession(AgentToolBus().apply { register(tool) },
+            AgentSessionBackend { _, _ ->
+                call("same", tool.id, mapOf("action" to "status"))
+            }, "phone", maxToolRounds = 24)
+        session.send("check repeated status")
+        assertEquals("No more than three identical tool dispatches", 3, tool.contexts.size)
+        assertTrue(session.lines.value.any { it.text.contains("bounded tool-round budget") })
+        assertFalse(session.busy.value)
+    }
+
 }

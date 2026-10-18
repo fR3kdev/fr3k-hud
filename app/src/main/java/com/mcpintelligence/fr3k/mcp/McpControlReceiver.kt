@@ -28,6 +28,7 @@ class McpControlReceiver : BroadcastReceiver() {
             }
             ACTION_STOP -> {
                 app.stopMcp()
+                File(context.filesDir, "mcp.json").delete()
                 Log.i(TAG, "MCP_STOPPED")
             }
         }

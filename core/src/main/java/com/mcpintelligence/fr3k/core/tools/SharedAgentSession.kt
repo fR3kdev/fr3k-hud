@@ -14,14 +14,14 @@ fun interface AgentSessionBackend {
 }
 
 data class SessionLine(val speaker: String, val text: String)
-data class ToolApproval(val id: String, val toolId: String, val arguments: Map<String, String>)
+data class ToolApproval(val id: String, val toolId: String, val arguments: Map<String, String>, val taskId: String)
 
 /** One application-owned task/conversation, independent of which overlay is visible. */
 class SharedAgentSession(
     private val bus: AgentToolBus,
     private val backend: AgentSessionBackend,
     private val deviceId: String,
-    private val maxToolRounds: Int = 8,
+    private val maxToolRounds: Int = 24,
 ) {
     val sessionId: String = UUID.randomUUID().toString()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -34,6 +34,12 @@ class SharedAgentSession(
     val busy = mutableBusy.asStateFlow()
     private var decision: CompletableDeferred<Boolean>? = null
     private var job: Job? = null
+    // Deliberate operator grant: scoped to ONE task, tool IDs present when granted,
+    // 10 minutes and at most 24 subsequent dispatches. Never stored across turns/restarts.
+    private data class TaskGrant(val taskId: String, val toolIds: Set<String>,
+                                 val expiresAt: Long, var remaining: Int = 24)
+    @Volatile private var taskGrant: TaskGrant? = null
+    @Volatile private var activeTaskId: String? = null
     private val messages = mutableListOf(JSONObject().put("role", "system").put("content", """
         You are the FR3K agent sharing one conversation across HUD, browser, terminal and BLACKWAVE.
         Explain intended operations concisely, use the provided tools, and explain their actual results.
@@ -53,17 +59,39 @@ class SharedAgentSession(
         job = scope.launch { send(prompt) }
     }
 
-    fun decide(id: String, allow: Boolean) {
-        if (mutableApproval.value?.id == id) decision?.complete(allow)
+    fun decide(id: String, allow: Boolean, allowAllThisTask: Boolean = false) {
+        val request = mutableApproval.value ?: return
+        if (request.id != id || request.taskId != activeTaskId) return
+        if (allow && allowAllThisTask) {
+            taskGrant = TaskGrant(request.taskId, bus.list().map { it.id }.toSet(),
+                System.nanoTime() + 10L * 60 * 1_000_000_000L)
+            line("review", "Operator approved up to 24 registered tool calls for this task only (10-minute limit).")
+        }
+        decision?.complete(allow)
     }
 
-    fun cancel() { job?.cancel() }
+    fun cancel() { taskGrant = null; job?.cancel() }
+
+    private fun coveredByGrant(taskId: String, toolId: String): Boolean {
+        val grant = taskGrant ?: return false
+        if (grant.taskId != taskId || toolId !in grant.toolIds ||
+            System.nanoTime() - grant.expiresAt >= 0L || grant.remaining <= 0) {
+            taskGrant = null
+            return false
+        }
+        grant.remaining--
+        return true
+    }
 
     /** Suspends until this turn completes, including any explicit tool review. */
     suspend fun send(prompt: String) {
         if (prompt.isBlank() || !mutex.tryLock()) return
         mutableBusy.value = true
         val taskId = UUID.randomUUID().toString()
+        activeTaskId = taskId
+        taskGrant = null
+        val attempts = mutableMapOf<String, Int>()
+        var totalCalls = 0
         try {
             trimHistory()
             messages.add(JSONObject().put("role", "user").put("content", prompt))
@@ -86,8 +114,14 @@ class SharedAgentSession(
                         val function = call.getJSONObject("function")
                         val name = function.getString("name")
                         val tool = tools.singleOrNull { functionName(it.id) == name }
+                        totalCalls++
+                        val signature = "$name:${function.optString("arguments")}"
+                        val repeated = attempts.getOrDefault(signature, 0)
+                        attempts[signature] = repeated + 1
                         val result = try {
-                            if (tool == null) ToolResult.Failure("Unknown tool: $name", "tool.unregistered")
+                            if (totalCalls > 48) ToolResult.Failure("This task reached the 48-call safety budget. Summarise the results so far.", "tool.budget")
+                            else if (repeated >= 3) ToolResult.Failure("Identical tool call repeated three times. Change the approach; do not loop.", "tool.loop")
+                            else if (tool == null) ToolResult.Failure("Unknown tool: $name", "tool.unregistered")
                             else {
                                 val json = JSONObject(function.getString("arguments"))
                                 val args = json.keys().asSequence().associateWith { key ->
@@ -99,7 +133,7 @@ class SharedAgentSession(
                                     tool.capability == "browser" -> args["action"] in setOf("click", "type", "submit")
                                     else -> true
                                 }
-                                if (needsReview && !approve(tool.id, args)) {
+                                if (needsReview && !coveredByGrant(taskId, tool.id) && !approve(taskId, tool.id, args)) {
                                     ToolResult.Failure("User declined this action. Do not retry or bypass it.", "tool.declined")
                                 } else {
                                     line("tool", "Running ${tool.displayName}: ${args["action"] ?: tool.id}")
@@ -125,7 +159,7 @@ class SharedAgentSession(
                     }
                 }
             }
-            line("agent", "Reached the tool limit for this turn. Review the results and send a follow-up to continue.")
+            line("agent", "This turn reached its bounded tool-round budget (24). Results are preserved; send a follow-up for a fresh, separately authorised task.")
         } catch (e: CancellationException) {
             line("agent", "Stopped waiting. A command already started in Termux may still be running.")
             throw e
@@ -135,12 +169,14 @@ class SharedAgentSession(
             mutableApproval.value = null
             decision = null
             mutableBusy.value = false
+            taskGrant = null
+            activeTaskId = null
             mutex.unlock()
         }
     }
 
-    private suspend fun approve(toolId: String, args: Map<String, String>): Boolean {
-        val request = ToolApproval(UUID.randomUUID().toString(), toolId, args.toMap())
+    private suspend fun approve(taskId: String, toolId: String, args: Map<String, String>): Boolean {
+        val request = ToolApproval(UUID.randomUUID().toString(), toolId, args.toMap(), taskId)
         val waiting = CompletableDeferred<Boolean>()
         decision = waiting
         mutableApproval.value = request

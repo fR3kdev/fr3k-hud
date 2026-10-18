@@ -22,7 +22,43 @@ import java.util.UUID
  */
 class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 8791) {
 
-    val token: String = UUID.randomUUID().toString().replace("-", "")
+    @Volatile var token: String = UUID.randomUUID().toString().replace("-", "")
+        private set
+
+    // A caller's "approve":true is not an operator approval. Exact reviewed goal/id,
+    // single use, limited to 2 minutes, and approved only from an in-app control.
+    private data class WriteReview(
+        val kind: String, val exactTarget: String, val summary: String,
+        val expires: Long, val operatorApproved: Boolean = false
+    )
+    @Volatile private var pendingWrite: WriteReview? = null
+
+    @Synchronized fun pendingWriteSummary(): String? =
+        pendingWrite?.takeIf { android.os.SystemClock.elapsedRealtime() < it.expires }
+            ?.let { it.kind + ": " + it.summary.take(500) + (if (it.operatorApproved) " · APPROVED" else " · NOT APPROVED") }
+
+    @Synchronized fun approvePendingWrite(): Boolean {
+        val request = pendingWrite ?: return false
+        if (android.os.SystemClock.elapsedRealtime() >= request.expires) { pendingWrite = null; return false }
+        pendingWrite = request.copy(operatorApproved = true)
+        return true
+    }
+
+    @Synchronized fun denyPendingWrite() { pendingWrite = null }
+
+    @Synchronized private fun recordWriteReview(kind: String, exact: String, summary: String) {
+        pendingWrite = WriteReview(kind, exact, summary, android.os.SystemClock.elapsedRealtime() + 120_000)
+    }
+
+    @Synchronized private fun consumeWriteReview(kind: String, exact: String): Boolean {
+        val request = pendingWrite ?: return false
+        pendingWrite = null
+        return request.operatorApproved && request.kind == kind && request.exactTarget == exact &&
+            android.os.SystemClock.elapsedRealtime() < request.expires
+    }
+    val diagnostics: HudDiagnosticSurface by lazy {
+        HudDiagnosticSurface(com.mcpintelligence.fr3k.Fr3kApplication.get(), this)
+    }
     private var server: ServerSocket? = null
     private var loop: Thread? = null
 
@@ -35,6 +71,8 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
 
     fun start(): Int {
         check(!running) { "already running" }
+        token = UUID.randomUUID().toString().replace("-", "")
+        denyPendingWrite()
         val socket = ServerSocket(port, 8, InetAddress.getByName("127.0.0.1"))
         server = socket
         running = true
@@ -49,6 +87,8 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
     }
 
     fun stop() {
+        if (running) diagnostics.revokeControls()
+        denyPendingWrite()
         running = false
         runCatching { server?.close() }
         server = null
@@ -65,13 +105,24 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
             com.mcpintelligence.fr3k.core.tools.AgentToolSchema.parameterNames("app.mods.$name").forEach { params.put(it, "string") }
             put(tool(name, "App modification: $name. Exact user review required before preparation.", params))
         }
+        put(tool("list_hud_screens", "Enumerate internal HUD screens and manifest presence", JSONObject()))
+        put(tool("get_hud_diagnostics", "Read-only HUD MCP, bridge, diagnostic control status", JSONObject()))
+        put(tool("run_hud_selftest", "Bounded evidence checks on this HUD process", JSONObject()))
+        put(tool("inspect_hud_ui", "Redacted clickable-node inventory of the HUD foreground only", JSONObject()))
+        put(tool("open_hud_screen", "Navigate to internal screen after locally enabled 10-minute diagnostic session",
+            JSONObject().put("id", "screen ID")))
+        put(tool("press_hud_control", "Tap non-sensitive HUD control by exact accessibility path after local approval",
+            JSONObject().put("path", "index path")))
         put(tool("list_capabilities", "List registered capabilities for the apps installed on this device", JSONObject()))
         put(tool("get_app_identity", "Read the installed identity (version, signer, APK hashes) of one package",
             JSONObject().put("package", "string")))
         put(tool("render_plan", "Compile a plain-English goal into a reviewable plan", JSONObject().put("goal", "string")))
         put(tool("execute_plan", "Compile and run a plan after the operator approved it",
             JSONObject().put("goal", "string").put("approve", "bool")))
-        put(tool("run_workflow", "Run a registered workflow by id", JSONObject().put("id", "string")))
+        put(tool("preview_workflow", "View a registered workflow for explicit single-use on-screen approval",
+            JSONObject().put("id", "exact workflow id")))
+        put(tool("run_workflow", "Run a workflow only after in-app review and approval",
+            JSONObject().put("id", "exact workflow id")))
         put(tool("read_ui_tree", "Read the accessibility tree of the foreground window", JSONObject()))
         put(tool("get_journal", "Return the evidence journal", JSONObject()))
         put(tool("bridge_status", "Report whether the accessibility bridge is connected and what it may act on", JSONObject()))
@@ -93,6 +144,12 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
             catch (failure: Exception) { error(failure.message) }
         }
         return when (name) {
+        "list_hud_screens" -> diagnostics.screens()
+        "get_hud_diagnostics" -> diagnostics.status()
+        "run_hud_selftest" -> diagnostics.selfTest()
+        "inspect_hud_ui" -> diagnostics.inspectUi()
+        "open_hud_screen" -> diagnostics.openScreen(arguments.optString("id"))
+        "press_hud_control" -> diagnostics.clickControl(arguments.optString("path"))
         "list_capabilities" -> JSONObject().put("capabilities", JSONArray().also { arr ->
             host.registry().all().forEach { entry ->
                 arr.put(JSONObject().apply {
@@ -139,13 +196,17 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
             if (goal.isBlank()) return error("goal is required")
             val result = PlanCompiler(host).compile(goal)
             val plan = result.plan ?: return error(result.refusal ?: "no plan")
-            JSONObject().put("ok", true).put("plan", PlanRenderer.render(plan, host.registry()))
+            val summary = PlanRenderer.render(plan, host.registry())
+            recordWriteReview("plan", goal, summary)
+            JSONObject().put("ok", true).put("plan", summary)
+                .put("operatorApproval", "PENDING_IN_HUD")
                 .put("capability", result.candidates.firstOrNull() ?: "")
         }
         "execute_plan" -> {
             val goal = arguments.optString("goal")
             if (goal.isBlank()) return error("goal is required")
-            if (!arguments.optBoolean("approve", false)) return error("operator approval is required (approve=true)")
+            if (!arguments.optBoolean("approve", false) || !consumeWriteReview("plan", goal))
+                return error("Exact plan requires fresh operator approval in the HUD Agent screen (single use)")
             val result = PlanCompiler(host).compile(goal)
             val plan = result.plan ?: return error(result.refusal ?: "no plan")
             val spec = WorkflowSpec(
@@ -157,8 +218,17 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
             val report = runBlocking { host.workflowRunner().run(spec) }
             JSONObject().put("ok", report.ok).put("note", report.note).put("steps", report.records.size)
         }
+        "preview_workflow" -> {
+            val id = arguments.optString("id")
+            val spec = host.workflows().firstOrNull { it.id == id } ?: return error("no such workflow")
+            recordWriteReview("workflow", id, spec.name + " (" + spec.steps.size + " steps)")
+            JSONObject().put("ok", true).put("id", spec.id).put("name", spec.name)
+                .put("steps", spec.steps.size).put("operatorApproval", "PENDING_IN_HUD")
+        }
         "run_workflow" -> {
-            val id = arguments.optString("id").ifBlank { host.workflows().firstOrNull()?.id ?: "" }
+            val id = arguments.optString("id")
+            if (!consumeWriteReview("workflow", id))
+                return error("Exact workflow requires fresh operator approval in the HUD Agent screen")
             val spec = host.workflows().firstOrNull { it.id == id } ?: return error("no such workflow: $id")
             val report = runBlocking { host.workflowRunner().run(spec) }
             JSONObject().put("ok", report.ok).put("note", report.note).put("steps", report.records.size)
@@ -176,6 +246,8 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
                 org.json.JSONArray(listOf(it.left, it.top, it.right, it.bottom))
             } ?: org.json.JSONArray())
         "explore_app" -> {
+            return error("EXPLICIT_OPERATOR_REVIEW_REQUIRED: external-app exploration is not included in HUD-only diagnostic approval")
+            @Suppress("UNREACHABLE_CODE")
             val pkg = arguments.optString("package")
             if (pkg.isBlank()) return error("package is required")
             val service = Fr3kBridgeService.instanceOrNull() ?: return error("accessibility service is not connected")

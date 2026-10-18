@@ -66,6 +66,13 @@ fun CommandDeck(activity: ComponentActivity, onOpenPalette: () -> Unit, onAskAbo
     var env by remember { mutableStateOf(ModEnvironment()) }
     var hudRunning by remember { mutableStateOf(false) }
     var mcpRunning by remember { mutableStateOf(false) }
+    var pendingMcpReview by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            pendingMcpReview = app.mcpServer.pendingWriteSummary()
+            delay(750)
+        }
+    }
     val scope = rememberCoroutineScope()
     fun open(screen: String) { activity.startActivity(Intent().setClassName(activity, "com.mcpintelligence.fr3k.ui.$screen")) }
     fun guides() = open("mods.ModsActivity")
@@ -168,6 +175,16 @@ fun CommandDeck(activity: ComponentActivity, onOpenPalette: () -> Unit, onAskAbo
                             TextButton(onClick = { reveal = !reveal }) { Text(if (reveal) "Hide bearer token" else "Show bearer token") }
                             if (reveal) DeckText(app.mcpServer.token)
                             if (message.isNotEmpty()) DeckText(message)
+                            pendingMcpReview?.let { request ->
+                                DeckText("PENDING MCP WRITE — review actual plan or workflow before approving:", Fr3kPalette.Warn)
+                                DeckText(request)
+                                Button(onClick = {
+                                    message = if (app.mcpServer.approvePendingWrite()) "Exact plan approved ONCE (expires in 2 min)" else "Approval expired"
+                                }) { Text("APPROVE EXACT MCP WRITE ONCE") }
+                                OutlinedButton(onClick = { app.mcpServer.denyPendingWrite(); message = "MCP write declined" }) {
+                                    Text("DENY MCP WRITE")
+                                }
+                            }
                         }
                         val toolList = remember { app.mcpServer.toolList() }
                         repeat(toolList.length()) { i -> val tool = toolList.getJSONObject(i)

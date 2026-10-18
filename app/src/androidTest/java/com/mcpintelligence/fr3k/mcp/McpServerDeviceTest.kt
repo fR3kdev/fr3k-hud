@@ -82,10 +82,19 @@ class McpServerDeviceTest {
         assertFalse(unapproved.optBoolean("ok"))
         assertTrue(unapproved.getString("error").contains("approval"))
 
+        val premature = JSONObject(request("POST", "/tools/execute_plan", """{"goal":"hide the banner on the owned fixture","approve":true}""", server.token).substringAfter("\r\n\r\n"))
+        assertFalse("Client's approve flag MUST NOT count as operator consent", premature.optBoolean("ok"))
+        // A denied attempt consumes the pending review; render again before the in-app approval.
+        val rerender = JSONObject(request("POST", "/tools/render_plan", """{"goal":"hide the banner on the owned fixture"}""", server.token).substringAfter("\r\n\r\n"))
+        assertTrue(rerender.optBoolean("ok"))
+        assertTrue("Only local UI can grant exact write once", server.approvePendingWrite())
         val approved = JSONObject(request("POST", "/tools/execute_plan", """{"goal":"hide the banner on the owned fixture","approve":true}""", server.token).substringAfter("\r\n\r\n"))
         assertTrue("approved run failed: $approved", approved.optBoolean("ok"))
         assertTrue(approved.getInt("steps") >= 1)
 
+        val restorePreview = JSONObject(request("POST", "/tools/render_plan", """{"goal":"show the banner on the owned fixture"}""", server.token).substringAfter("\r\n\r\n"))
+        assertTrue(restorePreview.optBoolean("ok"))
+        assertTrue(server.approvePendingWrite())
         val restored = JSONObject(request("POST", "/tools/execute_plan", """{"goal":"show the banner on the owned fixture","approve":true}""", server.token).substringAfter("\r\n\r\n"))
         assertTrue("restore failed: $restored", restored.optBoolean("ok"))
         android.util.Log.i("FR3KMCP", "EXECUTE_PLAN_OK steps=${approved.getInt("steps")}")

@@ -138,6 +138,7 @@ private enum class OnboardingStep(val title: String) {
     PERMISSIONS("GRANT WHAT FR3K NEEDS"),
     CONNECTIONS("CONNECT AND VERIFY DEVICE TOOLS"),
     AI("CONFIGURE AI PROVIDER + MODEL"),
+    MCP("AGENT CONNECTION · MCP DIAGNOSTICS"),
     READY("READY · FR3K HUD"),
 }
 
@@ -168,6 +169,8 @@ private fun OnboardingScreen(
     var aiOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var aiStatus by remember { mutableStateOf("Select provider and refresh the model catalogue.") }
     var termuxStatus by remember { mutableStateOf("NOT CHECKED") }
+    var mcpStatus by remember { mutableStateOf("NOT TESTED") }
+    var mcpReveal by remember { mutableStateOf(false) }
     LaunchedEffect(step, overlayReturnCheck) {
         if (step == OnboardingStep.CONNECTIONS) {
             com.mcpintelligence.fr3k.integrations.termux.TermuxHealth.invalidate()
@@ -420,6 +423,71 @@ private fun OnboardingScreen(
                     OutlinedButton(onClick = {
                         activity.startActivity(Intent(activity, SettingsActivity::class.java))
                     }, modifier = Modifier.fillMaxWidth()) { Text("ADVANCED AI SETTINGS") }
+                    Button(onClick = { step = OnboardingStep.MCP }, modifier = Modifier.fillMaxWidth()) {
+                        Text("NEXT · MCP & DIAGNOSTICS")
+                    }
+                }
+
+                OnboardingStep.MCP -> {
+                    Text("MCP gives an authenticated agent a read-only view of registered HUD screens, controls and diagnostics. The listener is local to this phone; it cannot automatically be reached from another computer.", color = Fr3kPalette.Text)
+                    Text(if (app.mcpServer.running) "MCP RUNNING · http://127.0.0.1:" + app.mcpServer.port() else "MCP STOPPED",
+                        color = if (app.mcpServer.running) Fr3kPalette.Ok else Fr3kPalette.Warn)
+                    Button(onClick = {
+                        mcpStatus = runCatching { "Listening on local port " + app.startMcp() }
+                            .getOrElse { "START ERROR: " + it.javaClass.simpleName }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("START LOCAL MCP") }
+                    Button(onClick = {
+                        workScope.launch {
+                            mcpStatus = "Testing authenticated socket..."
+                            mcpStatus = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                runCatching {
+                                    val port = app.startMcp()
+                                    val url = java.net.URL("http://127.0.0.1:" + port + "/tools")
+                                    val conn = url.openConnection() as java.net.HttpURLConnection
+                                    try {
+                                        conn.connectTimeout = 3000
+                                        conn.readTimeout = 3000
+                                        conn.setRequestProperty("Authorization", "Bearer " + app.mcpServer.token)
+                                        val body = conn.inputStream.bufferedReader().use { it.readText() }
+                                        val tools = org.json.JSONObject(body).getJSONArray("tools")
+                                        "AUTHENTICATED · HTTP " + conn.responseCode + " · " + tools.length() + " tools"
+                                    } finally { conn.disconnect() }
+                                }.getOrElse { "TEST FAILED: " + (it.message ?: it.javaClass.simpleName) }
+                            }
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("VERIFY MCP AUTH & TOOLS") }
+                    Text(mcpStatus, color = Fr3kPalette.TextDim)
+                    OutlinedButton(onClick = { mcpReveal = !mcpReveal }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (mcpReveal) "HIDE TOKEN" else "REVEAL TOKEN LOCALLY")
+                    }
+                    if (mcpReveal) Text(app.mcpServer.token, color = Fr3kPalette.Warn,
+                        fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                    Text("Diagnostic actions are controlled separately from bearer authentication. Never give the token to an untrusted agent.", color = Fr3kPalette.Warn)
+                    var pendingReview by remember { mutableStateOf("") }
+                    Button(onClick = {
+                        pendingReview = app.mcpServer.pendingWriteSummary() ?: "No pending MCP write"
+                    }, modifier = Modifier.fillMaxWidth()) { Text("CHECK PENDING MCP WRITE REVIEW") }
+                    Text(pendingReview, color = Fr3kPalette.TextDim)
+                    if (app.mcpServer.pendingWriteSummary() != null) {
+                        Button(onClick = {
+                            mcpStatus = if (app.mcpServer.approvePendingWrite())
+                                "Exact write approved once" else "Approval expired"
+                        }, modifier = Modifier.fillMaxWidth()) { Text("APPROVE EXACT WRITE ONCE") }
+                        OutlinedButton(onClick = {
+                            app.mcpServer.denyPendingWrite()
+                            mcpStatus = "Write declined"
+                        }, modifier = Modifier.fillMaxWidth()) { Text("DECLINE MCP WRITE") }
+                    }
+                    Button(onClick = { app.mcpServer.diagnostics.allowControlsTenMinutes() },
+                        modifier = Modifier.fillMaxWidth()) { Text("AUTHORISE HUD-ONLY CONTROLS · 10 MIN") }
+                    OutlinedButton(onClick = { app.mcpServer.diagnostics.revokeControls() },
+                        modifier = Modifier.fillMaxWidth()) { Text("REVOKE DIAGNOSTIC CONTROL") }
+                    Text(if (app.mcpServer.diagnostics.controlsEnabled()) "HUD CONTROL AUTHORIZED · EXPIRES AUTOMATICALLY"
+                        else "HUD CONTROL LOCKED · READ-ONLY", color = Fr3kPalette.TextDim)
+                    Button(onClick = {
+                        activity.startActivity(Intent(activity,
+                            com.mcpintelligence.fr3k.ui.diagnostics.DiagnosticsActivity::class.java))
+                    }, modifier = Modifier.fillMaxWidth()) { Text("OPEN COMPLETE DIAGNOSTICS") }
                     Button(onClick = { step = OnboardingStep.READY }, modifier = Modifier.fillMaxWidth()) {
                         Text("REVIEW SETUP")
                     }

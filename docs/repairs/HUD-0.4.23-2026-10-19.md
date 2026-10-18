@@ -1,0 +1,43 @@
+# FR3K HUD 0.4.23 — diagnostic MCP and chat approval repair
+
+Status: DEBUG candidate; compiled and emulator tested, not a verified OnePlus installation.
+Date: 2026-10-19 (Australia/Brisbane).
+
+## User observed
+
+- Chat repeatedly requests tool authorization and reaches its 8-round tool budget.
+- MCP setup was absent from onboarding.
+- The user needs agent-driven screen/control inspection and testing without falsely equating server availability with app correctness.
+- A bearer token was visible in a user-provided screenshot; tokens must rotate between server starts.
+
+## Changes
+
+- SharedAgentSession: ALLOW ALL · THIS TASK grants up to 24 subsequent tool dispatches against the registered tool set, with a ten-minute deadline. New turns and cancellation revoke. Decline still fails closed. Identical calls limited to 3 dispatches; 24 provider rounds, 48 tool calls maximum per task. No external Android permission is granted.
+- AgentSessionPanel: separate full-width ALLOW ALL · THIS TASK button; ALLOW / DECLINE remain available for each call.
+- Fr3kMcpServer: six additional diagnostic tools: list_hud_screens, get_hud_diagnostics, run_hud_selftest, inspect_hud_ui, open_hud_screen, press_hud_control. Also preview_workflow for exact local approval. Total advertised 22 tools.
+- HudDiagnosticSurface: 23 internal manifest activities inventoried. 2 require a system trigger; 21 are direct-launch candidates. Read-only redacted clickable-node inspection never returns third-party trees or private text inputs.
+- HUD screen navigation/control requires a ten-minute explicitly enabled local diagnostic session; bearer possession alone is insufficient. Sensitive controls and arbitrary shell/programmatic permissions remain excluded.
+- User-controlled write approvals: render_plan or preview_workflow creates a pending, exact, short-lived review; the local Agent screen must approve ONCE. Caller-supplied approve=true is not sufficient. External-app exploration fails closed until a matching local review flow exists.
+- MCP bearer rotates on each server start; stop revokes diagnostic authority and clears the pending review. Broadcast stop deletes stale private mcp.json.
+- Onboarding now includes MCP START / authenticated self-test / reveal / ten-minute diagnostic authorization / revoke / diagnostics screen. Settings can reopen onboarding.
+- App version 0.4.23 / code 423.
+
+## Observed evidence
+
+- Gradle: :core:testDebugUnitTest 83/83 passing; :app:testDebugUnitTest 71/71 passing; debug APK and androidTest assemble successful.
+- Instrumentation: HudDiagnosticsMcpDeviceTest OK (1); McpServerDeviceTest OK (3), including exact operator review; ChatTranscriptRegressionDeviceTest OK (1).
+- Onboarding UI was navigated on emulator through WELCOME → PERMISSIONS → CONNECTIONS → AI → MCP. Tapping START and VERIFY produced HTTP 200, 22 tool definitions.
+- HudScreenSweepDeviceTest OK (1). Manifest: 23 registered; 21 direct launches accepted; 19 showed HUD-owned accessibility roots; Deck and Wireless Debug had UNKNOWN tree/package observation during the sweep; share receiver and radial overlay marked BLOCKED_NEEDS_TRIGGER. This is NOT proof of 19 fully functioning screens or every button.
+- No live provider billing, hardware operations or arbitrary target apps were exercised. MCP user-phone authenticated validation remains UNKNOWN, even though the 8791 loopback listener previously returned HTTP 401 without a token.
+- APK signer verification succeeded.
+- SHA-256: 82bd88b6dcb9313edaf00e413d2bf60ab2931d186fbd540e4da53f36f9df02ac
+
+## Limitations and further acceptance
+
+- This is a bounded local diagnostic capability, NOT arbitrary full device control, code self-modification or automatic repair. A developer agent may use evidence to propose repairs, which still require a reviewed source build and real reinstallation.
+- Android's package installer, system consent dialogs and third-party app data remain separately controlled.
+- UI tree inspections cover accessible nodes only, not every rendered pixel or hidden state. Use screenshots/visual reviews and explicit end-to-end tests for each screen.
+- The physical OnePlus still needs installation approval and live validation for 0.4.23. Keep current app data; do not uninstall to circumvent signing.
+- GitHub contains source and bounded evidence, not secrets or raw private device telemetry.
+
+Operating loop: OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD.
