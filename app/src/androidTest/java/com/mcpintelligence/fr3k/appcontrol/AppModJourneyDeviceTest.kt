@@ -218,10 +218,9 @@ class AppModJourneyDeviceTest {
             tries++
             // An open keyboard covers the lower part of the page and swallows taps there: measured as a tap on
             // the repository confirmation never reaching the product while the field's keyboard was still up.
-            if (!dismissedKeyboard && instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) {
+            if (!dismissedKeyboard && keyboardUp()) {
                 dismissedKeyboard = true
-                instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-                Thread.sleep(700)
+                dismissKeyboard()
                 return@waitUntil false
             }
             // A system dialog (package installer) is not always the active window, so every window is searched.
@@ -366,12 +365,43 @@ class AppModJourneyDeviceTest {
         click(label, 60000)
         waitUntil(30000) { setText(labelledField()) }
         Thread.sleep(500)
-        fun keyboardUp() = instrumentation.uiAutomation.windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
-        if (keyboardUp()) {
-            instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-            // The keyboard covers every control below the field and swallows taps aimed at them, so it is waited
-            // out here rather than assumed dismissed by the back action.
-            runCatching { waitUntil(5000) { !keyboardUp() } }
+        if (keyboardUp()) dismissKeyboard()
+    }
+
+    private fun keyboardUp(): Boolean {
+        var visible = false
+        instrumentation.runOnMainSync {
+            visible = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                .any { it.window.decorView.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true }
+        }
+        return visible
+    }
+
+    private fun dismissKeyboard() {
+        // Accessibility can retain an IME window after it closes. Idempotent platform hide avoids
+        // sending a second Back to the activity when that stale window outlives the real keyboard.
+        instrumentation.runOnMainSync {
+            androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                .forEach { it.window.insetsController?.hide(android.view.WindowInsets.Type.ime()) }
+        }
+        waitUntil(5000) { !keyboardUp() }
+        settle()
+    }
+
+    private fun awaitReview(previewId: String) {
+        // The request's activity launch is asynchronous. Wait for delivery and focus before a click
+        // helper can interpret the previous fixture window as a detour and press Back through the launch.
+        waitUntil(20000) {
+            var resumed = false
+            instrumentation.runOnMainSync {
+                resumed = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                    .any { it is com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity &&
+                        it.intent.getStringExtra("preview_id") == previewId }
+            }
+            resumed && instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == app.packageName
         }
     }
 
@@ -464,12 +494,31 @@ class AppModJourneyDeviceTest {
         fun driven(packageName: String?) = packageName == null || packageName == app.packageName ||
             listOf("documentsui", "packageinstaller", "launcher").any { packageName.contains(it, ignoreCase = true) }
         fun unrelated() = !driven(instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
+        fun productResumed(): Boolean {
+            var resumed = false
+            instrumentation.runOnMainSync {
+                resumed = androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED)
+                    .any { it is com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity }
+            }
+            return resumed
+        }
         repeat(attempts) {
+            // Accessibility may still describe Settings after HUD has resumed. A second Back during
+            // that focus hand-off was measured finishing HUD itself, so wait for its window instead.
+            if (productResumed()) {
+                waitUntil(15000) { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == app.packageName }
+                return
+            }
             if (!unrelated()) return
-            val front = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
+            val previous = instrumentation.uiAutomation.rootInActiveWindow
+            val front = previous?.packageName?.toString()
             android.util.Log.i("APPMODDBG", "backing out of $front")
             instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-            Thread.sleep(900)
+            val deadline = android.os.SystemClock.elapsedRealtime() + 5000
+            while (android.os.SystemClock.elapsedRealtime() < deadline && !productResumed() &&
+                instrumentation.uiAutomation.rootInActiveWindow?.windowId == previous?.windowId) Thread.sleep(100)
+            Thread.sleep(250)
         }
         if (!unrelated()) return
         // An app from elsewhere (a browser left in front by another scenario) does not leave with back: the home
@@ -576,6 +625,7 @@ class AppModJourneyDeviceTest {
         val apiResult = AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
         assertEquals("AWAITING_USER_REVIEW", apiResult.getString("status"))
         assertNull(workflow.store.record("outputs", id))
+        awaitReview(id)
         clickUntil("Approve exact changes and prepare copy") { workflow.store.getJob(id)?.stage in setOf(ModificationStage.PREPARED, ModificationStage.FAILED) }
         assertEquals(workflow.store.getJob(id)?.error, ModificationStage.PREPARED, workflow.store.getJob(id)?.stage)
         click("Review in Android installer")
@@ -600,6 +650,7 @@ class AppModJourneyDeviceTest {
         val job = workflow.store.getJob(id)!!
         workflow.store.saveJob(job.copy(stage = ModificationStage.COMPLETED, verification = VerificationStatus.BEHAVIOR_VERIFIED, updatedAtMillis = System.currentTimeMillis()))
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
+        awaitReview(id)
         // The fixture is explicitly COMPLETED above. A successful UI verification changes it to INSTALLED;
         // observe that durable effect without sweeping away from the button before it has been pressed.
         clickUntil("Check installed artifact", timeout = 150000) { workflow.store.getJob(id)?.stage == ModificationStage.INSTALLED }
@@ -673,6 +724,7 @@ class AppModJourneyDeviceTest {
             assertTrue(java.io.FileInputStream(fd.fileDescriptor).bufferedReader().use { it.readText() }.contains("Success"))
         }
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
+        awaitReview(id)
         // The request itself opens the product's own review surface on this preview (the product starts the
         // surface with the preview extra), so the wait makes that precondition explicit and nothing is launched
         // here: a second launch without the extra replaces the review page with the discovery page.
@@ -842,7 +894,7 @@ class AppModJourneyDeviceTest {
         w.prepare(id, w.approveFromUi(id, preview.getString("digest")))
         val hashes = w.outputs(id).map(ApkHashing::sha256)
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
-        waitUntil { instrumentation.uiAutomation.rootInActiveWindow?.packageName == app.packageName }
+        awaitReview(id)
         AppModInstaller.install(app, w, id)
         val session = w.store.record("install_session", id)!!.getInt("sessionId")
         status("APPMOD_INSTALL_CANCEL_WAIT job=$id session=$session")
