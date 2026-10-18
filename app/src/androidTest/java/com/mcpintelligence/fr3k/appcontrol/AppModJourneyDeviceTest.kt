@@ -19,6 +19,8 @@ import org.junit.runner.RunWith
 class AppModJourneyDeviceTest {
     private val BUILD_MODEL = android.os.Build.MODEL
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
+    /** Dialog labels that must match exactly: the product's own review text contains "Install". */
+    private val SYSTEM_CONTROLS = setOf("Cancel", "Install", "Update", "Done")
     private val app get() = instrumentation.targetContext.applicationContext as Fr3kApplication
     private fun status(message: String) = instrumentation.sendStatus(0, android.os.Bundle().apply { putString("stream", "$message\n") })
     private fun waitUntil(timeout: Long = 20000, predicate: () -> Boolean) {
@@ -97,8 +99,17 @@ class AppModJourneyDeviceTest {
     private fun findTarget(root: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
         if (root == null) return null
         val platform = root.findAccessibilityNodeInfosByText(text).orEmpty()
-            .filter { it.isEnabled && it.text?.toString()?.equals(text, true) == true }
-        return platform.firstOrNull { it.isVisibleToUser } ?: platform.firstOrNull() ?: matchNode(root, text)
+        val exact = platform.firstOrNull { it.isEnabled && it.text?.toString()?.equals(text, true) == true }
+        if (exact != null) return exact
+        // A control's node can carry its row's other text once the layout merges it, measured at a large font
+        // scale as a button that exists never matching its own exact label. A containing match is the fallback,
+        // taken from the shortest candidate so the most specific control wins, and never for the system dialog
+        // labels: the product's own "Review in Android installer" contains "Install".
+        if (text in SYSTEM_CONTROLS) return matchNode(root, text)
+        val containing = platform
+            .filter { it.isEnabled && it.text?.toString()?.contains(text, true) == true }
+            .minByOrNull { it.text?.toString()?.length ?: Int.MAX_VALUE }
+        return containing?.takeIf { it.isVisibleToUser } ?: containing ?: matchNode(root, text)
     }
     /** A cheap position fingerprint of the active page: text and bounds, so a real scroll is observable. */
     private fun pageStamp(): Int {
@@ -155,7 +166,7 @@ class AppModJourneyDeviceTest {
         }
         // A target that is scrolled far away can be dropped from the accessibility tree entirely, so a missing
         // node sweeps the page instead of scrolling away from it forever.
-        val systemControl = text in setOf("Cancel", "Install", "Update", "Done")
+        val systemControl = text in SYSTEM_CONTROLS
         var missing = 0
         var tries = 0
         var forward = true
@@ -188,7 +199,15 @@ class AppModJourneyDeviceTest {
                 }
                 // Review pages grow downward; sweep down, and only re-anchor (one swipe up) if the page stopped
                 // changing, so a long 200%-font page is never abandoned by an early direction flip.
-                if (stalled >= 4) { stalled = 0; forward = !forward }
+                if (stalled >= 4) {
+                    // Flip-and-continue oscillates between two regions of a very long page (measured at a large
+                    // font scale as a control never being reached): rewind to the top and search downwards again.
+                    var previous = 0
+                    var current = pageStamp()
+                    var rewind = 0
+                    while (current != previous && rewind++ < 40) { previous = current; swipe(false); Thread.sleep(80); current = pageStamp() }
+                    stalled = 0; forward = true
+                }
                 val before = pageStamp()
                 swipe(forward)
                 Thread.sleep(250)
@@ -341,14 +360,24 @@ class AppModJourneyDeviceTest {
      * the tests drive deliberately, so they are never backed out of.
      */
     private fun returnToProduct(attempts: Int = 4) {
+        fun unrelated() = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
+            ?.let { it != app.packageName && !it.contains("documentsui", ignoreCase = true) && !it.contains("packageinstaller", ignoreCase = true) } == true
         repeat(attempts) {
+            if (!unrelated()) return
             val front = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
-            if (front == null || front == app.packageName) return
-            if (front.contains("documentsui", ignoreCase = true) || front.contains("packageinstaller", ignoreCase = true)) return
             android.util.Log.i("APPMODDBG", "backing out of $front")
             instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
             Thread.sleep(900)
         }
+        if (!unrelated()) return
+        // An app from elsewhere (a browser left in front by another scenario) does not leave with back: the home
+        // action clears it and the product's own surface is started again, which restores its page from the store.
+        val front = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
+        android.util.Log.i("APPMODDBG", "home from $front and restarting the product surface")
+        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
+        Thread.sleep(900)
+        app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        waitUntil(15000) { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == app.packageName }
     }
 
     /** A product message is evidence of a control's effect, so it is observed rather than clicked. */
@@ -369,7 +398,16 @@ class AppModJourneyDeviceTest {
             swipe(forward)
             Thread.sleep(150)
             sweeps++
-            if (before == pageStamp()) { if (++stalled >= 3) { stalled = 0; forward = !forward } } else stalled = 0
+            if (before == pageStamp()) {
+                if (++stalled >= 3) {
+                    // The same oscillation is avoided here: rewind and search downwards again.
+                    var previous = 0
+                    var current = pageStamp()
+                    var rewind = 0
+                    while (current != previous && rewind++ < 40) { previous = current; swipe(false); Thread.sleep(80); current = pageStamp() }
+                    stalled = 0; forward = true
+                }
+            } else stalled = 0
         }
         val result = found()
         if (!result) {
@@ -396,7 +434,7 @@ class AppModJourneyDeviceTest {
         var tries = 0
         waitUntil(timeout) {
             if (effect()) return@waitUntil true
-            if (tries++ < attempts) { runCatching { click(text, 15000) }; Thread.sleep(400) }
+            if (tries++ < attempts) { runCatching { click(text, 25000) }; Thread.sleep(400) }
             effect()
         }
     }
@@ -520,6 +558,11 @@ class AppModJourneyDeviceTest {
             assertTrue(java.io.FileInputStream(fd.fileDescriptor).bufferedReader().use { it.readText() }.contains("Success"))
         }
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
+        // The review controls live on the product's own surface and this scenario drives them directly, so that
+        // surface is opened on the preview under test instead of inheriting whatever ran before it.
+        app.getSharedPreferences("appmod.ui", 0).edit().putString("preview", id).putString("analysis", report.analysisId).putString("source", source.id).commit()
+        app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        waitUntil(60000) { shown("Review archived original restoration", 5000, restore = false) }
         click("Review archived original restoration", 60000)
         click("Install", 60000)
         waitUntil(90000) { workflow.store.getJob(id)?.installerStatus == InstallationStatus.ORIGINAL_RESTORED }
