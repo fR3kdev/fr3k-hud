@@ -1,4 +1,4 @@
-> Latest recovery checkpoint: [session 3 continuation](HANDOVER-CONTINUATION-2026-10-18-SESSION-3.md). Read it first; the entries below are historical. No new APK has been promoted yet.
+> FINAL STATUS — 2026-10-18: [authoritative acceptance record](APP-MODIFICATION-ACCEPTANCE-2026-10-18.md). Complete frozen run `20261018T121810Z-02213752` PASS: 58/58 scenario records, 78 Android executions, 285 JVM executions, 9 host checks, all10 coverage areas and both live GitHub checks. HUD SHA256 `fa73b23d684bbbe828e50ea13c3475b8070850f4b8b077b0b67d33c58d9875e7` is packaged/promoted; benchmark18/18PASS; other41baseline hashes and17non-HUD selections unchanged. Emulator scroll p95 API31/API35: 50.819881/50.030106ms, zero app-mod main-thread disk I/O. Private qualified release `hud-appmod-2026-10-18-r1`: all7assets downloaded and hash-verified. Physical/manual TalkBack/live AI/public-distribution gates and broader firmware work remain separate. All earlier entries below are historical, not current instructions.
 
 # Continuation — app-mod harness and runner repair (2026-10-18, session 2)
 

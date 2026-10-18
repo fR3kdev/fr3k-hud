@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "releaseId": 416443248,
+  "url": "https://github.com/fr3k-d3v/fr3k-ecosystem-checkpoint/releases/tag/hud-appmod-2026-10-18-r1",
+  "tag": "hud-appmod-2026-10-18-r1",
+  "assetCount": 7,
+  "assets": [
+    {
+      "name": "appmod-preservation-verification.json",
+      "id": 653466233,
+      "bytes": 11567,
+      "sha256": "b0033e2d350483bfbbad5356bd12661deb26bcbf2cec8961e34d98642bb550c1",
+      "downloadedSha256": "b0033e2d350483bfbbad5356bd12661deb26bcbf2cec8961e34d98642bb550c1",
+      "status": "PASS"
+    },
+    {
+      "name": "appmod-run-manifest.json",
+      "id": 653466228,
+      "bytes": 177993,
+      "sha256": "2caba5169c73cb7d3a31a0f76c4ec8a178d528357e80a7dfc16a6e521ea07312",
+      "downloadedSha256": "2caba5169c73cb7d3a31a0f76c4ec8a178d528357e80a7dfc16a6e521ea07312",
+      "status": "PASS"
+    },
+    {
+      "name": "hud-appmod-2026-10-18-r1.tar.gz",
+      "id": 653466234,
+      "bytes": 36900765,
+      "sha256": "30bfcc64a14b15ba190c8e50461f394129df081d35bfc8cd5622e3349b493544",
+      "downloadedSha256": "30bfcc64a14b15ba190c8e50461f394129df081d35bfc8cd5622e3349b493544",
+      "status": "PASS"
+    },
+    {
+      "name": "hud-frozen-test-artifacts.tar.gz",
+      "id": 653466229,
+      "bytes": 3128264,
+      "sha256": "14e05262ebd99939cc1c872102cde68a197c004e8b5e18eb266087adc149e9a5",
+      "downloadedSha256": "14e05262ebd99939cc1c872102cde68a197c004e8b5e18eb266087adc149e9a5",
+      "status": "PASS"
+    },
+    {
+      "name": "hud-latest-debug.apk",
+      "id": 653466231,
+      "bytes": 139159876,
+      "sha256": "fa73b23d684bbbe828e50ea13c3475b8070850f4b8b077b0b67d33c58d9875e7",
+      "downloadedSha256": "fa73b23d684bbbe828e50ea13c3475b8070850f4b8b077b0b67d33c58d9875e7",
+      "status": "PASS"
+    },
+    {
+      "name": "RELEASE-NOTES.md",
+      "id": 653466290,
+      "bytes": 2619,
+      "sha256": "0bf3da9e6840b345f939a6886066ec89ed834b6c3d66db409ca8693ef10947ea",
+      "downloadedSha256": "0bf3da9e6840b345f939a6886066ec89ed834b6c3d66db409ca8693ef10947ea",
+      "status": "PASS"
+    },
+    {
+      "name": "SHA256SUMS",
+      "id": 653466306,
+      "bytes": 562,
+      "sha256": "e4d9d23c8489a9b1ee46ba4dbd845728d3be0cb2d970f96e9e6ad5c20a2bf8d1",
+      "downloadedSha256": "e4d9d23c8489a9b1ee46ba4dbd845728d3be0cb2d970f96e9e6ad5c20a2bf8d1",
+      "status": "PASS"
+    }
+  ]
+}

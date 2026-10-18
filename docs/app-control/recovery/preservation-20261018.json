@@ -1,0 +1,228 @@
+{
+  "status": "PASS",
+  "baselineCount": 43,
+  "unchangedCount": 41,
+  "expectedChangedPaths": [
+    "/home/parrot/FR3K-BENCHMARK/hud-latest-debug.apk",
+    "/home/parrot/worktrees/blackwave-unified-20261012/releases/benchmark-selection.json"
+  ],
+  "nonHudSelectionEntriesUnchanged": 17,
+  "benchmarkChecksumCount": 18,
+  "files": [
+    {
+      "path": "/home/parrot/worktrees/blackwave-unified-20261012/releases/benchmark-selection.json",
+      "before": "7e0f5ae804b10a57876bc79a1d13f8f028dd5e1aa2730089c1197ea743800d92",
+      "after": "3a8a2006622867fd26d2649008e042614ffd18ebfb1df436e7b2dac03510cb3c"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/TEST-RESULT-TEMPLATE.md",
+      "before": "ab97841cf3d721710b2a80569689217bcce3cc4f4bf9b4d4343e49bcbbbe40f9",
+      "after": "ab97841cf3d721710b2a80569689217bcce3cc4f4bf9b4d4343e49bcbbbe40f9"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/k10-launcher.bin",
+      "before": "9d737f577d01842becabe1a721f62515af90679b0f0affb7bf9bf07f9dd3b83d",
+      "after": "9d737f577d01842becabe1a721f62515af90679b0f0affb7bf9bf07f9dd3b83d"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/hud-0.4.16-cluster1-debug.apk",
+      "before": "cc4fb902fb008b1f9f1ac84fa27333aca4145cefd7203c2225a3f85ac1e7bb0e",
+      "after": "cc4fb902fb008b1f9f1ac84fa27333aca4145cefd7203c2225a3f85ac1e7bb0e"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/hud-0.4.16-cluster2-debug.apk",
+      "before": "a8b5f6dcb7349c464b509d3e9db0f064f1baf05ae982919266e21b49e97b2893",
+      "after": "a8b5f6dcb7349c464b509d3e9db0f064f1baf05ae982919266e21b49e97b2893"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/cardputer-safe-launcher.bin",
+      "before": "8ece00a90ce42b6034e83838cfc7827e5f6ea6baf971857b6dcc5e622cf2697a",
+      "after": "8ece00a90ce42b6034e83838cfc7827e5f6ea6baf971857b6dcc5e622cf2697a"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/cardputer-lab-launcher.bin",
+      "before": "704e63a634957a1bd783e9d4b01afb538146bd9d8fbab04b6e99b4eb27b21e02",
+      "after": "704e63a634957a1bd783e9d4b01afb538146bd9d8fbab04b6e99b4eb27b21e02"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/cardputer-diag-launcher.bin",
+      "before": "c5f8c6eb59951dddc285e6fd4b3bdce6fe5f13aeeb1a1e2fb62ed654066df287",
+      "after": "c5f8c6eb59951dddc285e6fd4b3bdce6fe5f13aeeb1a1e2fb62ed654066df287"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tdisplay-s3-launcher.bin",
+      "before": "c5d66d51f4eea421e04d07fa4ac4e203766e5e1166af71efe85dbf63d2896948",
+      "after": "c5d66d51f4eea421e04d07fa4ac4e203766e5e1166af71efe85dbf63d2896948"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tdeck-pro-4g-launcher.bin",
+      "before": "32398007ba4db0673938cb8a2ea1118403b0e4178fb3a4ecb97cf522c48e17ee",
+      "after": "32398007ba4db0673938cb8a2ea1118403b0e4178fb3a4ecb97cf522c48e17ee"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tdeck-plus-launcher.bin",
+      "before": "cf4903d755b8afd1692d83ea75e3e049bb6fd66ae7ebf035fbbf094392e2ee41",
+      "after": "cf4903d755b8afd1692d83ea75e3e049bb6fd66ae7ebf035fbbf094392e2ee41"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/twatch-ultra-launcher.bin",
+      "before": "2ee8a197423201931fba5ec495c4ad1a368d49951e1fd34827508806a0c06fcc",
+      "after": "2ee8a197423201931fba5ec495c4ad1a368d49951e1fd34827508806a0c06fcc"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/twatch-s3-2020-launcher.bin",
+      "before": "45783e5b8f10fac0180e56b9dbfb91dd17e6f304a46a9d2cdf6b9628622a8c27",
+      "after": "45783e5b8f10fac0180e56b9dbfb91dd17e6f304a46a9d2cdf6b9628622a8c27"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tab5-launcher.bin",
+      "before": "02d740779f7906e131ef2f8d24df36f979916b4a703d41e187f852d5f9402bb5",
+      "after": "02d740779f7906e131ef2f8d24df36f979916b4a703d41e187f852d5f9402bb5"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tembed-launcher.bin",
+      "before": "653436494f24999818331b60aff3013e96f8a4c655634fab5d054d68018c6909",
+      "after": "653436494f24999818331b60aff3013e96f8a4c655634fab5d054d68018c6909"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/hud-latest-debug.apk",
+      "before": "ae78d17891c847b65423cae8348437a06e0fa6d5ab7a8f94716d6d28c2b3af7b",
+      "after": "fa73b23d684bbbe828e50ea13c3475b8070850f4b8b077b0b67d33c58d9875e7"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/blackwave-companion-latest-debug.apk",
+      "before": "9f648fb2759a7f4aa328c5bff6a6926f56931a93754eb1f0d75bb77bab01d4a6",
+      "after": "9f648fb2759a7f4aa328c5bff6a6926f56931a93754eb1f0d75bb77bab01d4a6"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/squach-nq-twatch-s3-launcher.bin",
+      "before": "890bc805c0ff52baa58406037d785a805bb7e257c2d33e3e9c8e6ff21ba5786d",
+      "after": "890bc805c0ff52baa58406037d785a805bb7e257c2d33e3e9c8e6ff21ba5786d"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/tembed-si4732-launcher.bin",
+      "before": "bd97c04aebfe5d06054dde092be349c1db35acdde235505fba381885b99ca736",
+      "after": "bd97c04aebfe5d06054dde092be349c1db35acdde235505fba381885b99ca736"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/unihiker-k10-launcher.bin",
+      "before": "af1cb15b890b18b6404caa85cbab8b668bf10feed39d06ce4b5426bacba44cc2",
+      "after": "af1cb15b890b18b6404caa85cbab8b668bf10feed39d06ce4b5426bacba44cc2"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/pico-sentinel.uf2",
+      "before": "5af98bc2fe60551fd2b87230ad1fbf4588e702a4867c01950b6e17ddfa16d36b",
+      "after": "5af98bc2fe60551fd2b87230ad1fbf4588e702a4867c01950b6e17ddfa16d36b"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/techo-pathfinder-dfu.zip",
+      "before": "6e90368ed3cf823040bef71bbe18dd4ae612bbef2ce91440632cd92b46603a88",
+      "after": "6e90368ed3cf823040bef71bbe18dd4ae612bbef2ce91440632cd92b46603a88"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/squach-nq-cardputer-adv-launcher.bin",
+      "before": "1a9236ab59190e0ed6ad55e1de5e5dff904dd9f7ad91ebb0a546daca11dc7adf",
+      "after": "1a9236ab59190e0ed6ad55e1de5e5dff904dd9f7ad91ebb0a546daca11dc7adf"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tembed-30EDA03453D8-preflash-backup.bin",
+      "before": "8df314d8163d948a92e8611305f3a1933d9de77c5e10f46e96fd3609615e140d",
+      "after": "8df314d8163d948a92e8611305f3a1933d9de77c5e10f46e96fd3609615e140d"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/cardputer-ADV-2884857844A4-preflash-backup.bin",
+      "before": "546ff637038916a406d35523d37f0f21d5f8fcbf3b4697a02a543704080621f2",
+      "after": "546ff637038916a406d35523d37f0f21d5f8fcbf3b4697a02a543704080621f2"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tdeck-pro-4g-28372F913860-preflash-backup.bin",
+      "before": "534c0c1594b9649ba7a382f523743b6a7c3cdfb771c35c17b792a7b6b96c5ff1",
+      "after": "534c0c1594b9649ba7a382f523743b6a7c3cdfb771c35c17b792a7b6b96c5ff1"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tdeck-plus-1051DB7CC700-preflash-backup.bin",
+      "before": "4541468fb59b2f34c023439ce424dce2924206d281e80d0033b553652b539cde",
+      "after": "4541468fb59b2f34c023439ce424dce2924206d281e80d0033b553652b539cde"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tdeck-plus-1051DB7CC700-app0-readback.bin",
+      "before": "659ee05702cf68db4e4b404223b9bb877fe9c359cc3bf9e0084ae834c9404b82",
+      "after": "659ee05702cf68db4e4b404223b9bb877fe9c359cc3bf9e0084ae834c9404b82"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tab5-30EDA0E2A726-preflash-part-0x0.bin",
+      "before": "cef2b0d05fceb1c1505db9add512ac19830b7f9fc045fae14ea5376afc3ab403",
+      "after": "cef2b0d05fceb1c1505db9add512ac19830b7f9fc045fae14ea5376afc3ab403"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tab5-30EDA0E2A726-preflash-0x9000.bin",
+      "before": "d9b67966771ce3e9347e3a689bf65b7ddcfb79cb94304eeb2b985d83f6a66936",
+      "after": "d9b67966771ce3e9347e3a689bf65b7ddcfb79cb94304eeb2b985d83f6a66936"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tab5-30EDA0E2A726-preflash-0xd000.bin",
+      "before": "8ba3b110139f45443d4f268d1a3373ef99a1718b71d51664531b83ee2d4b91a3",
+      "after": "8ba3b110139f45443d4f268d1a3373ef99a1718b71d51664531b83ee2d4b91a3"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tab5-30EDA0E2A726-preflash-0xf000.bin",
+      "before": "f47a8ec3e9aff2318d896942282ad4fe37d6391c82914f54a5da8a37de1300c6",
+      "after": "f47a8ec3e9aff2318d896942282ad4fe37d6391c82914f54a5da8a37de1300c6"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/tab5-nvs-now.bin",
+      "before": "d9b67966771ce3e9347e3a689bf65b7ddcfb79cb94304eeb2b985d83f6a66936",
+      "after": "d9b67966771ce3e9347e3a689bf65b7ddcfb79cb94304eeb2b985d83f6a66936"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/twatch-ultra-1051DB404F90-preflash-nvs.bin",
+      "before": "10aa473b48b1ad6241b2211f082c55193dc3103f8b31da225bbe89d46d4ad48c",
+      "after": "10aa473b48b1ad6241b2211f082c55193dc3103f8b31da225bbe89d46d4ad48c"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/twatch-ultra-1051DB404F90-preflash-otadata.bin",
+      "before": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0",
+      "after": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/twatch-ultra-1051DB404F90-preflash-app0.bin",
+      "before": "a7e66821815e9d2adb2abba579976149d0e6cd5f6db1a9456bdb48cb13f1d643",
+      "after": "a7e66821815e9d2adb2abba579976149d0e6cd5f6db1a9456bdb48cb13f1d643"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/k10-30EDA0B00CF0-preflash-0x0.bin",
+      "before": "1c2d0fcab2280cd42f2e36aab0b55a5df19f2a9c5307c1b9c857eeaa14096f59",
+      "after": "1c2d0fcab2280cd42f2e36aab0b55a5df19f2a9c5307c1b9c857eeaa14096f59"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/k10-30EDA0B00CF0-preflash-0x9000.bin",
+      "before": "3f88c9688dac8ff13ff2e6c227bb8bc3fb631157068eebeae517dc2d769ab5b2",
+      "after": "3f88c9688dac8ff13ff2e6c227bb8bc3fb631157068eebeae517dc2d769ab5b2"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/k10-30EDA0B00CF0-preflash-0xd000.bin",
+      "before": "8ba3b110139f45443d4f268d1a3373ef99a1718b71d51664531b83ee2d4b91a3",
+      "after": "8ba3b110139f45443d4f268d1a3373ef99a1718b71d51664531b83ee2d4b91a3"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/k10-30EDA0B00CF0-preflash-0xf000.bin",
+      "before": "f47a8ec3e9aff2318d896942282ad4fe37d6391c82914f54a5da8a37de1300c6",
+      "after": "f47a8ec3e9aff2318d896942282ad4fe37d6391c82914f54a5da8a37de1300c6"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/k10-nvs-now.bin",
+      "before": "3f88c9688dac8ff13ff2e6c227bb8bc3fb631157068eebeae517dc2d769ab5b2",
+      "after": "3f88c9688dac8ff13ff2e6c227bb8bc3fb631157068eebeae517dc2d769ab5b2"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/previous-candidates/hud-0.4.16-cluster3-debug.apk",
+      "before": "8d611bdf9ac7d66b3047272ec01650a646c0e57c9d82a0358092bd0326881273",
+      "after": "8d611bdf9ac7d66b3047272ec01650a646c0e57c9d82a0358092bd0326881273"
+    },
+    {
+      "path": "/home/parrot/FR3K-BENCHMARK/evidence/previous-candidates/hud-0.4.16-cluster4-debug.apk",
+      "before": "64246184d29d50d09c7acf6e32f55201579de989deeb682ce58bc222ac4dec6d",
+      "after": "64246184d29d50d09c7acf6e32f55201579de989deeb682ce58bc222ac4dec6d"
+    }
+  ]
+}
