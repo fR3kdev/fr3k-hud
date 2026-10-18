@@ -1,0 +1,4 @@
+<resources>
+    <string name="gallery_caption">Photo notes</string>
+    <color name="gallery_accent">#ff996633</color>
+</resources>

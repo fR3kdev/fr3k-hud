@@ -3,6 +3,8 @@ package com.mcpintelligence.fr3k.appcontrol
 import android.content.Context
 import android.content.pm.PackageManager
 import com.mcpintelligence.fr3k.capability.AppIdentity
+import com.mcpintelligence.fr3k.capability.appmod.ArtifactIdentity
+import com.mcpintelligence.fr3k.capability.appmod.SourceKind
 import java.io.File
 import java.security.MessageDigest
 
@@ -33,4 +35,8 @@ object AndroidIdentityReader {
         }
         return AppIdentity(pkg, info.longVersionCode, signer, hashes)
     }
+
+    /** Installed-app capture for the app-modification pipeline: build identity plus provenance. */
+    fun artifactOf(context: Context, pkg: String): ArtifactIdentity =
+        ArtifactIdentity(of(context, pkg), SourceKind.INSTALLED, System.currentTimeMillis(), null)
 }

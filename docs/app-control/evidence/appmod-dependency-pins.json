@@ -1,0 +1,25 @@
+{
+  "schema": "hud-appmod-dependency-pins/1",
+  "dependencies": [
+    {
+      "coordinate": "io.github.reandroid:ARSCLib:1.4.0",
+      "jarSha256": "0cc95b160ba4c731a5cadb455f32b79f4e64b4160bc5ec3e5183ea3676b385ce",
+      "pomSha256": "1608acd4df4d87035d12667534df9456c71dbe8bde85aef7744ef3099cc47938",
+      "license": "Apache-2.0",
+      "runtimeQualification": "API31_AND_API35_ISOLATED_ANALYSIS_AND_REWRITE_PASS"
+    },
+    {
+      "coordinate": "com.android.tools.smali:smali-dexlib2:3.0.10",
+      "jarSha256": "688dee6a46962a4dd1774b64be926534b0b6504bfd5d5c9f89c0f5af284f50c1",
+      "pomSha256": "9c6021368f139a6810ed2b9d09cb42bbcfc8d3981ae574d4aa0f161eae818bcc",
+      "license": "BSD-3-Clause",
+      "runtimeQualification": "API31_AND_API35_ISOLATED_ANALYSIS_AND_REWRITE_PASS"
+    }
+  ],
+  "notes": [
+    "ARSCLib framework interface stubs resolve to Android framework classes on device.",
+    "dexlib2 Guava transitives excluded; existing pinned LSPatch engine provides the single bundled Guava implementation.",
+    "LSPatch remains GPL-3.0; private debug qualification does not approve public distribution.",
+    "Desktop REA is design research only and is not bundled."
+  ]
+}

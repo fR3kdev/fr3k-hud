@@ -1,0 +1,4 @@
+<resources>
+    <string name="appmod_label">Media library</string>
+    <color name="appmod_accent">#ff336699</color>
+</resources>

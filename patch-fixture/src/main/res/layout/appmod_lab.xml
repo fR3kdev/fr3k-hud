@@ -1,0 +1,7 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <TextView android:id="@+id/appmod_label_view" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/appmod_label" android:textSize="24sp" />
+    <TextView android:id="@+id/appmod_url" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/appmod_speed" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/appmod_preference" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <TextView android:id="@+id/appmod_panel" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="visible" android:text="Optional panel" />
+</LinearLayout>

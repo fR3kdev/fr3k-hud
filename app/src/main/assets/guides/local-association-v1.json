@@ -1,0 +1,29 @@
+{
+  "id": "local-association",
+  "version": 1,
+  "explanation": "Connect the installed HUD and BLACKWAVE apps using Android local IPC. This gate shares metadata; it does not install firmware or enroll devices.",
+  "prerequisites": [
+    "Both apps installed on this phone",
+    "Review the installed package and certificate fingerprints"
+  ],
+  "steps": [
+    {
+      "number": 1,
+      "control": "BLACKWAVE.Settings.ConnectHUD.Review",
+      "instruction": "In BLACKWAVE Settings, select Review association for the installed HUD."
+    },
+    {
+      "number": 2,
+      "control": "BLACKWAVE.Settings.ConnectHUD.Approve",
+      "instruction": "Read the certificate fingerprint and select Approve HUD association."
+    },
+    {
+      "number": 3,
+      "control": "HUD.BLACKWAVE.ConnectLocal",
+      "instruction": "In HUD's BLACKWAVE panel, review BLACKWAVE's certificate and select Approve certificate and connect locally."
+    }
+  ],
+  "expected": "HUD reads Local connection: METADATA_ONLY. Authority is UNINITIALIZED before setup, or PHONE after explicit activation/transfer. No gateway credential or signing key is copied.",
+  "failure": "Missing app: install it and refresh. Association absent/revoked/certificate changed: review the current installed signer in Settings. Incompatible version: install compatible app versions. An empty fleet at this gate is expected.",
+  "recovery": "Select Disconnect HUD in BLACKWAVE Settings to revoke service access immediately. Select Disconnect local BLACKWAVE in HUD to remove its service certificate approval. No device state changes."
+}

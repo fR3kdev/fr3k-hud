@@ -491,7 +491,7 @@ object ModGuideCatalogue {
                 reversible = if (mapped) "No automatic inverse is known for this screen control. Review its consequences; return with Back where appropriate. Use the target app to reverse any persistent change." else if (privileged) "For a write, the Journal records the previous mode when confirmed; restore that mode with the corresponding control. A read changes nothing." else "Opening the app changes no persistent setting; return with Back.")
         }
 
-    fun all(): List<ModGuide> = procedures() + capabilities()
+    fun all(): List<ModGuide> = appModGuides() + procedures() + capabilities()
 
     /** Every capability id any guide mentions. Used by the coverage test. */
     fun coveredCapabilityIds(): Set<String> = all().flatMap { it.capabilityIds }.toSet()

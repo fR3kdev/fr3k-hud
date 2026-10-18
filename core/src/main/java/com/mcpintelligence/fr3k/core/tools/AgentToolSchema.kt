@@ -14,7 +14,14 @@ import org.json.JSONObject
 object AgentToolSchema {
 
     fun parameterNames(capability: String): List<String> = when (capability) {
+        "app.mods.analyze_apk" -> listOf("package", "artifact_id")
+        "app.mods.suggest_app_mods" -> listOf("analysis_id", "goal", "research_mode")
+        "app.mods.preview_app_mods" -> listOf("analysis_id", "selections", "installation_mode")
+        "app.mods.request_app_mod_preparation" -> listOf("preview_id")
+        "app.mods.get_app_mod_job" -> listOf("job_id")
         "app.control.read" -> listOf("package")
+        "app.control.suggest" -> listOf("analysis_id", "goal")
+        "app.control.job" -> listOf("job_id")
         "app.control.fixture.write" -> listOf("visible")
         "browser" -> listOf("action", "url", "selector", "text", "x", "y")
         "termux" -> listOf("command", "cwd")
@@ -22,7 +29,14 @@ object AgentToolSchema {
     }
 
     fun requiredNames(capability: String): List<String> = when (capability) {
+        "app.mods.analyze_apk" -> emptyList()
+        "app.mods.suggest_app_mods" -> listOf("analysis_id")
+        "app.mods.preview_app_mods" -> listOf("analysis_id", "selections")
+        "app.mods.request_app_mod_preparation" -> listOf("preview_id")
+        "app.mods.get_app_mod_job" -> listOf("job_id")
         "app.control.read" -> listOf("package")
+        "app.control.suggest" -> listOf("analysis_id")
+        "app.control.job" -> listOf("job_id")
         "app.control.fixture.write" -> listOf("visible")
         else -> emptyList()
     }

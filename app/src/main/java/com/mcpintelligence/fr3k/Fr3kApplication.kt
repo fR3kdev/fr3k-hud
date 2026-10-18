@@ -140,6 +140,13 @@ class Fr3kApplication : Application() {
         com.mcpintelligence.fr3k.appcontrol.CapabilityHost(this)
     }
 
+    /** Durable app-modification jobs. A separate database from BLACKWAVE; see [com.mcpintelligence.fr3k.appcontrol.ModificationStore]. */
+    val modificationStore: com.mcpintelligence.fr3k.appcontrol.ModificationStore by lazy {
+        com.mcpintelligence.fr3k.appcontrol.ModificationStore(this)
+    }
+
+    val appModWorkflow by lazy { com.mcpintelligence.fr3k.appcontrol.AppModWorkflow(this, modificationStore) }
+
     /** Localhost-only capability surface, started on demand and bounded by the process lifetime. */
     val workflowSession by lazy { com.mcpintelligence.fr3k.workflow.WorkflowSession(capabilityHost) }
 
@@ -162,7 +169,14 @@ class Fr3kApplication : Application() {
         agentToolBus.register(com.mcpintelligence.fr3k.core.appcontrol.AppControlInspectTool {
             com.mcpintelligence.fr3k.appcontrol.AndroidPackageInspector(this).inspect(it)
         })
+        agentToolBus.register(com.mcpintelligence.fr3k.appcontrol.AnalyzeApkTool(this, modificationStore))
+        agentToolBus.register(com.mcpintelligence.fr3k.appcontrol.SuggestAppModsTool(modificationStore))
+        agentToolBus.register(com.mcpintelligence.fr3k.appcontrol.GetAppModJobTool(modificationStore))
+        listOf("analyze_apk", "suggest_app_mods", "preview_app_mods", "request_app_mod_preparation", "get_app_mod_job").forEach {
+            agentToolBus.register(com.mcpintelligence.fr3k.appcontrol.AppModContractTool(this, it))
+        }
         agentToolBus.register(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveAgentTool(blackwaveBridgeClient))
+        agentToolBus.register(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveLocalAgentTool(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveLocalClient(this)))
         // The routing provider, not a fixed backend: chat and browser follow the key rules live.
         com.mcpintelligence.fr3k.core.tools.SharedAgentSession(agentToolBus, routingProvider, identity.deviceId)
     }
@@ -208,6 +222,7 @@ class Fr3kApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        if (getProcessName().contains(":appmod_sandbox")) return
         bootstrap()
 
     }
@@ -232,6 +247,21 @@ class Fr3kApplication : Application() {
         fr3kCore.pluginManager.register(SystemPlugin(com.mcpintelligence.fr3k.ui.AndroidStatusReader(this)::read))
         fr3kCore.pluginManager.startAll()
         seedAutomations()
+        resumeModificationJobs()
+    }
+
+    /**
+     * Any app-mod job left in an in-flight stage when this process last died is marked INTERRUPTED
+     * on a background thread, so the next analysis/preparation resumes from a verified checkpoint
+     * instead of treating a half-finished stage as done. Approval grants from the dead process do
+     * not survive.
+     */
+    private fun resumeModificationJobs() {
+        val recoveryCutoff = System.currentTimeMillis()
+        Thread {
+            runCatching { modificationStore.markInterruptedOnStartup(recoveryCutoff)
+                com.mcpintelligence.fr3k.appcontrol.AppModInstaller.reconcile(this@Fr3kApplication, appModWorkflow) }
+        }.start()
     }
 
     private fun registerHermes() {

@@ -57,6 +57,15 @@ android {
 configurations.configureEach {
     exclude(group = "com.google.code.gson", module = "gson")
     exclude(group = "com.google.guava", module = "listenablefuture")
+    // dexlib2 pulls a full Guava graph. The pinned lspatch engine already bundles a newer,
+    // proven-in-production copy (guava 32.0.1-jre + jsr305 + errorprone + j2objc + failureaccess +
+    // checker-qual). Exclude every resolved copy so the bundled one stays the single provider.
+    exclude(group = "com.google.guava", module = "guava")
+    exclude(group = "com.google.guava", module = "failureaccess")
+    exclude(group = "com.google.code.findbugs", module = "jsr305")
+    exclude(group = "com.google.errorprone", module = "error_prone_annotations")
+    exclude(group = "com.google.j2objc", module = "j2objc-annotations")
+    exclude(group = "org.checkerframework", module = "checker-qual")
 }
 
 // Use one current Bouncy Castle implementation for both the patch engine and ADB pairing.
@@ -79,6 +88,11 @@ dependencies {
     implementation(project(":ui"))
     // Private lab engine, source-built and pinned; limited to the owned fixture.
     implementation(files(patchEngineWithoutBundledCrypto))
+
+    // App-modification analysis: pinned pure-JVM parsers. ARSCLib = binary manifest/resource
+    // inspection (Apache-2.0), smali-dexlib2 = DEX indexing/disassembly (BSD-3-Clause).
+    implementation("io.github.reandroid:ARSCLib:1.4.0")
+    implementation("com.android.tools.smali:smali-dexlib2:3.0.10")
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")
@@ -123,3 +137,32 @@ dependencies {
     testImplementation("org.json:json:20240303")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
+
+// Reviewed fixed payloads for data-only helper-call patches. No compiler ships to the phone.
+val appModClasses = tasks.register<JavaCompile>("compileAppModTemplates") {
+    source(rootProject.file("qualification/appmod-templates"))
+    classpath = files(android.bootClasspath)
+    options.release.set(8)
+    destinationDirectory.set(layout.buildDirectory.dir("generated/appmod/classes"))
+}
+val appModJar = tasks.register<Jar>("jarAppModTemplates") {
+    dependsOn(appModClasses)
+    from(appModClasses.flatMap { it.destinationDirectory })
+    archiveFileName.set("helpers.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("generated/appmod"))
+}
+val appModAssets = layout.buildDirectory.dir("generated/appmod/assets")
+val appModDex = tasks.register<Exec>("dexAppModTemplates") {
+    dependsOn(appModJar)
+    inputs.file(appModJar.flatMap { it.archiveFile })
+    outputs.file(appModAssets.map { it.file("appmod/classes.dex") })
+    doFirst {
+        val destination = appModAssets.get().dir("appmod").asFile.apply { mkdirs() }
+        commandLine(System.getProperty("java.home") + "/bin/java", "-cp",
+            File(android.sdkDirectory, "build-tools/35.0.1/lib/d8.jar"), "com.android.tools.r8.D8", "--min-api", "31",
+            "--lib", File(android.sdkDirectory, "platforms/android-35/android.jar"), "--output", destination,
+            appModJar.get().archiveFile.get().asFile)
+    }
+}
+android.sourceSets.getByName("main").assets.srcDir(appModAssets)
+tasks.named("preBuild") { dependsOn(appModDex) }

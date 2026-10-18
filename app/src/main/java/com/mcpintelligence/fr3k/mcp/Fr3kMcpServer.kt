@@ -60,6 +60,11 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
         get() = com.mcpintelligence.fr3k.Fr3kApplication.get()
 
     fun toolList(): JSONArray = JSONArray().apply {
+        listOf("analyze_apk", "suggest_app_mods", "preview_app_mods", "request_app_mod_preparation", "get_app_mod_job").forEach { name ->
+            val params = JSONObject()
+            com.mcpintelligence.fr3k.core.tools.AgentToolSchema.parameterNames("app.mods.$name").forEach { params.put(it, "string") }
+            put(tool(name, "App modification: $name. Exact user review required before preparation.", params))
+        }
         put(tool("list_capabilities", "List registered capabilities for the apps installed on this device", JSONObject()))
         put(tool("get_app_identity", "Read the installed identity (version, signer, APK hashes) of one package",
             JSONObject().put("package", "string")))
@@ -83,6 +88,10 @@ class Fr3kMcpServer(private val host: CapabilityHost, private val port: Int = 87
     fun call(name: String, arguments: JSONObject): JSONObject = callBlock(name, arguments)
 
     private fun callBlock(name: String, arguments: JSONObject): JSONObject {
+        if (name in setOf("analyze_apk", "suggest_app_mods", "preview_app_mods", "request_app_mod_preparation", "get_app_mod_job")) {
+            return try { runBlocking { com.mcpintelligence.fr3k.appcontrol.AppModApi(context).call(name, arguments) } }
+            catch (failure: Exception) { error(failure.message) }
+        }
         return when (name) {
         "list_capabilities" -> JSONObject().put("capabilities", JSONArray().also { arr ->
             host.registry().all().forEach { entry ->

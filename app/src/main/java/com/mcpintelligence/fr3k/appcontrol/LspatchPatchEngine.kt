@@ -70,6 +70,8 @@ class LspatchPatchEngine(private val context: Context) : PatchEngine {
         // otherwise a caller could pair any APK with any identity and the guard would be vacuous.
         PatchContract.requireSourceMatchesIdentity(request.sourceApk, request.identity, request.identity.splitSha256)
         check(ApkVerifier.Builder(request.sourceApk).build().verify().isVerified) { "staged source signature is invalid" }
+        val archiveBefore = OriginalArchive(context).store(StagedTarget(request.identity.packageName, request.sourceApk,
+            emptyList(), listOf(ApkHashing.sha256(request.sourceApk)), request.identity))
 
         // The engine calls this from its own threads, so cancellation is checked without suspending.
         val patchJob = currentCoroutineContext()[kotlinx.coroutines.Job]
@@ -108,7 +110,7 @@ class LspatchPatchEngine(private val context: Context) : PatchEngine {
             listOf(ApkHashing.sha256(request.sourceApk)),
             request.identity,
         )
-        val archived = archive.store(staged)
+        val archived = archiveBefore
         val sheet = PreparationSheet(
             packageName = request.identity.packageName,
             appFingerprint = request.identity.fingerprint,

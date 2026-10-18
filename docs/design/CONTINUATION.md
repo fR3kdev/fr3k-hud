@@ -1,3 +1,11 @@
+# BLACKWAVE local adapter r2 — 2026-10-15
+
+Current bounded local adapter and return flow are built/packaged,184 debug JVM tests PASS. API35 actual preview→BLACKWAVE approval→both process restart→verified signed evidence→Return-to-HUD journey PASS. See docs/blackwave-local/HANDOFF.md and unified BLACKWAVE releases/phone-control-2026-10-15-r2. Full system/physical release acceptance OPEN; historical broad UI lab results remain tied to their original APKs. Existing changes preserved; no source commit or deployment made.
+
+# 2026-10-15 BLACKWAVE local metadata adapter increment
+
+The unified-system task added a bounded, uncommitted BLACKWAVE local client/panel, shared AIDL, package queries and instrumentation. See [adapter handoff](../blackwave-local/HANDOFF.md). Both debug APK/test builds pass; real HUD UID IPC/guide reads and post-revocation denial PASS, fixture associations restored. Current HUD regression XML184PASS; previous broad-lab measurements are not reassigned. Selected HUD SHA256 b2ca06287926aae219df354b59c463f8906844927799d715d9bdbc564f98a903; all17benchmark hashes verified. This changed candidate has not rerun the previous full release UI/capability/accessibility labs. No hardware is available. Full unified objective remains OPEN. Benchmark refresh is handled by the unified worktree selection; preserve unrelated firmware/operator records. Older HUD verification below describes its recorded hashes, not the new candidate automatically.
+
 # fR3k HUD redesign — active continuation checkpoint
 
 Updated: 2026-10-14. **WORK IN PROGRESS. Do not claim complete release or exhaustive verification.**

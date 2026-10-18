@@ -73,6 +73,8 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <queries>
+        <package android:name="com.fr3k.blackwave" />
+        <package android:name="com.fr3k.blackwave.debug" />
         <package android:name="com.termux" />
         <package android:name="com.termux.api" />
         <package android:name="com.termux.tasker" />
@@ -118,6 +120,9 @@
         tools:targetApi="34">
 
         <activity android:name="com.mcpintelligence.fr3k.ui.appcontrol.SelectedAppPatchActivity" android:exported="false" />
+        <activity android:name="com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity" android:exported="false" />
+        <service android:name="com.mcpintelligence.fr3k.appcontrol.AppModSandboxService" android:exported="false" android:isolatedProcess="true" android:process=":appmod_sandbox" />
+        <receiver android:name="com.mcpintelligence.fr3k.appcontrol.AppModInstallReceiver" android:exported="false" />
         <activity android:name="com.mcpintelligence.fr3k.ui.integrations.WirelessDebuggingActivity" android:exported="false" />
         <activity
             android:name="com.mcpintelligence.fr3k.ui.appcontrol.AppControlActivity"

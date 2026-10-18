@@ -43,6 +43,7 @@ class SelectedAppPatchActivity : ComponentActivity() {
         val pkg=EditText(this).apply { hint="Installed package name"; contentDescription="patch-target-package"; setText(intent.getStringExtra("package") ?: ""); setSingleLine(); setTextColor(0xffE6ECF5.toInt()); setHintTextColor(0xffB0BCD5.toInt()) };body.addView(pkg)
         output=label("No output prepared.").apply { setTextIsSelectable(true) }
         fun button(title:String, action:()->Unit) { body.addView(Button(this).apply { text=title; setOnClickListener { action() } }) }
+        button("FIND APP-SPECIFIC IMPROVEMENTS") { startActivity(Intent(this, AppModDiscoveryActivity::class.java)) }
         button("IMPORT COMPATIBLE MODULE APK") { pick.launch(arrayOf("application/vnd.android.package-archive", "application/octet-stream")) }
         button("PREPARE SELECTED APP COPY") {
             val target=pkg.text.toString().trim(); val selected=module

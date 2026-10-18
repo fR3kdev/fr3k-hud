@@ -3,7 +3,25 @@ package com.mcpintelligence.fr3k.appcontrol
 import com.mcpintelligence.fr3k.capability.*
 
 /** Production journeys. Fixture walkthroughs exist only in the instrumented capability lab. */
-fun releaseProcedures(): List<ModGuide> = listOf(
+fun appModGuides(): List<ModGuide> = listOf(
+    releaseGuide("mod.discovery", "Find app-specific improvements", ModCategory.INSPECT,
+        "Analyse immutable APK copies on this phone, inspect resource/DEX evidence and find improvements tied to this exact build.", emptyList(),
+        listOf("APP MODS → FIND APP IMPROVEMENTS → choose APK or installed package.", "Read coverage, inferred purpose and evidence. Enter what you want to improve, then find local suggestions.", "Optionally confirm the public owner/repository and research requests, or request AI ideas from a redacted summary."),
+        "Public requests show demand, not missing features or executable compatibility. APKs and full code stay local; AI summaries are bounded to32KiB.",
+        "Analysis changes no target app. Originals remain archived until explicitly deleted."),
+    releaseGuide("mod.preparation", "Preview and prepare exact app changes", ModCategory.MODIFY,
+        "Select resource text/colour/layout, DEX constants or reviewed helper/hook templates and approve an exact source-bound preparation on this phone.", emptyList(),
+        listOf("Choose executable suggestions, enter replacement values or a listed helper ID, then select installation mode.", "Preview the complete changes, source fingerprint, digest, consequences and recovery. Conflicting or unsupported changes are refused.", "Approve exact changes and prepare the copy. Wait for PREPARED with a verified output hash; process death requires fresh review."),
+        "Preparation proves static checks only. Helpers have exact method/register constraints. Hook recipes are version-bound; no arbitrary scripts or generated Java run.",
+        "Cancel preparation or review the retained original. No installed app changes until Android installation."),
+    releaseGuide("mod.install.restore", "Install and restore a prepared APK set", ModCategory.MODIFY,
+        "Use Android's reviewed package-install sessions for a prepared base/split APK set, then verify the installed artifact and test the changed behavior.", emptyList(),
+        listOf("Open the durable job → Review in Android installer. Grant installation permission to HUD when required, then review again.", "Confirm Android installation. Check installed artifact hashes/signer, then test the desired behavior and record manual observations separately.", "For recovery, review archived original restoration. Original APKs remain available after uninstall; no uninstall occurs automatically."),
+        "Only exact qualified profiles support side-by-side installation. Switching signers may require uninstall/data loss. APK archives do not back up private app data.",
+        "Review original restoration in Android's installer. Reset generated preference state through the target app's own data controls if required.")
+)
+
+fun releaseProcedures(): List<ModGuide> = appModGuides() + listOf(
     releaseGuide("mod.inspect.app","Inspect an installed app",ModCategory.INSPECT,
         "Read exact installed version, signer and APK hashes without changing the app.",emptyList(),
         listOf("App Control → BROWSE INSTALLED APPS, then choose a target.","Press INSPECT SELECTED APP — READ ONLY.","Read package, version, signer and per-APK hashes; preserve them for a later review."),

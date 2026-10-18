@@ -63,12 +63,12 @@ import kotlinx.coroutines.launch
 class BlackwaveActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { Fr3kTheme { BlackwaveScreen(onClose = { finish() }) } }
+        setContent { Fr3kTheme { BlackwaveScreen(onClose = { finish() }, requestedPackage = intent.getStringExtra("blackwave.package"), requestedOperation = intent.getStringExtra("blackwave.operation_id")) } }
     }
 }
 
 @Composable
-private fun BlackwaveScreen(onClose: () -> Unit) {
+private fun BlackwaveScreen(onClose: () -> Unit, requestedPackage: String? = null, requestedOperation: String? = null) {
     val app = Fr3kApplication.get()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -117,6 +117,8 @@ private fun BlackwaveScreen(onClose: () -> Unit) {
             }
             Spacer(Modifier.height(12.dp))
 
+            BlackwaveLocalPanel(requestedPackage, requestedOperation)
+            Spacer(Modifier.height(12.dp))
             val current = probe
             Fr3kPanel(title = "bridge") {
                 StatusRow(

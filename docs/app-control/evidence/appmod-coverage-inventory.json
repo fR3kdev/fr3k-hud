@@ -1,0 +1,140 @@
+{
+  "schema": "hud-appmod-inventory/1",
+  "guideReferences": "PASS",
+  "interactionCoverage": "NOT_INFERRED_FROM_INVENTORY",
+  "operators": {
+    "resource_string": "mod.preparation",
+    "resource_color": "mod.preparation",
+    "layout_attribute": "mod.preparation",
+    "dex_constant": "mod.preparation",
+    "helper_call": "mod.preparation",
+    "hook_template": "mod.preparation"
+  },
+  "helpers": {
+    "url.clean": "mod.preparation",
+    "preference.persist": "mod.preparation",
+    "hud.share": "mod.preparation"
+  },
+  "tools": {
+    "analyze_apk": "mod.discovery",
+    "suggest_app_mods": "mod.discovery",
+    "preview_app_mods": "mod.preparation",
+    "request_app_mod_preparation": "mod.preparation",
+    "get_app_mod_job": "mod.install.restore"
+  },
+  "controls": {
+    "choose_apks": "mod.discovery",
+    "choose_installed": "mod.discovery",
+    "research_requests": "mod.discovery",
+    "request_ai_ideas": "mod.discovery",
+    "search_evidence": "mod.discovery",
+    "select_suggestion": "mod.preparation",
+    "preview": "mod.preparation",
+    "approve": "mod.preparation",
+    "cancel": "mod.preparation",
+    "resume": "mod.preparation",
+    "install": "mod.install.restore",
+    "verify_installed": "mod.install.restore",
+    "record_observation": "mod.install.restore",
+    "restore_original": "mod.install.restore"
+  },
+  "staticControlLabels": [
+    "Allow Android installation from HUD",
+    "Analyse installed app",
+    "Approve exact changes and prepare copy",
+    "Cancel current work",
+    "Check installed artifact",
+    "Choose APK or base + split APKs",
+    "Choose installed app",
+    "Confirm public repository: owner/repository",
+    "Confirm repository and research requests",
+    "Executable suggestions only",
+    "Expert: import compatible Xposed module",
+    "Find installed app",
+    "Find local suggestions",
+    "I checked the changed behavior",
+    "Inspect feature map",
+    "Installed package",
+    "Offline walkthrough and recovery",
+    "Open analysis, saved jobs and offline guides",
+    "Reopen analysis / resume interrupted analysis",
+    "Replacement (colour: 8-digit ARGB hex)",
+    "Resume source analysis",
+    "Review archived original restoration",
+    "Review in Android installer",
+    "Review removing the separate app",
+    "Review saved preview / resume",
+    "Search local feature evidence",
+    "Search suggestions",
+    "Suggest with configured AI",
+    "What would you like this app to do?"
+  ],
+  "deviceTests": {
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModAccessibilityDeviceTest.kt": [
+      "discoveryControlsAreLabelledAcrossScrollablePagesAtCurrentScale"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModBoundaryDeviceTest.kt": [
+      "incompleteDuplicateMismatchedVersionAndSignerSetsAreRefused",
+      "conflictingSelectionsAndFailedPreparationPublishNoOutputs",
+      "researchCacheSurvivesRateLimitsTimeoutsAndUntrustedResponses",
+      "staleAndDuplicateCallbacksCannotOverwriteANewerSession"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModConcurrencyDeviceTest.kt": [
+      "preparedPublicationAndSuggestionReplacementFinishTogether",
+      "databaseFailureRollsBackPreparedOutputPublication",
+      "queuedPreparationCancellationCannotKillAnotherPreparation",
+      "cancellingQueuedSandboxDoesNotKillOwner"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModDeviceTest.kt": [
+      "isolatedImportAnalyzePreviewPrepareAndReopen",
+      "expiredApprovalAndReplayAreRefusedAndPreviewSurvivesReopen",
+      "installedSourceAndPublicResearchRemainBounded"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModJourneyDeviceTest.kt": [
+      "actualReviewInstallerAndModifiedBehavior",
+      "splitSetInstallAndArchivedOriginalRestoration",
+      "cancelControlCancelsOnlyItsQueuedAnalysis",
+      "installedSelectionEvidenceSearchAndOfflineGuidesUseActualControls",
+      "selectionBasketPreviewAndDraftRecoveryUseActualControls",
+      "installerCancellationRetainsPreparedCopy",
+      "publicResearchUsesLiveGithubTransport",
+      "documentPickerImportsWithoutStoragePermission",
+      "aiBoundaryAndAllFiveTools"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModMcpDeviceTest.kt": [
+      "actualSocketRetainsFiveClosedToolsAndCannotApprovePreparation"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModMigrationDeviceTest.kt": [
+      "versionOneMigrationPreservesAnalysisAndBackfillsSearch"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModPerformanceDeviceTest.kt": [
+      "startupAndScrollWithRealisticHistoryAvoidMainThreadDiskIo"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModPermissionDeniedDeviceTest.kt": [
+      "missingPermissionDoesNotCreateInstallerSession"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModRestartDeviceTest.kt": [
+      "createRestartCheckpoint",
+      "verifyRestartCheckpoint",
+      "createPlatformSessionCheckpoint",
+      "verifyPlatformSessionAfterProcessDeath",
+      "beginRealPreparationForHostProcessDeath",
+      "recoverRealPreparationAfterHostProcessDeath"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModStorageDeviceTest.kt": [
+      "insufficientSpaceFailsBeforePublishingAndRetainsOriginal"
+    ],
+    "app/src/androidTest/java/com/mcpintelligence/fr3k/appcontrol/AppModTemplateDeviceTest.kt": [
+      "fixedPayloadCleansUrlsAndPersistsPerContextKey",
+      "insertedShareHelperDispatchesThePatchedAppsActualReturnedValue",
+      "exactOwnedHookPreparesWithSignatureBypassDisabled"
+    ]
+  },
+  "fixtureSha256": {
+    "appmod-gallery-fixture.apk": "957369f931aec88b53b1d7e4fc95eeb0596cec1f69f94f65aa9d13609a09e2a1",
+    "appmod-media-fixture.apk": "1a0ca517c77a2cee16044417c1a9833e9745999b9bd09d996ef008ad5d9d240c",
+    "owned-fixture-hook.apk": "65842fadc40a147ddb12aa608468e72fad5093b52958a8d5ef85050d4326134d",
+    "owned-fixture.apk": "7f6f84a470fbc4dd7c7e828c0bc2845e775a4cc803b5da8a85ffc36731f28db7",
+    "appmod-feature-split.apk": "a073d80f6fb1e5b91ee94dab73d21a6d83b95e3fbb0ffd6c53b6d29b43e4ee61"
+  }
+}

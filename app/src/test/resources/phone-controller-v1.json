@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "assurance": "TEST_ONLY_DETERMINISTIC_KEYS_AND_FAKE_SDK_NO_HARDWARE",
+  "source_sha256": {
+    "phone_identity.cpp": "e3c9feb0869fe7d5bdc63a27627aeb5f2d2e2385b39e33b43c986ecbfd3220b3",
+    "phone_controller.cpp": "055993633dca8631fe7688f5451e449118f2b13f03c365aa828366831d374e68",
+    "phone_controller_esp_idf.cpp": "1eb81d217a8b795f86b937336cf129a4244b9e6ca06f06e1589d71e2220f15a2"
+  },
+  "controller_seed_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+  "hello": {
+    "payload": {
+      "client_challenge": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "generation": 0,
+      "last_sequence": 0,
+      "lease_ms": 90000,
+      "model_id": "unihiker-k10",
+      "owner_identity": "",
+      "protocol": "blackwave-device-controller/1",
+      "public_key": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+      "session_nonce": "ca02b4efcca577ed981be4d17636e03fa63f25a23b47488b09957e1cbd0e259e",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "nHssH0TW8hiD1fbVD7AaN8jxRNs1cOyfRc1lv612mwVRfm2i8ygGuv8E5glv6nXgJjYxJUk1CA67qNTK3dU4Dg=="
+  },
+  "capabilities": {
+    "payload": {
+      "actions": [
+        "device.status",
+        "device.set_volume"
+      ],
+      "client_challenge": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "controller_abi": 1,
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "firmware_elf_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "model_id": "unihiker-k10",
+      "protocol": "blackwave-device-capabilities/1",
+      "readiness": "READY",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c",
+      "transport": "usb-console"
+    },
+    "signature": "06vrSgqOAkZ2nRPLOG/LjhK2PJyCJ/Tsm02iNJtWVZFzNRu3GBzEg5/jHc2Hk6/nK2/xqMis6mJx6hZGS9mFCw=="
+  },
+  "association": {
+    "payload": {
+      "protocol": "blackwave-device-controller/1",
+      "action": "associate",
+      "request_id": "7b134fb9-d804-58fc-afc5-5ed8505d74d6",
+      "operation_id": "84a20165-a71c-5b87-97cb-15315bc7cb2a",
+      "operation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "controller_id": "8a478066-b1e3-565d-8b60-6b402a39873a",
+      "controller_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "controller_public_key": "Kay64UG8yvCyLhqU000LxzYeUm0L/hLIl5S8kyKWbdc=",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "model_id": "unihiker-k10",
+      "session_nonce": "ca02b4efcca577ed981be4d17636e03fa63f25a23b47488b09957e1cbd0e259e",
+      "generation": 0
+    },
+    "signature": "9yiHCJtZuZ1B5qYGwHIpcAXJvCC8vIlMGuHfZo6rBIcEUVT3G86SZamq4+vc60+U9CWNK1lRSy5+szG5fJT1BA=="
+  },
+  "review": {
+    "payload": {
+      "controller_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "protocol": "blackwave-device-controller-review/1",
+      "request_digest": "afb3d92f00beb400d3fc3ccddd372016235255080b85c4ae8644e8849bbb79a1",
+      "state": "LOCAL_APPROVAL_REQUIRED",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "2IKEP3WcV4n3EFLXojLXdAxumlWPNKZv5/Vd3w+o+3r3QtAULU3i4OXbojoYfRwn10YnSvopATWId49rsO6CCw=="
+  },
+  "ownership": {
+    "payload": {
+      "controller_id": "8a478066-b1e3-565d-8b60-6b402a39873a",
+      "controller_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "generation": 1,
+      "model_id": "unihiker-k10",
+      "operation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "operation_id": "84a20165-a71c-5b87-97cb-15315bc7cb2a",
+      "protocol": "blackwave-device-controller/1",
+      "request_digest": "afb3d92f00beb400d3fc3ccddd372016235255080b85c4ae8644e8849bbb79a1",
+      "request_id": "7b134fb9-d804-58fc-afc5-5ed8505d74d6",
+      "state": "OWNED",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "J8WOse5YqOht/jNAgPS47tGYhM1AQx+3neEOgpUR+ClqOmgpin8mg5d2zGJZnn/+EnlimWuDo5LWqGTWI5J1DQ=="
+  },
+  "command_hello": {
+    "payload": {
+      "client_challenge": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "generation": 1,
+      "last_sequence": 0,
+      "lease_ms": 90000,
+      "model_id": "unihiker-k10",
+      "owner_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "protocol": "blackwave-device-controller/1",
+      "public_key": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+      "session_nonce": "b4dc0937753d52a400d70343c0e690dca850f808df0e20d66d9b55aec80429e3",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "NPc1B41mNTHIKMPQf0s3cydN+DkSH0zCh5a81VXjVCDH4KPi4tp0RKDucMnQK2kA9v++LIYhyAY1jn5lWCCLBQ=="
+  },
+  "command": {
+    "payload": {
+      "protocol": "blackwave-device-command/1",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "controller_id": "8a478066-b1e3-565d-8b60-6b402a39873a",
+      "generation": 1,
+      "sequence": 1,
+      "session_nonce": "b4dc0937753d52a400d70343c0e690dca850f808df0e20d66d9b55aec80429e3",
+      "operation_id": "3c4bd0ad-387e-5a67-b07c-af641d702dad",
+      "request_id": "a00390d3-940e-51a5-aacf-eea4e3a2dcd0",
+      "operation_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "action": "device.set_volume",
+      "parameters": {
+        "volume": 0
+      }
+    },
+    "signature": "URHgforJRKAuArUHCddOgAC3FhHF1CNqF1GJu77/+g4xVURmTlGEa6qlurIvfViRK1yCs35QwbOAxX1kFEtCDA=="
+  },
+  "result": {
+    "payload": {
+      "action": "device.set_volume",
+      "command_digest": "ff1b9252c430d9bd64af110d602245cc1fb1c748f519539f7be326b296f4c06f",
+      "controller_id": "8a478066-b1e3-565d-8b60-6b402a39873a",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "generation": 1,
+      "operation_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "operation_id": "3c4bd0ad-387e-5a67-b07c-af641d702dad",
+      "protocol": "blackwave-device-command-receipt/1",
+      "request_id": "a00390d3-940e-51a5-aacf-eea4e3a2dcd0",
+      "result": {
+        "volume": 0
+      },
+      "sequence": 1,
+      "state": "SUCCEEDED",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "yi5R4gQOaqUTDU429f3zpU9mtO55f9s+hf9GAYiQVE6KxnlnruiGyS4rM/uSRbzK9kZFB+lmgwylB/3XSHAMAA=="
+  },
+  "cancelled_association": {
+    "payload": {
+      "protocol": "blackwave-device-controller/1",
+      "action": "associate",
+      "request_id": "9dd8767b-caab-5eca-a833-08190917f711",
+      "operation_id": "19644f62-0f44-5fcd-8613-93813abf336d",
+      "operation_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+      "controller_id": "8a478066-b1e3-565d-8b60-6b402a39873a",
+      "controller_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "controller_public_key": "Kay64UG8yvCyLhqU000LxzYeUm0L/hLIl5S8kyKWbdc=",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "model_id": "unihiker-k10",
+      "session_nonce": "1546eacee5a183ba5447bad5f998e862659a3423cc670743e619b7bcd7a50a89",
+      "generation": 2
+    },
+    "signature": "lSplL7kYN6eM+vvcCFqu3O329ONfk1GhedQmhajxCIkx5S/AxG6rC5t7PKyy/M5Yvi+wkdWjIWW5VosQR3gDCg=="
+  },
+  "cancelled_review": {
+    "payload": {
+      "controller_identity": "bw:ed25519:sha256:24f6ed6acbfe1009c030d7ca567c33ca4830911498236b5561a6c82abec5de28",
+      "protocol": "blackwave-device-controller-review/1",
+      "request_digest": "35472794be1406925c6b17ade6ea2adc315023c5f988571fbd48cc251f56a4a5",
+      "state": "LOCAL_APPROVAL_REQUIRED",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "9rSl2cPyWEs/o2FCSVZYJWPeutsL3UkABhnczLWRYDW+nhSyTjUPRfZtqFL6xWeqozEsUmatsNADxjYMLjSnBw=="
+  },
+  "unowned_after_cancel_hello": {
+    "payload": {
+      "client_challenge": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "device_id": "d37a8a63-7350-45eb-851c-678148200001",
+      "generation": 2,
+      "last_sequence": 0,
+      "lease_ms": 90000,
+      "model_id": "unihiker-k10",
+      "owner_identity": "",
+      "protocol": "blackwave-device-controller/1",
+      "public_key": "A6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=",
+      "session_nonce": "dffec523a18b1609127a8dce327ba8de2bf5f14d66ad0aef0d4bc81fa2cc4fd5",
+      "target_identity": "bw:ed25519:sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c"
+    },
+    "signature": "dWpDs6nhoy8tKPhYTFpVXkY0rXZlRRKB7RonyIH4L/YQX+jqztR48uOvesTc7Ik7+vHL2Sxd87wE1nBqRX52AA=="
+  }
+}

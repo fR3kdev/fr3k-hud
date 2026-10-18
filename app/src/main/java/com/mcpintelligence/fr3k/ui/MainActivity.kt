@@ -126,6 +126,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openRequestedSurface(intent: Intent?) {
+        if (intent?.getBooleanExtra("open_blackwave", false) == true) {
+            val operation = intent.getStringExtra("blackwave.operation_id")
+            val target = intent.getStringExtra("blackwave.package")
+            val local = Intent(this, BlackwaveActivity::class.java)
+            if (operation != null && runCatching { java.util.UUID.fromString(operation).toString() == operation }.getOrDefault(false)) local.putExtra("blackwave.operation_id", operation)
+            if (target in setOf("com.fr3k.blackwave", "com.fr3k.blackwave.debug")) local.putExtra("blackwave.package", target)
+            startActivity(local)
+        }
         if (intent?.getBooleanExtra("open_integrations", false) == true) {
             startActivity(Intent(this, IntegrationsActivity::class.java))
         }

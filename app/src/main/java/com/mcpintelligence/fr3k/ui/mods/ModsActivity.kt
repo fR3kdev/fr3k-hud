@@ -111,6 +111,7 @@ private fun ModsScreen(onClose: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column {
+            Button(onClick = { app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text("FIND APP IMPROVEMENTS") }
             Text(
                 text = "▰ fR3k // APP MODS",
                 color = Fr3kPalette.Accent,
