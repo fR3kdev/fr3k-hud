@@ -217,15 +217,19 @@ class AppModJourneyDeviceTest {
             }
             // The app window minus the system bars. A label's own box can be a one-line sliver clipped by the
             // navigation bar, and a tap there is delivered to the system instead of the control: measured as
-            // silently dropped taps on the basket switches, the radio rows and the review buttons.
+            // silently dropped taps on the basket switches, the radio rows and the review buttons. A control that
+            // is only partly on screen is not tapped either: at a large font scale a control clipped against the
+            // top edge was measured being tapped at the header instead of pressing the control at all.
             val safe = safeViewport()
+            fun onScreen(box: android.graphics.Rect) = !box.isEmpty &&
+                if (box.height() <= safe.height()) safe.contains(box) else safe.contains(box.exactCenterX().toInt(), box.exactCenterY().toInt())
             var bounds = android.graphics.Rect(); node.getBoundsInScreen(bounds)
             var control: AccessibilityNodeInfo? = node
             while (control != null && !control.isClickable) control = control.parent
             if (control != null) control.getBoundsInScreen(bounds)
             // Compose can acknowledge ACTION_CLICK on an off-screen, stale semantics node
             // without invoking the current button. Bring the target into the viewport first.
-            if (bounds.isEmpty || !node.isVisibleToUser || !safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())) {
+            if (!node.isVisibleToUser || !(onScreen(bounds) || (stalled >= 4 && safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())))) {
                 if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
                 Thread.sleep(250)
                 return@waitUntil false
@@ -242,7 +246,7 @@ class AppModJourneyDeviceTest {
             control = fresh
             while (control != null && !control.isClickable) control = control.parent
             if (control != null) control.getBoundsInScreen(bounds)
-            if (bounds.isEmpty || !safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())) {
+            if (!(onScreen(bounds) || (stalled >= 4 && safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())))) {
                 if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
                 Thread.sleep(250)
                 return@waitUntil false
@@ -360,8 +364,11 @@ class AppModJourneyDeviceTest {
      * the tests drive deliberately, so they are never backed out of.
      */
     private fun returnToProduct(attempts: Int = 4) {
-        fun unrelated() = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
-            ?.let { it != app.packageName && !it.contains("documentsui", ignoreCase = true) && !it.contains("packageinstaller", ignoreCase = true) } == true
+        // The launcher is not an app to be backed out of: the product's own request starts its review surface
+        // with the preview extra, and pressing home while that launch is in flight destroyed the review page.
+        fun driven(packageName: String?) = packageName == null || packageName == app.packageName ||
+            listOf("documentsui", "packageinstaller", "launcher").any { packageName.contains(it, ignoreCase = true) }
+        fun unrelated() = !driven(instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString())
         repeat(attempts) {
             if (!unrelated()) return
             val front = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
@@ -558,10 +565,9 @@ class AppModJourneyDeviceTest {
             assertTrue(java.io.FileInputStream(fd.fileDescriptor).bufferedReader().use { it.readText() }.contains("Success"))
         }
         AppModApi(app).call("request_app_mod_preparation", JSONObject().put("preview_id", id))
-        // The review controls live on the product's own surface and this scenario drives them directly, so that
-        // surface is opened on the preview under test instead of inheriting whatever ran before it.
-        app.getSharedPreferences("appmod.ui", 0).edit().putString("preview", id).putString("analysis", report.analysisId).putString("source", source.id).commit()
-        app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        // The request itself opens the product's own review surface on this preview (the product starts the
+        // surface with the preview extra), so the wait makes that precondition explicit and nothing is launched
+        // here: a second launch without the extra replaces the review page with the discovery page.
         waitUntil(60000) { shown("Review archived original restoration", 5000, restore = false) }
         click("Review archived original restoration", 60000)
         click("Install", 60000)
