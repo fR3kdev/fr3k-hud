@@ -1,3 +1,5 @@
+> Current checkpoint: [session 3 continuation](HANDOVER-CONTINUATION-2026-10-18-SESSION-3.md). The complete frozen run `20261018T112043Z-c63c71f1` is active; no new APK is promoted. Historical entries follow.
+
 # App modification feature — agent continuation
 
 ## 2026-10-18 continuation checkpoint (work in progress)
