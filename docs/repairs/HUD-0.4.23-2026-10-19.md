@@ -41,3 +41,12 @@ Date: 2026-10-19 (Australia/Brisbane).
 - GitHub contains source and bounded evidence, not secrets or raw private device telemetry.
 
 Operating loop: OBSERVE → VERIFY → RECONCILE → IMPROVE → TEST → RECORD.
+
+## Private handoff verified (not an installed-phone acceptance test)
+
+- Private release asset FR3K-HUD-0.4.23-debug.apk is uploaded; GitHub asset size 105069104 bytes, SHA-256 82bd88b6dcb9313edaf00e413d2bf60ab2931d186fbd540e4da53f36f9df02ac.
+- Authenticated Termux GH download on OnePlus succeeded. SHA-256 comparison PASS against Parrot and private GitHub.
+- Copy to Android /storage/emulated/0/Download/FR3K-HUD-0.4.23-debug.apk independently passed SHA-256 comparison.
+- Android package-installer VIEW intent accepted (termux-open exit code 0).
+- Operator approval and signed update acceptance: UNKNOWN. No uninstall, application-data deletion, or hidden privilege escalation was attempted.
+- The previous screenshot contained an old bearer token; the 0.4.23 code now rotates the bearer when the server is restarted. Do not publish the new bearer.
