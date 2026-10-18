@@ -158,15 +158,9 @@ class AppModJourneyDeviceTest {
                 // buttons, and an injected swipe there was measured dismissing the confirmation.
                 missing++
                 if (systemControl || root?.packageName?.toString() != app.packageName) {
-                    // The product has controls that hand off to Settings (the removal review), so a wait that
-                    // finds Settings in front instead of the product is recovered with one back action rather
-                    // than timing out; the picker and installer windows are legitimately not the product's.
-                    if (!systemControl && !backedOut && root?.packageName?.toString() == "com.android.settings") {
-                        backedOut = true
-                        android.util.Log.i("APPMODDBG", "click '$text' found Settings in front; returning to the product")
-                        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
-                        Thread.sleep(700)
-                    } else Thread.sleep(250)
+                    // A hand-off window in front of the product (Settings, or the patched app the removal
+                    // review opens) would otherwise turn every later wait into a timeout.
+                    if (!systemControl && !backedOut) { backedOut = true; returnToProduct() } else Thread.sleep(250)
                     return@waitUntil false
                 }
                 // Review pages grow downward; sweep down, and only re-anchor (one swipe up) if the page stopped
@@ -313,8 +307,25 @@ class AppModJourneyDeviceTest {
         }
     }
 
+    /**
+     * Some product controls hand off to Settings and to the patched app for the removal review, so a wait that
+     * finds another window in front backs out of the detour. One back action only reaches the patched app:
+     * the measured back stack is Settings -> patched app -> product. The picker and the installer are windows
+     * the tests drive deliberately, so they are never backed out of.
+     */
+    private fun returnToProduct(attempts: Int = 4) {
+        repeat(attempts) {
+            val front = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString()
+            if (front == null || front == app.packageName) return
+            if (front.contains("documentsui", ignoreCase = true) || front.contains("packageinstaller", ignoreCase = true)) return
+            android.util.Log.i("APPMODDBG", "backing out of $front")
+            instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+            Thread.sleep(900)
+        }
+    }
+
     /** A product message is evidence of a control's effect, so it is observed rather than clicked. */
-    private fun shown(text: String, timeout: Long = 30000, sweep: Boolean = true): Boolean {
+    private fun shown(text: String, timeout: Long = 30000, sweep: Boolean = true, restore: Boolean = true): Boolean {
         // A manual tree walk is the effective search here: the platform text search was measured returning
         // nothing for a message that the walk finds in the same window.
         fun found() = allNodes().any { node ->
@@ -335,10 +346,13 @@ class AppModJourneyDeviceTest {
         }
         val result = found()
         if (!result) {
-            // Scroll back to the top and report the page's own text, so a refusal is visible in evidence.
-            var previous = 0
-            var current = pageStamp()
-            while (current != previous) { previous = current; swipe(false); Thread.sleep(120); current = pageStamp() }
+            // Scroll back to the top and report the page's own text, so a refusal is visible in evidence. A
+            // state observation must not do this: scrolling to the top loses the list the observer is reading.
+            if (restore) {
+                var previous = 0
+                var current = pageStamp()
+                while (current != previous) { previous = current; swipe(false); Thread.sleep(120); current = pageStamp() }
+            }
             val visible = allNodes().mapNotNull { node -> node.text?.toString()?.takeIf { it.isNotBlank() } }.joinToString(" | ")
             android.util.Log.i("APPMODDBG", "shown '$text' missing; page='${visible.take(3000)}'")
         }
@@ -424,7 +438,7 @@ class AppModJourneyDeviceTest {
         assertNotNull(workflow.store.record("install_session", id))
         click("Review removing the separate app", 60000)
         waitUntil { instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString() == "com.android.settings" }
-        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        returnToProduct()
         click("Open analysis, saved jobs and offline guides", 60000)
         click("Review saved preview / resume", 60000)
         click("Digest: ${preview.getString("digest")}", 60000)
@@ -587,11 +601,11 @@ class AppModJourneyDeviceTest {
         val selected = w.suggestions(report.analysisId).single { it.title.contains("gallery_caption") }
         app.getSharedPreferences("appmod.ui", 0).edit().putString("analysis", report.analysisId).putString("source", source.id).remove("preview").commit()
         fun launch() = app.startActivity(Intent(app, com.mcpintelligence.fr3k.ui.appcontrol.AppModDiscoveryActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
-        // The expansion control's own label is the page's state, so the state is read with a plain observation:
-        // a sweeping observation scrolls the page back to its top when it gives up, which loses the list it is
-        // looking at and makes the next attempt start over from the entry form.
+        // The expansion control's own label is the page's state, but the control can be off the viewport, so the
+        // state is read by sweeping the page while never scrolling it back to the top: that scroll loses the
+        // list being read and makes the next attempt start over from the entry form.
         fun expansionState(): String? = listOf("Show top eight", "Show all suggestions (up to twenty)")
-            .firstOrNull { shown(it, 300, sweep = false) }
+            .firstOrNull { shown(it, 6000, sweep = true, restore = false) }
         fun setExpanded(on: Boolean) {
             val wanted = if (on) "Show top eight" else "Show all suggestions (up to twenty)"
             clickUntil(if (on) "Show all suggestions (up to twenty)" else "Show top eight", 90000) { expansionState() == wanted }
