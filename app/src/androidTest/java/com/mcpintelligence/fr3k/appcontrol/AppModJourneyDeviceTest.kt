@@ -359,13 +359,24 @@ class AppModJourneyDeviceTest {
             val fields = editableFields()
             return fields.firstOrNull { it.contentDescription?.toString() == label }
                 ?: fields.firstOrNull { holdsLabel(it, 0) }
-                ?: fields.firstOrNull { it.isFocused }
-                ?: fields.singleOrNull()
+                ?: fields.takeIf { label != "Find installed app" }?.let { candidates ->
+                    candidates.firstOrNull { it.isFocused } ?: candidates.singleOrNull()
+                }
         }
-        click(label, 60000)
-        waitUntil(30000) { setText(labelledField()) }
-        Thread.sleep(500)
+        if (label == "Find installed app") {
+            // Loading app rows can reflow between pointer lookup and dispatch. In the full API31
+            // run the search-field tap selected a row instead, closed the chooser and started analysis.
+            // Use this labelled field's own action and read back its text, never a focus fallback.
+            assertTrue("Installed search not reachable", shown(label, 60000, restore = false))
+            waitUntil(30000) { setText(labelledField()) }
+            waitUntil(30000) { labelledField()?.text?.toString() == value }
+        } else {
+            click(label, 60000)
+            waitUntil(30000) { setText(labelledField()) }
+            Thread.sleep(500)
+        }
         if (keyboardUp()) dismissKeyboard()
+        android.util.Log.i("APPMODDBG", "after edit '$label': ${pageText().take(3000)}")
     }
 
     private fun keyboardUp(): Boolean {
