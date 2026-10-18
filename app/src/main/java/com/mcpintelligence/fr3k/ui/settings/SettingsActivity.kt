@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Slider
@@ -95,6 +97,10 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(8.dp))
+            Button(onClick = {
+                app.startActivity(android.content.Intent(app, com.mcpintelligence.fr3k.ui.onboarding.OnboardingActivity::class.java)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }, modifier = Modifier.fillMaxWidth()) { Text("REOPEN COMPLETE DEVICE ONBOARDING") }
 
             com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "HUD") {
                 Column {
@@ -168,6 +174,9 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 val stored = app.secureStore.get(settings.opencodeApiKeyKey)
                 var openCodeKeyInput by remember { mutableStateOf("") }
                 var status by remember { mutableStateOf<String?>(null) }
+                var modelExpanded by remember { mutableStateOf(false) }
+                var modelSearch by remember { mutableStateOf("") }
+                var liveModels by remember { mutableStateOf(openCode.availableModels()) }
                 Column {
                     Text(
                         text = "active: ${app.activeProviderLabel}  ·  model ${app.activeModelLabel}",
@@ -268,20 +277,35 @@ private fun SettingsScreen(onClose: () -> Unit) {
                         fontFamily = FontFamily.Monospace,
                         fontSize = 12.sp,
                     )
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        openCode.availableModels().take(3).forEach { model ->
-                            Button(
+                    Button(onClick = { modelExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("CHOOSE MODEL ▼  (${liveModels.size} listed)", fontFamily = FontFamily.Monospace)
+                    }
+                    Button(onClick = {
+                        scope.launch {
+                            status = "Fetching current OpenCode catalogue..."
+                            openCode.refreshModels().fold(
+                                onSuccess = {
+                                    liveModels = openCode.availableModels()
+                                    status = "${liveModels.size} available catalogue entries loaded"
+                                },
+                                onFailure = { status = "Model refresh failed: ${it.message}; showing cached models" },
+                            )
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("REFRESH ALL AVAILABLE MODELS") }
+                    DropdownMenu(expanded = modelExpanded, onDismissRequest = { modelExpanded = false },
+                        modifier = Modifier.heightIn(max = 440.dp)) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = modelSearch, onValueChange = { modelSearch = it },
+                            label = { Text("Filter models") }, modifier = Modifier.width(300.dp),
+                        )
+                        liveModels.filter { it.id.contains(modelSearch, true) }.forEach { model ->
+                            DropdownMenuItem(text = { Text(model.id + if (model.isFree) " · FREE" else "") },
                                 onClick = {
                                     openCode.setModel(model.id)
                                     app.settings.update { it.copy(opencodeModel = model.id) }
-                                    status = "model: ${model.id}"
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (openCode.selectedModel() == model.id) Fr3kPalette.Accent else Fr3kPalette.Surface,
-                                    contentColor = if (openCode.selectedModel() == model.id) Fr3kPalette.Bg else Fr3kPalette.Text,
-                                ),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                            ) { Text(model.id, fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
+                                    status = "Selected: ${model.id} (verify chat support with TEST)"
+                                    modelExpanded = false
+                                })
                         }
                     }
                     status?.let {
@@ -300,7 +324,9 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 var keyInput by remember { mutableStateOf("") }
                 var modelInput by remember(provider.selectedModel()) { mutableStateOf(provider.selectedModel()) }
                 var status by remember { mutableStateOf<String?>(null) }
-                var freeModels by remember { mutableStateOf<List<com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterModel>>(emptyList()) }
+                var allModels by remember { mutableStateOf(provider.cachedAllModels()) }
+                var allExpanded by remember { mutableStateOf(false) }
+                var allSearch by remember { mutableStateOf("") }
                 Column {
                     Text(
                         text = "key: ${if (storedKey != null) "stored (encrypted) — ${maskKey(storedKey)}" else "not set"}",
@@ -389,35 +415,36 @@ private fun SettingsScreen(onClose: () -> Unit) {
                             onClick = {
                                 scope.launch {
                                     status = "refreshing…"
-                                    freeModels = provider.refreshFreeModels().getOrDefault(emptyList())
-                                    status = "${freeModels.size} free models cached"
+                                    provider.refreshAllModels().fold(
+                                        onSuccess = { allModels = it; status = "${it.size} models loaded" },
+                                        onFailure = { status = "Could not fetch models: ${it.message}" },
+                                    )
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
                             modifier = Modifier.semantics { contentDescription = "settings-router-refresh" },
                         ) { Text("REFRESH", fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
                     }
-                    if (freeModels.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
-                        freeModels.take(6).forEach { m ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 1.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Fr3kPalette.Surface)
-                                    .semantics { contentDescription = "use model ${m.id}" }
-                                    .clickable {
+                    Button(onClick = { allExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("CHOOSE ANY AVAILABLE MODEL ▼ (${allModels.size})")
+                    }
+                    DropdownMenu(expanded = allExpanded, onDismissRequest = { allExpanded = false },
+                        modifier = Modifier.heightIn(max = 440.dp)) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = allSearch, onValueChange = { allSearch = it },
+                            label = { Text("Search full catalogue") }, modifier = Modifier.width(300.dp),
+                        )
+                        allModels.filter { it.id.contains(allSearch, true) || it.name.contains(allSearch, true) }
+                            .forEach { m ->
+                                DropdownMenuItem(text = { Text(m.name + if (m.free) " · FREE" else " · MAY BE PAID") },
+                                    onClick = {
                                         provider.setModel(m.id)
                                         app.settings.update { it.copy(openrouterModel = m.id) }
                                         modelInput = m.id
-                                        status = "model selected"
-                                    }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            ) {
-                                Text(m.id, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+                                        status = "Selected: ${m.id}; check tool support and billing"
+                                        allExpanded = false
+                                    })
                             }
-                        }
                     }
                 }
             }

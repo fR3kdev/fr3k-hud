@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.ScrollView
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.CommandResult
 import com.mcpintelligence.fr3k.core.ConsentLevel
@@ -52,6 +53,7 @@ class Fr3kChatBubble(
     private val params: WindowManager.LayoutParams
     private val tail: View
     private val transcript: TextView
+    private val transcriptScroll: ScrollView
     private val input: EditText
     private val send: Button
     private val dismiss: Button
@@ -177,10 +179,15 @@ class Fr3kChatBubble(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
-            maxLines = 6
-            ellipsize = TextUtils.TruncateAt.END
-            text = "tap send to ask Hermes anything."
+            // Never ellipsize answers: the previous six-line limit looked like a cut-off response.
+            text = "Ask the active provider anything. Replies stay scrollable."
+            isVerticalScrollBarEnabled = false
+        }
+
+        transcriptScroll = ScrollView(ctx).apply {
+            isFillViewport = false
             isVerticalScrollBarEnabled = true
+            addView(transcript, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
         input = EditText(ctx).apply {
@@ -264,7 +271,7 @@ class Fr3kChatBubble(
             val transcriptLp = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
             )
-            addView(transcript, transcriptLp)
+            addView(transcriptScroll, transcriptLp)
             addView(sessionPanel)
             val sp = Space(ctx); sp.layoutParams = LinearLayout.LayoutParams(1, (2 * density).toInt())
             addView(sp)
@@ -308,7 +315,10 @@ class Fr3kChatBubble(
 
     private val sessionObserver = scope.launch(Dispatchers.Main.immediate) {
         session.lines.collect { lines ->
-            if (lines.isNotEmpty()) transcript.text = lines.joinToString("\n") { "${it.speaker}: ${it.text}" }
+            if (lines.isNotEmpty()) {
+                transcript.text = lines.joinToString("\n") { "${it.speaker}: ${it.text}" }
+                transcriptScroll.post { transcriptScroll.fullScroll(View.FOCUS_DOWN) }
+            }
         }
     }
 
@@ -518,7 +528,10 @@ class Fr3kChatBubble(
     private fun onSend() {
         val prompt = input.text?.toString()?.trim().orEmpty()
         if (prompt.isEmpty()) return
-        if (session.busy.value) return
+        if (session.busy.value) {
+            appendLine("fr3k: Previous request is still active. Use STOP AGENT to cancel it, then send again.")
+            return
+        }
         input.setText("")
         session.submit(prompt)
     }
@@ -529,6 +542,7 @@ class Fr3kChatBubble(
             val combined = if (prev.isBlank() || prev.startsWith("tap send")) line
                            else prev + "\n" + line
             transcript.text = combined
+            transcriptScroll.post { transcriptScroll.fullScroll(View.FOCUS_DOWN) }
         }
     }
 

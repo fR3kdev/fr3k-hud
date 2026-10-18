@@ -89,7 +89,7 @@ class AppModViewModel(application: Application) : AndroidViewModel(application) 
         message = "Analysing immutable APK copies…"; report = workflow.analyze(id)
         withContext(Dispatchers.IO) { prefs.edit().putString("analysis", report!!.analysisId).apply() }
         suggestions = withContext(Dispatchers.IO) { workflow.suggestions(report!!.analysisId) }
-        message = "${report!!.artifact.label}: ${report!!.evidence.size} findings. ${if (report!!.completed) "Analysis completed within stated coverage." else "Partial analysis; inspect limits."}"
+        message = "${report!!.artifact.label}: ${report!!.evidence.size} findings. ${if (report!!.completed) "Analysis completed within stated coverage." else "Partial analysis; inspect limits."} NEXT: scroll to Suggested changes, select a READY change and tap Preview. If none is executable, this APK cannot yet be modified by the embedded engine."
     }
     fun resumeAnalysis() = work { select(withContext(Dispatchers.IO) { requireNotNull(prefs.getString("source", null)) { "Choose a source first" } }) }
     fun reopenAnalysis(id: String) = work {
@@ -240,6 +240,19 @@ private fun LazyListScope.section(key: String, content: @Composable ColumnScope.
             }
         }
         }
+        section("appmod-next-action") {
+            Text("HOW APP MOD WORKS", style = MaterialTheme.typography.titleMedium)
+            Text("1. Choose an APK. HUD inspects a private copy; your original remains untouched.")
+            Text("2. Only READY or CAN_GENERATE changes with a Select change checkbox can be patched. Choose one and keep its suggested replacement unless you know the format.")
+            Text("3. Tap Preview selected changes, review exact changes and risks, then explicitly approve a staged copy. Nothing is installed automatically.")
+            Text("If no selectable change appears, the app is analysed but NOT patchable yet. Entering a wish in the goal field does not invent a working patch.")
+            vm.report?.let { report ->
+                val ready = vm.suggestions.count { it.route == ExecutionRoute.APK_PATCH && it.readiness in setOf(Readiness.CAN_GENERATE, Readiness.READY) }
+                Text("SOURCE: ${report.artifact.label} · ${vm.suggestions.size} ideas · $ready selectable changes",
+                    color = if (ready > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                if (ready == 0) Text("BLOCKED: No executable patch recipe for this APK. Use Inspect feature map or research suggestions; do not prepare or install guesses.")
+            }
+        }
         if (showGuide) appModGuides().forEach { guide ->
             section("guide-${guide.id}") {
             Text(guide.title, style = MaterialTheme.typography.titleMedium)
@@ -308,6 +321,7 @@ private fun LazyListScope.section(key: String, content: @Composable ColumnScope.
             vm.evidenceResults.forEach { evidence -> Text("${evidence.kind} · ${evidence.evidenceId}\n${evidence.feature}") }
             Text("Installation preference")
             for (option in listOf("auto", "same_package", "side_by_side")) Row { RadioButton(mode == option, { mode = option }, modifier = Modifier.semantics { contentDescription = "Installation ${option.replace('_', ' ')}" }); Text(option.replace('_', ' ')) }
+            Text(if (JSONObject(selection).length() == 0) "Select a change above to enable Preview. Greyed-out preview means no executable change has been selected." else "${JSONObject(selection).length()} selected change(s). Preview checks replacement format before preparation.")
             Button({ val chosen = JSONObject(selection); val array = JSONArray()
                 chosen.keys().forEach { array.put(JSONObject().put("suggestionId", it).put("replacement", chosen.getString(it))) }
                 vm.makePreview(array, mode)

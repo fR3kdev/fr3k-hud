@@ -50,6 +50,9 @@ class OpenRouterProvider(
 
     @Volatile
     private var cachedFreeModels: List<OpenRouterModel> = emptyList()
+    @Volatile
+    private var cachedAllModels: List<OpenRouterModel> = emptyList()
+    fun cachedAllModels(): List<OpenRouterModel> = cachedAllModels
 
     /** The model the next [ask] would use. */
     fun selectedModel(): String = currentModel
@@ -62,8 +65,14 @@ class OpenRouterProvider(
     /** Last fetched free-model list (empty until [refreshFreeModels]). */
     fun cachedFreeModels(): List<OpenRouterModel> = cachedFreeModels
 
+    suspend fun refreshAllModels(): Result<List<OpenRouterModel>> =
+        refreshCatalogue().map { cachedAllModels }
+
     /** Re-fetch the catalogue and keep only `:free`-routed models. Never throws. */
-    suspend fun refreshFreeModels(): Result<List<OpenRouterModel>> = withContext(Dispatchers.IO) {
+    suspend fun refreshFreeModels(): Result<List<OpenRouterModel>> =
+        refreshCatalogue().map { cachedFreeModels }
+
+    private suspend fun refreshCatalogue(): Result<List<OpenRouterModel>> = withContext(Dispatchers.IO) {
         runCatching {
             val url = URL("$endpoint/models")
             val conn = (url.openConnection() as HttpURLConnection).apply {
@@ -80,8 +89,9 @@ class OpenRouterProvider(
                 val raw = BufferedReader(InputStreamReader(conn.inputStream, Charsets.UTF_8)).use { it.readText() }
                 val data = JSONObject(raw).getJSONArray("data")
                 val models = (0 until data.length()).mapNotNull { i -> data.getJSONObject(i).toModel() }
+                cachedAllModels = models.sortedBy { it.name.lowercase() }
                 cachedFreeModels = models.filter { it.free }
-                cachedFreeModels
+                cachedAllModels
             } finally {
                 conn.disconnect()
             }

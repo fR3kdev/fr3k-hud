@@ -45,7 +45,11 @@ class SharedAgentSession(
     """.trimIndent()))
 
     fun submit(prompt: String) {
-        if (prompt.isBlank() || job?.isActive == true) return
+        if (prompt.isBlank()) return
+        if (job?.isActive == true) {
+            line("system", "A response is already in progress. Stop the active agent request before sending another.")
+            return
+        }
         job = scope.launch { send(prompt) }
     }
 
@@ -141,7 +145,12 @@ class SharedAgentSession(
         decision = waiting
         mutableApproval.value = request
         line("review", "Review $toolId in either chat panel before it runs.")
-        return try { waiting.await() } finally { mutableApproval.value = null; decision = null }
+        return try {
+            withTimeoutOrNull(120_000) { waiting.await() } ?: run {
+                line("review", "Approval timed out. Nothing was authorized; send a new request if still needed.")
+                false
+            }
+        } finally { mutableApproval.value = null; decision = null }
     }
 
     private fun line(speaker: String, text: String) {

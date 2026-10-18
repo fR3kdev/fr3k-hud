@@ -215,12 +215,9 @@ private fun ModsScreen(onClose: () -> Unit) {
                             scope.launch {
                                 mcpStatus = runCatching {
                                     val port = app.startMcp()
-                                    val token = runCatching {
-                                        org.json.JSONObject(
-                                            java.io.File(app.filesDir, "mcp.json").readText(),
-                                        ).optString("token")
-                                    }.getOrDefault("")
-                                    "http://127.0.0.1:$port  token $token"
+                                    // The running server owns the token; no mcp.json file is written.
+                                    // Reveal only when the operator deliberately starts MCP on this screen.
+                                    "http://127.0.0.1:$port  token ${app.mcpServer.token}"
                                 }.getOrElse { "could not start: ${it.message}" }
                             }
                         },
