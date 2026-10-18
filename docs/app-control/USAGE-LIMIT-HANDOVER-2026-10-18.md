@@ -12,6 +12,9 @@ Host gates remain green: capability66 + core81 + app69 debug + app69 release, 0 
 
 Still required: the full frozen acceptance run on both platforms (started after a green preflight of the remaining UI-heavy scenarios), then packaging and promotion of HUD only, benchmark sync and the18 hashes, and this handover's final numbers. No APK promoted yet.
 
+> Current state, verified scenario evidence, the four red scenarios with their exact failure lines and the
+> infrastructure facts: see `HANDOVER-NEXT-AGENT-2026-10-18.md` (written 2026-10-18 19:35 AEST). Read that first.
+
 ---
 
 # Latest follow-up — 2026-10-18, backup still transferring

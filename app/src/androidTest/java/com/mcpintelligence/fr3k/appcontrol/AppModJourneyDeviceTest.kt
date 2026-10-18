@@ -109,7 +109,21 @@ class AppModJourneyDeviceTest {
         val containing = platform
             .filter { it.isEnabled && it.text?.toString()?.contains(text, true) == true }
             .minByOrNull { it.text?.toString()?.length ?: Int.MAX_VALUE }
-        return containing?.takeIf { it.isVisibleToUser } ?: containing ?: matchNode(root, text)
+        // The platform text search was measured returning nothing for a long message while the same window's
+        // tree contained it, so a manual walk is the last fallback and it matches containment, not equality.
+        // A window can also carry a stale copy of the page, measured as a tap on a hidden node that the product
+        // never received, so a visible candidate always wins over one that is not on screen.
+        val fallback = containing ?: walkMatch(root, text)
+        return containing?.takeIf { it.isVisibleToUser } ?: fallback?.takeIf { it.isVisibleToUser } ?: fallback
+    }
+
+    /** A manual substring walk, for long labels the platform text search does not return. */
+    private fun walkMatch(node: AccessibilityNodeInfo?, text: String): AccessibilityNodeInfo? {
+        if (node == null) return null
+        val label = node.text?.toString() ?: node.contentDescription?.toString()
+        if (node.isEnabled && label != null && label.contains(text, true)) return node
+        for (index in 0 until node.childCount) walkMatch(node.getChild(index), text)?.let { return it }
+        return null
     }
     /** A cheap position fingerprint of the active page: text and bounds, so a real scroll is observable. */
     private fun pageStamp(): Int {
@@ -185,8 +199,11 @@ class AppModJourneyDeviceTest {
                 return@waitUntil false
             }
             // A system dialog (package installer) is not always the active window, so every window is searched.
-            val node = (listOfNotNull(root) + instrumentation.uiAutomation.windows.mapNotNull { it.root })
-                .firstNotNullOfOrNull { findTarget(it, text) }
+            val roots = listOfNotNull(root) + instrumentation.uiAutomation.windows.mapNotNull { it.root }
+            // A window carrying a stale copy of the page can offer the label off screen; a visible match in any
+            // window is preferred over a hidden one in the first, measured as taps the product never received.
+            val node = roots.firstNotNullOfOrNull { findTarget(it, text)?.takeIf { n -> n.isVisibleToUser } }
+                ?: roots.firstNotNullOfOrNull { findTarget(it, text) }
             if (node == null) {
                 // Only the HUD's own scrollable pages are swept. A system dialog (package installer) has fixed
                 // buttons, and an injected swipe there was measured dismissing the confirmation.
@@ -217,19 +234,16 @@ class AppModJourneyDeviceTest {
             }
             // The app window minus the system bars. A label's own box can be a one-line sliver clipped by the
             // navigation bar, and a tap there is delivered to the system instead of the control: measured as
-            // silently dropped taps on the basket switches, the radio rows and the review buttons. A control that
-            // is only partly on screen is not tapped either: at a large font scale a control clipped against the
-            // top edge was measured being tapped at the header instead of pressing the control at all.
+            // silently dropped taps on the basket switches, the radio rows and the review buttons.
             val safe = safeViewport()
-            fun onScreen(box: android.graphics.Rect) = !box.isEmpty &&
-                if (box.height() <= safe.height()) safe.contains(box) else safe.contains(box.exactCenterX().toInt(), box.exactCenterY().toInt())
+            fun onScreen(box: android.graphics.Rect) = !box.isEmpty && safe.contains(box.exactCenterX().toInt(), box.exactCenterY().toInt())
             var bounds = android.graphics.Rect(); node.getBoundsInScreen(bounds)
             var control: AccessibilityNodeInfo? = node
             while (control != null && !control.isClickable) control = control.parent
             if (control != null) control.getBoundsInScreen(bounds)
             // Compose can acknowledge ACTION_CLICK on an off-screen, stale semantics node
             // without invoking the current button. Bring the target into the viewport first.
-            if (!node.isVisibleToUser || !(onScreen(bounds) || (stalled >= 4 && safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())))) {
+            if (!node.isVisibleToUser || !onScreen(bounds)) {
                 if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
                 Thread.sleep(250)
                 return@waitUntil false
@@ -239,17 +253,25 @@ class AppModJourneyDeviceTest {
             // page stops moving, because tapping stale bounds was measured landing on the neighbouring control
             // and following its action instead (the verification step opened Settings instead of confirming).
             settle()
-            val fresh = (listOfNotNull(instrumentation.uiAutomation.rootInActiveWindow) + instrumentation.uiAutomation.windows.mapNotNull { it.root })
-                .firstNotNullOfOrNull { findTarget(it, text) }
+            val freshRoots = listOfNotNull(instrumentation.uiAutomation.rootInActiveWindow) + instrumentation.uiAutomation.windows.mapNotNull { it.root }
+            val fresh = freshRoots.firstNotNullOfOrNull { findTarget(it, text)?.takeIf { n -> n.isVisibleToUser } }
+                ?: freshRoots.firstNotNullOfOrNull { findTarget(it, text) }
             if (fresh == null || !fresh.isVisibleToUser) { Thread.sleep(200); return@waitUntil false }
             bounds = android.graphics.Rect(); fresh.getBoundsInScreen(bounds)
             control = fresh
             while (control != null && !control.isClickable) control = control.parent
             if (control != null) control.getBoundsInScreen(bounds)
-            if (!(onScreen(bounds) || (stalled >= 4 && safe.contains(bounds.exactCenterX().toInt(), bounds.exactCenterY().toInt())))) {
+            if (!onScreen(bounds)) {
                 if (!systemControl) swipe(bounds.isEmpty || bounds.exactCenterY() >= safe.exactCenterY())
                 Thread.sleep(250)
                 return@waitUntil false
+            }
+            // A control that is only partly on screen can sit under the page's own bar, where a coordinate tap was
+            // measured landing on the bar instead of the control at a large font scale: the control's own click
+            // action is performed instead of guessing a screen point.
+            if (!safe.contains(bounds) && control?.isClickable == true) {
+                android.util.Log.i("APPMODDBG", "semantics click '$text' clipped=$bounds safe=$safe")
+                if (control.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { Thread.sleep(250); return@waitUntil true }
             }
             // DocumentsUI rows expose a clickable ancestor; its action selects the URI even when
             // the filename text's pointer bounds overlap the roots drawer during a transition.
