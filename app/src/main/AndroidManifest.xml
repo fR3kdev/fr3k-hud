@@ -6,6 +6,12 @@
         android:name="com.mcpintelligence.fr3k.hud.permission.CONTROL_OVERLAY"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.mcpintelligence.fr3k.hud.permission.CONTROL_OVERLAY" />
+
+    <!-- Shared voice engine for other FR3K apps signed with the same key. -->
+    <permission
+        android:name="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- ============================================================== -->
@@ -298,6 +304,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="fr3k_hud_overlay" />
+        </service>
+
+        <!-- Shared voice: only apps signed with the same key may bind (see VoiceAssistProtocol). -->
+        <service
+            android:name="com.mcpintelligence.fr3k.voice.VoiceAssistService"
+            android:exported="true"
+            android:permission="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST">
+            <intent-filter>
+                <action android:name="com.mcpintelligence.fr3k.voice.VOICE_ASSIST" />
+            </intent-filter>
         </service>
 
         <service

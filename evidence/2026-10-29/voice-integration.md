@@ -1,0 +1,93 @@
+# Voice integration — HUD (2026-10-29)
+
+Scope: make voice assistance actually work in the HUD, with Android voice as the default and
+Xiaozhi (`https://voice.fr3k.dev/xiaozhi/ota/`) as an explicit opt-in.
+
+## What was broken before this pass
+
+1. `core/.../xiaozhi/VoiceSession.kt:100` contained `val authorization: ***` — a redaction
+   placeholder written into source. The `core` module could not compile at all.
+2. `XiaozhiAudio` started microphone capture and speaker playback as one unit, so releasing a
+   push-to-talk button would also kill the spoken reply.
+3. `XiaozhiVoiceControls` was rendered with `adapter = null`, so the panel only ever printed
+   "Voice unavailable".
+4. `AndroidVoice` existed but nothing referenced it — no UI path reached it.
+5. `XiaozhiSetup` claimed the endpoint was "not configured or contacted by HUD", which stopped
+   being true.
+
+## What is wired now
+
+| Piece | File | State |
+|---|---|---|
+| Bootstrap POST | `core/.../xiaozhi/BootstrapClient.kt` | Sends `mac_address` + `application{name,version}`, `Device-Id`, `Client-Id`, `Activation-Version` |
+| WebSocket session | `core/.../xiaozhi/VoiceSession.kt` | hello / listen start-stop / Opus frames v1-v3, compiles |
+| Controller | `app/.../xiaozhi/XiaozhiController.kt` | discovery → activation code → READY, retry, close |
+| Audio engine | `app/.../xiaozhi/XiaozhiAudio.kt` | capture and playback now have independent lifetimes |
+| Adapter | `app/.../xiaozhi/XiaozhiVoiceAdapterImpl.kt` | binds controller + audio + Android TTS, one output path only |
+| Settings UI | `app/.../ui/settings/VoiceAssistant.kt` | mode switch: ANDROID VOICE (default) / XIAOZHI |
+| Xiaozhi UI | `app/.../ui/settings/XiaozhiSetup.kt` + `XiaozhiVoice.kt` | consent, mic permission, activation code, PTT, reply-voice switch |
+| HUD surface | `app/.../hud/overlays/Fr3kChatBubble.kt` | MIC button, hold to talk, no double speech with `TtsPreference` |
+| Default voice | `app/.../integrations/voice/AndroidVoice.kt` | `SpeechRecognizer` → shared agent session → Android TTS |
+
+Output rule: the `tts` text events are spoken by Android TTS by default. Selecting XIAOZHI voice
+plays the server's Opus audio and stops speaking text, so a reply is never played twice.
+
+## Live endpoint evidence (this machine, 2026-10-29)
+
+`POST https://voice.fr3k.dev/xiaozhi/ota/` with an app-style virtual device id returned:
+
+```
+HTTP 200
+keys: ['activation', 'firmware', 'server_time', 'websocket']
+activation: {"code": "986140", "message": "https://voice.fr3k.dev\n986140", "challenge": "02:e0:a8:e6:83:aa"}
+websocket: {"token": "...", "url": "wss://..."}   (no "version" key)
+```
+
+This confirms the request/response contract our parser implements: an activation code is returned
+until the operator activates the device, and the `websocket` block carries a `wss` URL plus token.
+
+## Verified
+
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :core:testDebugUnitTest --offline` → BUILD
+  SUCCESSFUL; 161 unit tests, 0 failures.
+- APK: `app/build/outputs/apk/debug/app-debug.apk`
+  sha256 `da1c981466b6047861d6259c01c7f438e70f107cac621b4f3586b0faf827b076`
+- New tests: `XiaozhiVoiceAdapterTest` (10 cases) covers consent gating, activation code display,
+  retry, negotiated rate, PTT release keeping playback alive, mic failure, both output modes,
+  frame forwarding, disconnect/reconnect and close.
+
+## Shared with BLACKWAVE (added after the first report)
+
+The HUD now exports its voice so other FR3K apps do not re-implement it
+(`docs/voice-assist-bridge.md`):
+
+- `VoiceAssistService` — bound service, action `…voice.VOICE_ASSIST`, protected by
+  `com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST` (`protectionLevel=signature`).
+  `MSG_ASK` runs the shared agent turn and speaks the answer, `MSG_SPEAK`, `MSG_STOP`.
+- `VoiceAssistProtocol` — message codes, 2000-character cap, control-character rejection.
+- BLACKWAVE companion: `HudVoiceClient` binds it, `VoiceHelpCard` adds a "VOICE WALKTHROUGH"
+  card to every setup step. The companion keeps the microphone (foreground app) and sends the
+  transcript; the HUD answers and speaks, so both apps share one voice and one assistant.
+- Signature match verified: both debug APKs carry certificate SHA-256
+  `6ca9ca0a0219b011b4f6e0a66134945143c0bdc8c42308de1e53b01294023f94`.
+
+Rebuilt artifacts:
+
+```
+HUD        app/build/outputs/apk/debug/app-debug.apk
+           sha256 d3fa60bd7c59009d7d9e50071c674061b107b9aca038a4de9dc8baa38bac940d
+BLACKWAVE  blackwave/apps/android-companion/app/build/outputs/apk/debug/app-debug.apk
+           sha256 d6f0a4465d5f29b1784371157338f00cdb3566125e24e15a7ad3abb2c2aba4a2
+```
+
+Unit tests: HUD 166 run / 0 failed (5 new protocol tests); companion suite passes.
+
+## Not verified — do not claim as working
+- No Android device or emulator run: microphone capture, Opus round trip over the network, and
+  speaker playback have not been exercised on hardware.
+- Activation is not completed. The code above was generated by this probe; entering it in the
+  service console is a user action.
+- Xiaozhi server audio output path is implemented but has never been heard.
+- Android `SpeechRecognizer` accuracy/latency on this device is unknown.
+- Cross-app voice binding has not run on hardware: the HUD-not-installed, force-stopped and
+  signature-mismatch paths are implemented but untested on a device.

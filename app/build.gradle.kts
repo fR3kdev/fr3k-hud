@@ -39,6 +39,10 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions.unitTests.all {
+        it.systemProperty("fr3k.appDir", project.projectDir.absolutePath)
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -52,6 +56,8 @@ android {
 }
 
 dependencies {
+    // Pure Java Opus codec (no native ABI or device codec dependency).
+    implementation("io.github.jaredmdobson:concentus:1.0.2")
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(project(":transport"))

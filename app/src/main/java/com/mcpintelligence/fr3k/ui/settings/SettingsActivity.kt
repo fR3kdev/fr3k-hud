@@ -52,16 +52,19 @@ import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.core.ConsentLevel
 import com.mcpintelligence.fr3k.hud.OrbAppearance
+import com.mcpintelligence.fr3k.ui.Fr3kAmbientBackground
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
 import com.mcpintelligence.fr3k.ui.Fr3kButton
 import com.mcpintelligence.fr3k.ui.Fr3kDimens
 import com.mcpintelligence.fr3k.ui.Fr3kGhostButton
 import com.mcpintelligence.fr3k.ui.Fr3kGradientText
+import com.mcpintelligence.fr3k.ui.Fr3kHeroHeader
 import com.mcpintelligence.fr3k.ui.Fr3kOutlineButton
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import com.mcpintelligence.fr3k.ui.Fr3kPanel
 import com.mcpintelligence.fr3k.ui.Fr3kRowItem
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
+import com.mcpintelligence.fr3k.ui.fr3kAppear
 import kotlinx.coroutines.launch
 
 /**
@@ -108,7 +111,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
     var endpoint by remember(settings.hermesEndpoint) { mutableStateOf(settings.hermesEndpoint) }
     var telemetry by remember(settings.telemetryEnabled) { mutableStateOf(settings.telemetryEnabled) }
 
-    Box(modifier = Modifier.fillMaxSize().background(Fr3kPalette.Bg)) {
+    Fr3kAmbientBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -116,17 +119,14 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 .padding(Fr3kDimens.SpacingLg),
             verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
         ) {
-            Column {
-                Fr3kGradientText(text = "SETTINGS", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "system · orb · providers · consent",
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                    color = Fr3kPalette.TextDim,
-                )
-            }
+            Fr3kHeroHeader(
+                title = "SETTINGS",
+                subtitle = "system · orb · providers · consent",
+                modifier = Modifier.fr3kAppear(0),
+                trailing = { Fr3kBadge(text = "live", color = Fr3kPalette.Ok) },
+            )
 
-            Fr3kPanel(title = "HUD") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(1), title = "HUD") {
                 Column {
                     Toggle("HUD overlay enabled", settings.hudEnabled) { v ->
                         app.settings.update { it.copy(hudEnabled = v) }
@@ -143,7 +143,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Fr3kPanel(title = "orb appearance", subtitle = "custom button") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(2), title = "orb appearance", subtitle = "custom button") {
                 val orbStore = remember { com.mcpintelligence.fr3k.hud.OrbAppearanceStore(context) }
                 var orbApp by remember { mutableStateOf(orbStore.read()) }
                 val picker = rememberLauncherForActivityResult(
@@ -220,7 +220,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Fr3kPanel(title = "consent profile") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(3), title = "consent profile") {
                 Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     listOf(
                         ConsentLevel.LOCAL_ONLY to "LOCAL ONLY · no data leaves the device",
@@ -235,7 +235,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Fr3kPanel(title = "Hermes") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(4), title = "Hermes") {
                 Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     Text("endpoint:", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                     OutlinedTextField(
@@ -261,7 +261,26 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Fr3kPanel(title = "OpenRouter") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(5), title = "Chat provider", subtitle = "applies to HUD and browser shared chat") {
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                    Text("Selected: ${if (settings.activeAgentProvider == "opencode-go") "OpenCode Go" else "OpenRouter"}", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = if (settings.activeAgentProvider == "openrouter") "✓ OPENROUTER" else "OPENROUTER",
+                            onClick = { app.settings.update { it.copy(activeAgentProvider = "openrouter") } },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kButton(
+                            text = if (settings.activeAgentProvider == "opencode-go") "✓ OPENCODE GO" else "OPENCODE GO",
+                            onClick = { app.settings.update { it.copy(activeAgentProvider = "opencode-go") } },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Text("Selection is saved and routes every shared chat request through that provider. No automatic fallback.", color = Fr3kPalette.TextDim, fontSize = 10.sp)
+                }
+            }
+
+            Fr3kPanel(modifier = Modifier.fr3kAppear(6), title = "OpenRouter") {
                 val scope = rememberCoroutineScope()
                 val provider = app.openRouterProvider
                 val storedKey = app.secureStore.get(settings.openrouterApiKeyKey)
@@ -396,11 +415,158 @@ private fun SettingsScreen(onClose: () -> Unit) {
                 }
             }
 
-            Fr3kPanel(title = "telemetry") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(6), title = "OpenCode Go", subtitle = "alternative to OpenRouter") {
+                val scope = rememberCoroutineScope()
+                val provider = app.openCodeGoProvider
+                val storedKey = app.secureStore.get(settings.opencodegoApiKeyKey)
+                var keyInput by remember { mutableStateOf("") }
+                var modelInput by remember(provider.selectedModel()) { mutableStateOf(provider.selectedModel()) }
+                var endpointInput by remember(settings.opencodegoEndpoint) { mutableStateOf(settings.opencodegoEndpoint) }
+                var status by remember { mutableStateOf<String?>(null) }
+                var models by remember { mutableStateOf<List<com.mcpintelligence.fr3k.integrations.opencodego.OpenCodeGoModel>>(emptyList()) }
+                Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Fr3kBadge(
+                            text = if (storedKey != null) "key stored" else "key missing",
+                            color = if (storedKey != null) Fr3kPalette.Ok else Fr3kPalette.Warn,
+                        )
+                        Text(
+                            text = if (storedKey != null) maskKey(storedKey) else "add an OpenCode Go key",
+                            color = Fr3kPalette.TextDim,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = { keyInput = it },
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        placeholder = { Text("opencode-go api key", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = "SAVE KEY",
+                            onClick = {
+                                val trimmed = keyInput.trim()
+                                if (trimmed.isNotEmpty()) {
+                                    app.secureStore.put(settings.opencodegoApiKeyKey, trimmed)
+                                    keyInput = ""
+                                    status = "key saved"
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kGhostButton(
+                            text = "REMOVE",
+                            onClick = { app.secureStore.remove(settings.opencodegoApiKeyKey); status = "key removed" },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kOutlineButton(
+                            text = "VALIDATE",
+                            onClick = {
+                                scope.launch {
+                                    status = "validating…"
+                                    val h = provider.health()
+                                    status = if (h.online) "ONLINE — ${h.model ?: "?"} — ${h.message}" else "OFFLINE — ${h.message}"
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    status?.let {
+                        Text(it, color = if (it.startsWith("ONLINE") || it == "key saved") Fr3kPalette.Ok else Fr3kPalette.Err, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    }
+                    Text("endpoint:", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    OutlinedTextField(
+                        value = endpointInput,
+                        onValueChange = { endpointInput = it },
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Fr3kGhostButton(
+                        text = "SAVE ENDPOINT",
+                        onClick = {
+                            val e = endpointInput.trim()
+                            if (e.isNotEmpty()) {
+                                app.settings.update { it.copy(opencodegoEndpoint = e) }
+                                status = "endpoint saved"
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text("model: ${provider.selectedModel()}", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                    OutlinedTextField(
+                        value = modelInput,
+                        onValueChange = { modelInput = it },
+                        textStyle = TextStyle(color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp),
+                        placeholder = { Text("opencode-go/<model-id>", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp) },
+                        shape = Fr3kFieldShape,
+                        colors = fr3kFieldColors(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                        Fr3kButton(
+                            text = "USE MODEL",
+                            onClick = {
+                                val m = modelInput.trim()
+                                if (m.isNotEmpty()) {
+                                    provider.setModel(m)
+                                    app.settings.update { it.copy(opencodegoModel = m) }
+                                    status = "model set"
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        Fr3kOutlineButton(
+                            text = "REFRESH",
+                            onClick = {
+                                scope.launch {
+                                    status = "refreshing…"
+                                    models = provider.refreshModels().getOrDefault(emptyList())
+                                    status = "${models.size} models cached"
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (models.isNotEmpty()) {
+                        models.take(6).forEach { m ->
+                            Fr3kRowItem(
+                                label = m.id,
+                                accent = Fr3kPalette.Text,
+                                onClick = {
+                                    provider.setModel(m.id)
+                                    app.settings.update { it.copy(opencodegoModel = m.id) }
+                                    modelInput = m.id
+                                    status = "model selected"
+                                },
+                                trailing = { Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 14.sp) },
+                            )
+                        }
+                    }
+                }
+            }
+
+            VoiceAssistantPanel()
+
+            Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "telemetry") {
                 Toggle("telemetry enabled (crash-free only)", telemetry) { v -> telemetry = v; app.settings.update { it.copy(telemetryEnabled = v) } }
             }
 
-            Fr3kPanel(title = "current context") {
+            Fr3kPanel(modifier = Modifier.fr3kAppear(8), title = "current context") {
                 Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
                     Text(ctx.summary(), color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
                     Fr3kGhostButton(
@@ -414,7 +580,7 @@ private fun SettingsScreen(onClose: () -> Unit) {
             Fr3kOutlineButton(
                 text = "CLOSE",
                 onClick = onClose,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().fr3kAppear(9),
                 accent = Fr3kPalette.TextDim,
             )
         }
@@ -438,7 +604,11 @@ private fun Toggle(label: String, value: Boolean, onChange: (Boolean) -> Unit) {
         label = "toggleTrack",
     )
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(Fr3kDimens.RadiusChip))
+            .background(if (value) Fr3kPalette.Ok.copy(alpha = 0.06f) else Fr3kPalette.SurfaceLow)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

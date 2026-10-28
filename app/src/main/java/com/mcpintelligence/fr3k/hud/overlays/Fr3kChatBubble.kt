@@ -1,6 +1,8 @@
 package com.mcpintelligence.fr3k.hud.overlays
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
@@ -20,6 +22,13 @@ import com.mcpintelligence.fr3k.core.ConsentLevel
 import com.mcpintelligence.fr3k.core.Fr3kContext
 import com.mcpintelligence.fr3k.hud.R
 import com.mcpintelligence.fr3k.integrations.hermes.HermesAskCommand
+import com.mcpintelligence.fr3k.integrations.voice.AndroidVoice
+import com.mcpintelligence.fr3k.integrations.voice.VoiceState
+import com.mcpintelligence.fr3k.ui.settings.VoiceMode
+import com.mcpintelligence.fr3k.ui.settings.VoiceModePreference
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,6 +63,7 @@ class Fr3kChatBubble(
     private val transcript: TextView
     private val input: EditText
     private val send: Button
+    private val mic: Button
     private val dismiss: Button
     private val header: TextView
     private val bubble: View
@@ -159,6 +169,7 @@ class Fr3kChatBubble(
             setOnClickListener {
                 val now = !TtsPreference.isEnabled(ctx)
                 TtsPreference.setEnabled(ctx, now)
+                if (!now) TtsPreference.shutdown()
                 text = if (now) "TTS●" else "TTS"
                 setTextColor(if (now) 0xFF7d3cff.toInt() else 0xFF8e8a99.toInt())
             }
@@ -221,12 +232,30 @@ class Fr3kChatBubble(
             setOnClickListener { onSend() }
         }
 
+        mic = Button(ctx).apply {
+            text = "MIC"
+            setTextColor(0xFFe8eaf2.toInt())
+            setBackgroundColor(0xFF24243a.toInt())
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
+            contentDescription = "Hold to talk"
+            setOnTouchListener { _, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> { startVoiceTurn(); true }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { stopVoiceTurn(); true }
+                    else -> false
+                }
+            }
+        }
+
         val inputRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(input, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             val sp = Space(ctx); sp.layoutParams = LinearLayout.LayoutParams(6.dp(), 1)
             addView(sp)
+            addView(mic, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(send, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
 
@@ -311,6 +340,52 @@ class Fr3kChatBubble(
         }
     }
 
+    private val speechObserver = scope.launch(Dispatchers.Main.immediate) {
+        session.finalReplies.collect { reply ->
+            // The voice turn speaks its own answer; never let both engines talk at once.
+            if (isAttached && voice?.isActive != true) TtsPreference.speakIfEnabled(host.context, reply)
+        }
+    }
+
+    /** Lazily built on first push-to-talk so the bubble costs nothing until used. */
+    private var voice: AndroidVoice? = null
+
+    private fun voiceEngine(): AndroidVoice = voice ?: AndroidVoice(host.context, session, onState = { state, message ->
+        mic.text = when (state) {
+            VoiceState.LISTENING -> "LISTEN"
+            VoiceState.THINKING -> "WAIT"
+            VoiceState.SPEAKING -> "TALK"
+            VoiceState.ERROR, VoiceState.IDLE -> "MIC"
+        }
+        mic.contentDescription = message
+    }).also { voice = it }
+
+    private fun startVoiceTurn() {
+        val ctx = host.context
+        if (VoiceModePreference.read(ctx) == VoiceMode.XIAOZHI) {
+            Toast.makeText(ctx, "Xiaozhi voice is in Settings → voice assistant", Toast.LENGTH_SHORT).show()
+            openVoiceSettings()
+            return
+        }
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(ctx, "Allow the microphone in Settings → voice assistant", Toast.LENGTH_SHORT).show()
+            openVoiceSettings()
+            return
+        }
+        voiceEngine().startFromUserGesture()
+    }
+
+    private fun stopVoiceTurn() { voice?.stopListening() }
+
+    private fun openVoiceSettings() {
+        runCatching {
+            host.context.startActivity(
+                Intent(host.context, com.mcpintelligence.fr3k.ui.settings.SettingsActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
     override fun show() {
         if (isAttached) return
         try {
@@ -337,6 +412,9 @@ class Fr3kChatBubble(
 
     override fun hide() {
         if (!isAttached) return
+        runCatching { voice?.close() }
+        voice = null
+        TtsPreference.shutdown()
         try {
             host.remove(root)
             isAttached = false

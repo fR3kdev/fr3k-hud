@@ -128,7 +128,7 @@ class NoBlockingUiContractTest {
     }
 
     private fun readFile(relativePath: String): String {
-        val f = java.io.File("/home/parrot/repos/fr3k-hud/$relativePath")
+        val f = java.io.File(System.getProperty("fr3k.appDir"), relativePath.removePrefix("app/"))
         if (!f.exists()) error("missing file: ${f.absolutePath}")
         return f.readText()
     }

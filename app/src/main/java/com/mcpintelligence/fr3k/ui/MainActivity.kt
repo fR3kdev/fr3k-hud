@@ -44,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -93,7 +94,7 @@ class MainActivity : ComponentActivity() {
         val activity = this
         setContent {
             Fr3kTheme {
-                Box(modifier = Modifier.fillMaxSize().background(Fr3kPalette.Bg)) {
+                Fr3kAmbientBackground {
                     DashboardScreen(
                         activity = activity,
                         onOpenPalette = { activity.startActivity(Intent(activity, CommandPaletteActivity::class.java)) },
@@ -177,6 +178,8 @@ fun DashboardScreen(
         verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd),
     ) {
         Header()
+        // Voice is the primary entry point: first thing on the landing page, above everything else.
+        com.mcpintelligence.fr3k.ui.voice.VoiceHub(modifier = Modifier.fr3kAppear(1))
         PrimaryActions(
             onOpenPalette = onOpenPalette,
             onAskAboutThis = onAskAboutThis,
@@ -205,8 +208,9 @@ fun DashboardScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Fr3kPalette.Border.copy(alpha = 0.5f), RoundedCornerShape(Fr3kDimens.RadiusRow))
-                    .background(Fr3kPalette.SurfaceLow, RoundedCornerShape(Fr3kDimens.RadiusRow))
+                    .shadow(Fr3kDimens.ElevLow, RoundedCornerShape(Fr3kDimens.RadiusRow), clip = false, ambientColor = Color.Transparent, spotColor = Fr3kPalette.Accent.copy(alpha = 0.3f))
+                    .border(1.dp, Fr3kPalette.Accent.copy(alpha = 0.35f), RoundedCornerShape(Fr3kDimens.RadiusRow))
+                    .background(Brush.verticalGradient(listOf(Fr3kPalette.SurfaceHigh.copy(alpha = 0.5f), Fr3kPalette.SurfaceLow)), RoundedCornerShape(Fr3kDimens.RadiusRow))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -264,32 +268,20 @@ private fun resultColor(line: String): Color = when {
 
 @Composable
 private fun Header() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingMd, Alignment.End),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Fr3kGradientText(
-                text = "▰ FR3K HUD",
-                style = MaterialTheme.typography.displaySmall,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "v${Fr3kApplication.get().identity.appVersion} · android capability layer",
-                style = MaterialTheme.typography.labelSmall,
-                color = Fr3kPalette.TextDim,
-            )
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(top = 2.dp),
-        ) {
-            StatusDot(status = DeviceStatus.ONLINE, size = 8.dp)
-            Fr3kBadge(text = "online", color = Fr3kPalette.Ok)
-        }
-    }
+    Fr3kHeroHeader(
+        title = "▰ FR3K HUD",
+        subtitle = "v${Fr3kApplication.get().identity.appVersion} · android capability layer",
+        modifier = Modifier.fr3kAppear(0),
+        trailing = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                StatusDot(status = DeviceStatus.ONLINE, size = 8.dp)
+                Fr3kBadge(text = "online", color = Fr3kPalette.Ok)
+            }
+        },
+    )
 }
 
 @Composable
@@ -299,7 +291,7 @@ private fun PrimaryActions(
     onClipboard: () -> Unit,
     onScreenshot: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm), modifier = Modifier.fr3kAppear(1)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
             Fr3kButton(text = "PALETTE", onClick = onOpenPalette, modifier = Modifier.weight(1f))
             Fr3kOutlineButton(text = "ASK", onClick = onAskAboutThis, modifier = Modifier.weight(1f))
@@ -319,7 +311,7 @@ private fun SuggestionsPanel(
     onRun: (com.mcpintelligence.fr3k.core.Fr3kCommand) -> Unit,
 ) {
     val app = Fr3kApplication.get()
-    Fr3kPanel(title = "suggestions", subtitle = "profile: $profile") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(2), title = "suggestions", subtitle = "profile: $profile") {
         if (suggestions.isEmpty()) {
             Text("no suggestions for current app", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
         } else {
@@ -361,7 +353,7 @@ private fun SuggestionsPanel(
 
 @Composable
 private fun ContextPanel(summary: String) {
-    Fr3kPanel(title = "context engine") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(3), title = "context engine") {
         Text(
             text = summary.ifEmpty { "no context yet — share, copy, or open an app" },
             color = if (summary.isEmpty()) Fr3kPalette.TextDim else Fr3kPalette.Text,
@@ -373,7 +365,7 @@ private fun ContextPanel(summary: String) {
 @Composable
 private fun IdentityPanel() {
     val id = Fr3kApplication.get().identity
-    Fr3kPanel(title = "identity") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(4), title = "identity") {
         KeyValueRow("device", id.deviceId)
         KeyValueRow("android", id.androidId.take(16) + "…")
         KeyValueRow("fingerprint", id.fingerprint())
@@ -419,6 +411,7 @@ private fun OrbPanel(enabled: Boolean, onStart: () -> Unit, onStop: () -> Unit) 
         label = "orbStatus",
     )
     Fr3kPanel(
+        modifier = Modifier.fr3kAppear(5),
         title = "floating HUD",
         subtitle = if (enabled) "live" else "idle",
         accent = if (enabled) Fr3kPalette.Ok else Fr3kPalette.Accent,
@@ -466,7 +459,7 @@ private fun OrbPanel(enabled: Boolean, onStart: () -> Unit, onStop: () -> Unit) 
 
 @Composable
 private fun SecondaryActions(activity: ComponentActivity) {
-    Fr3kPanel(title = "more surfaces") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(6), title = "more surfaces") {
         Column(verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
             SecondaryRow("QUICK HUD PANEL") { activity.startActivity(Intent(activity, QuickHudActivity::class.java)) }
             SecondaryRow("INTEGRATIONS · TERMUX/SHIZUKU/LSPATCH/MORPHE/ROOT") {
@@ -497,7 +490,7 @@ private fun SecondaryRow(label: String, onClick: () -> Unit) {
 
 @Composable
 private fun CapabilitiesPanel(caps: List<Capability>) {
-    Fr3kPanel(title = "capabilities", subtitle = "${caps.size} registered") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "capabilities", subtitle = "${caps.size} registered") {
         if (caps.isEmpty()) {
             Text("none registered", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace)
         } else {
@@ -530,7 +523,7 @@ private fun CapabilitiesPanel(caps: List<Capability>) {
 
 @Composable
 private fun CommandsPanel(commands: List<com.mcpintelligence.fr3k.core.Fr3kCommand>) {
-    Fr3kPanel(title = "commands", subtitle = "${commands.size} available") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(8), title = "commands", subtitle = "${commands.size} available") {
         if (commands.isEmpty()) {
             Text("no commands available", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace)
         } else {
@@ -572,7 +565,7 @@ private fun CommandsPanel(commands: List<com.mcpintelligence.fr3k.core.Fr3kComma
 
 @Composable
 private fun FleetPanel(devices: List<DeviceManifest>) {
-    Fr3kPanel(title = "fleet", subtitle = "${devices.size} peers") {
+    Fr3kPanel(modifier = Modifier.fr3kAppear(9), title = "fleet", subtitle = "${devices.size} peers") {
         if (devices.isEmpty()) {
             Text("no peers discovered", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace)
         } else {
@@ -611,7 +604,7 @@ private fun FleetPanel(devices: List<DeviceManifest>) {
 
 @Composable
 private fun Footer() {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().fr3kAppear(10)) {
         Fr3kDivider()
         Spacer(Modifier.height(Fr3kDimens.SpacingMd))
         Text(
