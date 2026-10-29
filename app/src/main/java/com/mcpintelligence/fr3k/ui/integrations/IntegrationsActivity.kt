@@ -99,16 +99,17 @@ class IntegrationsActivity : ComponentActivity() {
     private fun buildContent(): View {
         val density = resources.displayMetrics.density
         val bg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xFF0a0a14.toInt())
-            cornerRadius = 12f * density
+            colors = intArrayOf(0xFF0A0C16.toInt(), 0xFF05060A.toInt(), 0xFF030408.toInt())
+            orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
         }
         val sectionBg = android.graphics.drawable.GradientDrawable().apply {
-            setColor(0xFF11111c.toInt())
-            setStroke((1.5f * density).toInt(), 0xFF2b2b40.toInt())
-            cornerRadius = 10f * density
+            colors = intArrayOf(0xFF151A2B.toInt(), 0xFF0E1018.toInt())
+            orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
+            setStroke(density.toInt(), 0xFF2B3350.toInt())
+            cornerRadius = 14f * density
         }
 
-        fun tv(text: String, color: Int = 0xFFcdd1e0.toInt(), sp: Float = 12f, bold: Boolean = false): TextView =
+        fun tv(text: String, color: Int = 0xFFE6ECF5.toInt(), sp: Float = 12f, bold: Boolean = false): TextView =
             TextView(this@IntegrationsActivity).apply {
                 this.text = text
                 setTextColor(color)
@@ -123,28 +124,45 @@ class IntegrationsActivity : ComponentActivity() {
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
             typeface = android.graphics.Typeface.MONOSPACE
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            setBackgroundColor(0xFF7d3cff.toInt())
+            setLetterSpacing(0.08f)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                colors = intArrayOf(0xFFB829FF.toInt(), 0xFFFF3FA4.toInt())
+                orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT
+                cornerRadius = 10f * density
+            }
+            elevation = 4f * density
             setPadding(
-                (12 * density).toInt(), (8 * density).toInt(),
-                (12 * density).toInt(), (8 * density).toInt(),
+                (14 * density).toInt(), (10 * density).toInt(),
+                (14 * density).toInt(), (10 * density).toInt(),
             )
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                topMargin = (5 * density).toInt()
+                bottomMargin = (5 * density).toInt()
+            }
             setOnClickListener { onClick(this) }
         }
 
         fun makeRow(label: String, onClick: () -> Unit): TextView = TextView(this@IntegrationsActivity).apply {
-            text = label
-            setTextColor(0xFFcdd1e0.toInt())
+            text = "▸  $label"
+            setTextColor(0xFFE6ECF5.toInt())
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setLetterSpacing(0.06f)
             val rowBg = android.graphics.drawable.GradientDrawable().apply {
-                setColor(0xFF11111c.toInt())
-                setStroke((1 * density).toInt(), 0xFF2b2b40.toInt())
-                cornerRadius = 8f * density
+                colors = intArrayOf(0xFF161B2B.toInt(), 0xFF0E1018.toInt())
+                orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
+                setStroke(density.toInt(), 0xFF3A2A55.toInt())
+                cornerRadius = 12f * density
             }
             background = rowBg
+            elevation = 2f * density
             setPadding(
-                (14 * density).toInt(), (12 * density).toInt(),
-                (14 * density).toInt(), (12 * density).toInt(),
+                (14 * density).toInt(), (13 * density).toInt(),
+                (14 * density).toInt(), (13 * density).toInt(),
             )
             isClickable = true
             isFocusable = true
@@ -164,11 +182,27 @@ class IntegrationsActivity : ComponentActivity() {
         fun section(title: String, body: View): View = LinearLayout(this@IntegrationsActivity).apply {
             orientation = LinearLayout.VERTICAL
             background = sectionBg
+            elevation = 3f * density
             setPadding(
                 (16 * density).toInt(), (14 * density).toInt(),
                 (16 * density).toInt(), (14 * density).toInt(),
             )
-            addView(tv(title, 0xFF7d3cff.toInt(), 12f, true))
+            val head = LinearLayout(this@IntegrationsActivity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            head.addView(View(this@IntegrationsActivity).apply {
+                layoutParams = LinearLayout.LayoutParams((3 * density).toInt(), (14 * density).toInt()).apply {
+                    marginEnd = (8 * density).toInt()
+                }
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    colors = intArrayOf(0xFFB829FF.toInt(), 0x4028E0B0.toInt())
+                    orientation = android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM
+                    cornerRadius = 2f * density
+                }
+            })
+            head.addView(tv(title, 0xFFB829FF.toInt(), 12f, true))
+            addView(head)
             addView(this@IntegrationsActivity.spacer(density, 6))
             addView(body)
         }
@@ -189,8 +223,19 @@ class IntegrationsActivity : ComponentActivity() {
         container.addView(content)
 
         with(content) {
-            addView(tv("FR3K ▸ INTEGRATIONS", 0xFF7d3cff.toInt(), 14f, true))
-            addView(this@IntegrationsActivity.spacer(density, 12))
+            addView(tv("FR3K ▸ INTEGRATIONS", 0xFFB829FF.toInt(), 18f, true))
+            addView(View(this@IntegrationsActivity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    (2 * density).toInt(),
+                ).apply { topMargin = (8 * density).toInt() }
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    colors = intArrayOf(0xFFB829FF.toInt(), 0x6628E0B0, 0x0005060A)
+                    orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT
+                    cornerRadius = density
+                }
+            })
+            addView(this@IntegrationsActivity.spacer(density, 14))
 
             // ----- GRANT ALL (one-tap runtime perms) -----
             addView(makeRow("GRANT ALL RUNTIME PERMISSIONS", onClick = {
@@ -218,13 +263,13 @@ class IntegrationsActivity : ComponentActivity() {
                 orientation = LinearLayout.VERTICAL
                 addView(tv(
                     "tier: 1 (user grant in Termux)",
-                    if (termuxUsable) 0xFF4ade80.toInt() else 0xFFfbbf24.toInt(), 11f,
+                    if (termuxUsable) 0xFF28E0B0.toInt() else 0xFFFFAA33.toInt(), 11f,
                 ))
                 addView(this@IntegrationsActivity.spacer(density, 4))
-                addView(tv("installed: ${if (termuxAvail) "yes" else "no — install com.termux + com.termux.api"}", 0xFF9ca3af.toInt(), 11f))
-                addView(tv("RUN_COMMAND granted: ${if (termuxGranted) "yes" else "no"}", 0xFF9ca3af.toInt(), 11f))
+                addView(tv("installed: ${if (termuxAvail) "yes" else "no — install com.termux + com.termux.api"}", 0xFF8A93A6.toInt(), 11f))
+                addView(tv("RUN_COMMAND granted: ${if (termuxGranted) "yes" else "no"}", 0xFF8A93A6.toInt(), 11f))
                 addView(tv("probe (live): ${if (termuxUsable) "yes" else "no"}",
-                    if (!termuxUsable && termuxAvail) 0xFFfb923c.toInt() else 0xFF9ca3af.toInt(), 11f))
+                    if (!termuxUsable && termuxAvail) 0xFFFFAA33.toInt() else 0xFF8A93A6.toInt(), 11f))
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (!termuxAvail) {
                     addView(makeButton("OPEN PLAY STORE → TERMUX") { _ ->
@@ -288,13 +333,13 @@ class IntegrationsActivity : ComponentActivity() {
             }
             val shBody = LinearLayout(this@IntegrationsActivity).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(tv("tier: 2 (Shizuku permission grant)", if (shPing) 0xFF4ade80.toInt() else 0xFFfbbf24.toInt(), 11f))
+                addView(tv("tier: 2 (Shizuku permission grant)", if (shPing) 0xFF28E0B0.toInt() else 0xFFFFAA33.toInt(), 11f))
                 addView(this@IntegrationsActivity.spacer(density, 4))
-                addView(tv("Shizuku installed: ${if (shIn) "yes" else "no"}", 0xFF9ca3af.toInt(), 11f))
+                addView(tv("Shizuku installed: ${if (shIn) "yes" else "no"}", 0xFF8A93A6.toInt(), 11f))
                 addView(tv("Shizuku manager running: ${if (shManager) "yes" else "no"}",
-                    if (!shManager && shIn) 0xFFfb923c.toInt() else 0xFF9ca3af.toInt(), 11f))
-                addView(tv("Shizuku authorised: ${if (shAuth) "yes" else "no"}", 0xFF9ca3af.toInt(), 11f))
-                addView(tv("IPC link live: ${if (shPing) "yes" else "no"}", 0xFF9ca3af.toInt(), 11f))
+                    if (!shManager && shIn) 0xFFFFAA33.toInt() else 0xFF8A93A6.toInt(), 11f))
+                addView(tv("Shizuku authorised: ${if (shAuth) "yes" else "no"}", 0xFF8A93A6.toInt(), 11f))
+                addView(tv("IPC link live: ${if (shPing) "yes" else "no"}", 0xFF8A93A6.toInt(), 11f))
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (!shIn) {
                     addView(makeButton("OPEN PLAY STORE → SHIZUKU") { _ ->
@@ -310,7 +355,7 @@ class IntegrationsActivity : ComponentActivity() {
                         "SUI Manager is installed but the service is not running. " +
                         "Open the Shizuku app and tap \"Start\" — once the " +
                         "binder is live, return here and grant permission.",
-                        0xFFfb923c.toInt(), 11f,
+                        0xFFFFAA33.toInt(), 11f,
                     ))
                     addView(this@IntegrationsActivity.spacer(density, 4))
                     addView(makeButton("OPEN SHIZUKU APP") { _ ->
@@ -354,15 +399,15 @@ class IntegrationsActivity : ComponentActivity() {
             val lspMgrPkg = lspatch.managerPackage()
             val lspBody = LinearLayout(this@IntegrationsActivity).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(tv("tier: 3 (LSPatch host-app repackage — no root needed)", if (lspModules.isNotEmpty()) 0xFF4ade80.toInt() else 0xFFfbbf24.toInt(), 11f))
+                addView(tv("tier: 3 (LSPatch host-app repackage — no root needed)", if (lspModules.isNotEmpty()) 0xFF28E0B0.toInt() else 0xFFFFAA33.toInt(), 11f))
                 addView(this@IntegrationsActivity.spacer(density, 4))
                 addView(tv(
                     "manager installed: ${if (lspMgr) "yes (${lspMgrPkg ?: "?"})" else "no — install JingMatrix LSPatch (no root required)"}",
-                    0xFF9ca3af.toInt(), 11f,
+                    0xFF8A93A6.toInt(), 11f,
                 ))
-                addView(tv("modules: ${lspModules.size} discovered", 0xFF9ca3af.toInt(), 11f))
+                addView(tv("modules: ${lspModules.size} discovered", 0xFF8A93A6.toInt(), 11f))
                 for (m in lspModules.take(3)) {
-                    addView(tv("  • ${m.id}  v${m.version}  (${if (m.isEnabled) "enabled" else "DISABLED"})", 0xFF9ca3af.toInt(), 10f))
+                    addView(tv("  • ${m.id}  v${m.version}  (${if (m.isEnabled) "enabled" else "DISABLED"})", 0xFF8A93A6.toInt(), 10f))
                 }
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (!lspMgr) {
@@ -408,11 +453,11 @@ class IntegrationsActivity : ComponentActivity() {
             val morphePatches = morphe.loadAllAvailable(this@IntegrationsActivity)
             val morpheBody = LinearLayout(this@IntegrationsActivity).apply {
                 orientation = LinearLayout.VERTICAL
-                addView(tv("tier: 3 (Morphe patch repo)", if (morphePatches.isNotEmpty()) 0xFF4ade80.toInt() else 0xFFfbbf24.toInt(), 11f))
+                addView(tv("tier: 3 (Morphe patch repo)", if (morphePatches.isNotEmpty()) 0xFF28E0B0.toInt() else 0xFFFFAA33.toInt(), 11f))
                 addView(this@IntegrationsActivity.spacer(density, 4))
-                addView(tv("patches: ${morphePatches.size} loaded", 0xFF9ca3af.toInt(), 11f))
+                addView(tv("patches: ${morphePatches.size} loaded", 0xFF8A93A6.toInt(), 11f))
                 for (p in morphePatches.take(3)) {
-                    addView(tv("  • ${p.id}  → ${p.targetPackage}", 0xFF9ca3af.toInt(), 10f))
+                    addView(tv("  • ${p.id}  → ${p.targetPackage}", 0xFF8A93A6.toInt(), 10f))
                 }
                 addView(this@IntegrationsActivity.spacer(density, 8))
                 if (PermissionRegistry.firstMissing(this@IntegrationsActivity, PermissionRegistry.Feature.MORPHE) != null) {
@@ -443,18 +488,18 @@ class IntegrationsActivity : ComponentActivity() {
                 orientation = LinearLayout.VERTICAL
                 addView(tv(
                     "tier: 4 (LSPosed runtime — ROOT ONLY, OPTIONAL)",
-                    if (v.rootAvailable) 0xFF4ade80.toInt() else 0xFFfbbf24.toInt(), 11f,
+                    if (v.rootAvailable) 0xFF28E0B0.toInt() else 0xFFFFAA33.toInt(), 11f,
                 ))
                 addView(this@IntegrationsActivity.spacer(density, 4))
                 if (!v.rootAvailable) {
                     addView(tv(
                         "Root not available. Skip this section — standalone LSPatch (above) works without root.",
-                        0xFF9ca3af.toInt(), 11f,
+                        0xFF8A93A6.toInt(), 11f,
                     ))
                 } else {
-                    addView(tv("root available: yes  (su at ${v.suPath ?: "?"})", 0xFF4ade80.toInt(), 11f))
-                    addView(tv("Vector pkg: ${v.vectorPackage ?: "none"}", 0xFF9ca3af.toInt(), 11f))
-                    addView(tv("LSPatch modules: ${v.lspatchPackages.size}", 0xFF9ca3af.toInt(), 11f))
+                    addView(tv("root available: yes  (su at ${v.suPath ?: "?"})", 0xFF28E0B0.toInt(), 11f))
+                    addView(tv("Vector pkg: ${v.vectorPackage ?: "none"}", 0xFF8A93A6.toInt(), 11f))
+                    addView(tv("LSPatch modules: ${v.lspatchPackages.size}", 0xFF8A93A6.toInt(), 11f))
                     addView(this@IntegrationsActivity.spacer(density, 8))
                     addView(makeButton("SMOKE-TEST: su -c 'id'") { btn ->
                         btn.isEnabled = false
@@ -473,7 +518,7 @@ class IntegrationsActivity : ComponentActivity() {
             container.addView(section("VECTOR / ROOT (TIER 4) — optional, root only", vBody))
             container.addView(this@IntegrationsActivity.spacer(density, 24))
 
-            addView(makeButton("CLOSE") { _ -> finish() })
+            container.addView(makeButton("CLOSE") { _ -> finish() })
         }
 
         val scroll = android.widget.ScrollView(this@IntegrationsActivity).apply {
@@ -553,13 +598,13 @@ class IntegrationsActivity : ComponentActivity() {
 
         val container = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(0xFF11111c.toInt())
+            setBackgroundColor(0xFF0E1018.toInt())
             setPadding(pad, pad, pad, pad)
         }
 
         container.addView(android.widget.TextView(this).apply {
             text = title
-            setTextColor(0xFF7d3cff.toInt())
+            setTextColor(0xFFB829FF.toInt())
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = android.graphics.Typeface.MONOSPACE
             setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -572,7 +617,7 @@ class IntegrationsActivity : ComponentActivity() {
 
         val text = android.widget.TextView(this).apply {
             text = body
-            setTextColor(0xFFcdd1e0.toInt())
+            setTextColor(0xFFE6ECF5.toInt())
             setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = android.graphics.Typeface.MONOSPACE
             setTextIsSelectable(true)   // long-press to select
@@ -601,10 +646,16 @@ class IntegrationsActivity : ComponentActivity() {
                 setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
                 typeface = android.graphics.Typeface.MONOSPACE
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setBackgroundColor(0xFF7d3cff.toInt())
+                setLetterSpacing(0.08f)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    colors = intArrayOf(0xFFB829FF.toInt(), 0xFFFF3FA4.toInt())
+                    orientation = android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT
+                    cornerRadius = 10f * density
+                }
+                elevation = 3f * density
                 setPadding(
-                    (12 * density).toInt(), (8 * density).toInt(),
-                    (12 * density).toInt(), (8 * density).toInt(),
+                    (14 * density).toInt(), (10 * density).toInt(),
+                    (14 * density).toInt(), (10 * density).toInt(),
                 )
                 setOnClickListener { onClick() }
             }
@@ -630,7 +681,7 @@ class IntegrationsActivity : ComponentActivity() {
             .create()
         this.dlg = dlg
         dlg.window?.setBackgroundDrawable(
-            android.graphics.drawable.ColorDrawable(0xFF11111c.toInt())
+            android.graphics.drawable.ColorDrawable(0xFF0E1018.toInt())
         )
         dlg.show()
     }

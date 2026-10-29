@@ -89,12 +89,12 @@ internal fun XiaozhiVoiceControls(adapter: XiaozhiVoiceAdapter?) {
                 onClick = { androidTts = true; adapter.setAndroidTtsOutput(true) },
                 enabled = !androidTts,
                 modifier = Modifier.weight(1f),
-            ) { Text("ANDROID") }
+            ) { Text(if (androidTts) "ANDROID · ACTIVE" else "ANDROID") }
             Button(
                 onClick = { androidTts = false; adapter.setAndroidTtsOutput(false) },
                 enabled = androidTts,
                 modifier = Modifier.weight(1f),
-            ) { Text("XIAOZHI") }
+            ) { Text(if (androidTts) "XIAOZHI" else "XIAOZHI · ACTIVE") }
         }
         Text(
             if (androidTts) "Replies are spoken by the Android system voice." else "Replies play the Xiaozhi server voice.",

@@ -62,7 +62,12 @@ playback, mic failure, both output modes, frame forwarding, disconnect/reconnect
   not bound yet, so no voice session is granted until that code is entered in the Xiaozhi control panel.
 - Raw transcript: `evidence/2026-10-29/xiaozhi-live-probe.txt`.
 
-This is why the binding instruction now reaches the operator verbatim instead of a generic error.
+In the app the OTA answer already carries an `activation` block, so `BootstrapClient` returns
+`ActivationCode`, the panel shows `Activation code: <code>` and no websocket is opened while activation is
+pending (verified on the emulator, `evidence/2026-10-29/xiaozhi-live-ui/`). The `ServerNotice` path covers
+the other ordering — OTA returns a websocket block and the socket then refuses the device — which is
+exactly what the host probe observed; if that text ever arrives it now reaches the operator instead of a
+generic "voice channel failed".
 
 ## Still unverified
 

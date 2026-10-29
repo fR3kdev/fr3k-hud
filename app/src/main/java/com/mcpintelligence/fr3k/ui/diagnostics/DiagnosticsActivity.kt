@@ -22,8 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,9 +43,17 @@ import com.mcpintelligence.fr3k.core.DiagnosticsExporter
 import com.mcpintelligence.fr3k.hud.HudOverlayService
 import com.mcpintelligence.fr3k.integrations.termux.TermuxHealth
 import com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher
+import com.mcpintelligence.fr3k.ui.Fr3kAmbientBackground
 import com.mcpintelligence.fr3k.ui.Fr3kBadge
+import com.mcpintelligence.fr3k.ui.Fr3kButton
+import com.mcpintelligence.fr3k.ui.Fr3kDimens
+import com.mcpintelligence.fr3k.ui.Fr3kGhostButton
+import com.mcpintelligence.fr3k.ui.Fr3kHeroHeader
+import com.mcpintelligence.fr3k.ui.Fr3kMeterBar
 import com.mcpintelligence.fr3k.ui.Fr3kPalette
+import com.mcpintelligence.fr3k.ui.Fr3kPanel
 import com.mcpintelligence.fr3k.ui.Fr3kTheme
+import com.mcpintelligence.fr3k.ui.fr3kAppear
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -223,26 +229,26 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
     }
     LaunchedEffect(Unit) { runFullDiagnostic() }
 
-    Box(modifier = Modifier.fillMaxSize().background(Fr3kPalette.Bg)) {
+    Fr3kAmbientBackground {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Fr3kDimens.SpacingLg),
+            verticalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
         ) {
-            Text(
-                text = "DIAGNOSTICS",
-                color = Fr3kPalette.Accent,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
+            Fr3kHeroHeader(
+                title = "DIAGNOSTICS",
+                subtitle = "observability · permissions · live probes",
+                modifier = Modifier.fr3kAppear(0),
+                trailing = { Fr3kBadge(text = "live", color = Fr3kPalette.Ok) },
             )
-            Spacer(Modifier.height(8.dp))
 
-            Section("SYSTEM DIAGNOSTICS · PASS/WARN/FAIL") {
+            Section("SYSTEM DIAGNOSTICS · PASS/WARN/FAIL", index = 1) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = if (diagRunning) "probing…" else "agent · termux · browser · blackwave · hud",
@@ -250,13 +256,15 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp,
                     )
-                    Button(
+                    Fr3kButton(
+                        text = "RUN FULL",
                         onClick = { runFullDiagnostic() },
                         enabled = !diagRunning,
-                        colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                    ) {
-                        Text("RUN FULL DIAGNOSTIC", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    }
+                    )
+                }
+                if (diagRunning) {
+                    Spacer(Modifier.height(Fr3kDimens.SpacingSm))
+                    Fr3kMeterBar(fraction = 0f, indeterminate = true)
                 }
                 Spacer(Modifier.height(6.dp))
                 if (diagRows.isEmpty()) {
@@ -264,8 +272,11 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                 } else {
                     diagRows.forEach { row ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp, horizontal = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm),
                         ) {
                             Text(
                                 text = row.label.uppercase(),
@@ -273,7 +284,7 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.width(70.dp),
+                                modifier = Modifier.width(72.dp),
                             )
                             Text(
                                 text = row.detail,
@@ -295,49 +306,45 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                 }
             }
 
-            Section("APPLICATION") { kv(bundle.app) }
-            Section("DEVICE") { kv(bundle.device) }
-            Section("PERMISSIONS") {
+            Section("APPLICATION", index = 2) { kv(bundle.app) }
+            Section("DEVICE", index = 3) { kv(bundle.device) }
+            Section("PERMISSIONS", index = 4) {
                 bundle.permissions.forEach { (k, v) ->
-                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(k, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.weight(1f))
                         if (v) {
-                            Text(
-                                text = "GRANTED",
-                                color = Fr3kPalette.Ok,
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 10.sp,
-                            )
+                            Fr3kBadge(text = "granted ✓", color = Fr3kPalette.Ok)
                         } else {
-                            // Each denied perm gets a one-tap "GRANT" button
-                            // that fires the standard request flow. Special
-                            // permissions (overlay, notification-listener,
-                            // write-settings, …) go to their dedicated
-                            // Settings screen instead.
-                            Button(
+                            // Each denied perm keeps its one-tap GRANT action:
+                            // normal runtime perms fire the OS dialog, special
+                            // perms go to their dedicated Settings screen.
+                            Fr3kButton(
+                                text = "GRANT",
                                 onClick = { activity?.requestPermission(k) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                            ) {
-                                Text("GRANT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                            }
+                            )
                         }
                     }
                 }
             }
-            Section("FOREGROUND SERVICES") { list_(foreground) }
-            Section("CAPABILITIES (${caps.size})") { list_(caps.keys.sorted()) }
-            Section("PLUGINS") { list_(plugins.map { (id, status) -> "$id → $status" }) }
-            Section("AUTOMATIONS (${automations.size})") {
+            Section("FOREGROUND SERVICES", index = 5) { list_(foreground) }
+            Section("CAPABILITIES (${caps.size})", index = 6) { list_(caps.keys.sorted()) }
+            Section("PLUGINS", index = 7) { list_(plugins.map { (id, status) -> "$id → $status" }) }
+            Section("AUTOMATIONS (${automations.size})", index = 8) {
                 list_(automations.map { "${it.id} → ${it.trigger.type}" })
             }
-            Section("RECENT AUTOMATION LOGS") {
+            Section("RECENT AUTOMATION LOGS", index = 9) {
                 list_(logs.map { "${it.timestamp}: ${it.title} ${it.outcome}" })
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Fr3kDimens.SpacingSm))
 
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
+            Row(modifier = Modifier.fillMaxWidth().fr3kAppear(10), horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+                Fr3kButton(
+                    text = "EXPORT BUNDLE",
                     onClick = {
                         val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
                         val file = File(dir, "fr3k-bundle-${System.currentTimeMillis()}.txt")
@@ -345,21 +352,16 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                         exportedTo = file.absolutePath
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
-                ) {
-                    Text("EXPORT", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                }
-                Button(
+                )
+                Fr3kGhostButton(
+                    text = "CLOSE",
                     onClick = onClose,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Surface, contentColor = Fr3kPalette.Text),
-                ) {
-                    Text("CLOSE", fontFamily = FontFamily.Monospace)
-                }
+                )
             }
 
             if (exportedTo != null) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Fr3kDimens.SpacingSm))
                 Text(
                     text = "exported → $exportedTo",
                     color = Fr3kPalette.Ok,
@@ -369,15 +371,14 @@ private fun DiagnosticsScreen(refreshTick: kotlinx.coroutines.flow.StateFlow<Lon
                 )
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(Fr3kDimens.Spacing2xl))
         }
     }
 }
 
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
-    Spacer(Modifier.height(6.dp))
-    com.mcpintelligence.fr3k.ui.Fr3kPanel(title = title.lowercase()) {
+private fun Section(title: String, index: Int = 0, content: @Composable () -> Unit) {
+    Fr3kPanel(modifier = Modifier.fillMaxWidth().fr3kAppear(index), title = title.lowercase()) {
         Column { content() }
     }
 }
@@ -386,25 +387,35 @@ private fun Section(title: String, content: @Composable () -> Unit) {
 private fun kv(map: Map<String, String>) {
     Column {
         map.forEach { (k, v) ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Fr3kDimens.RadiusChip))
+                    .background(Fr3kPalette.SurfaceLow.copy(alpha = 0.5f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(k.uppercase(), color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                 Text(v, color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 10.sp, modifier = Modifier.padding(start = 8.dp))
             }
+            Spacer(Modifier.height(3.dp))
         }
     }
 }
 
 @Composable
 private fun list_(items: List<String>) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         items.forEach { item ->
-            Text(
-                text = item,
-                color = Fr3kPalette.Text,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("›", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 11.sp, modifier = Modifier.width(10.dp))
+                Text(
+                    text = item,
+                    color = Fr3kPalette.Text,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 10.sp,
+                )
+            }
         }
     }
 }
