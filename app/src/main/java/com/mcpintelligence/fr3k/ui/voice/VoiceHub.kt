@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +31,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mcpintelligence.fr3k.Fr3kApplication
 import com.mcpintelligence.fr3k.integrations.voice.AndroidVoice
 import com.mcpintelligence.fr3k.integrations.voice.VoiceChecklist
@@ -51,12 +55,17 @@ import com.mcpintelligence.fr3k.ui.Fr3kPalette
  * operator through fixing that before pretending to listen.
  */
 @Composable
-fun VoiceHub(modifier: Modifier = Modifier) {
+fun VoiceHub(
+    modifier: Modifier = Modifier,
+    /** Where the "provider" step sends the operator; the onboarding keeps them inside setup. */
+    onOpenProvider: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val main = remember { Handler(Looper.getMainLooper()) }
     val app = remember { Fr3kApplication.get() }
     val selectedSettings by app.settings.settings.collectAsState()
     val session = remember { app.agentSession }
+    val lifecycleOwner = LocalLifecycleOwner.current
     var showHermesSetup by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf(VoiceState.IDLE) }
     var message by remember { mutableStateOf("Press start, then speak") }
@@ -73,6 +82,7 @@ fun VoiceHub(modifier: Modifier = Modifier) {
     var muted by remember { mutableStateOf(false) }
     var typed by remember { mutableStateOf("") }
     var pitch by remember { mutableStateOf(com.mcpintelligence.fr3k.voice.VoiceTuning.pitch(context)) }
+    val grounding = remember { mutableStateOf<String?>(null) }
     val voice = remember(session) {
         AndroidVoice(context, session, onState = { newState, text ->
             main.post {
@@ -81,7 +91,7 @@ fun VoiceHub(modifier: Modifier = Modifier) {
                 if (newState == VoiceState.ERROR) lastReply = null
                 if (newState == VoiceState.ERROR || newState == VoiceState.IDLE) conversing = false
             }
-        })
+        }, pageContext = { grounding.value })
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         voice.onPermissionResult(granted)
@@ -93,6 +103,20 @@ fun VoiceHub(modifier: Modifier = Modifier) {
     DisposableEffect(voice) {
         refresh()
         onDispose { runCatching { voice.close() } }
+    }
+    DisposableEffect(lifecycleOwner, voice) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> if (voice.isActive) voice.cancel()
+                Lifecycle.Event.ON_RESUME -> {
+                    progress = SetupAndroid.progress(context)
+                    refresh()
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     // Spoken greeting on open: one phrase tests engine, language and audio together.
     LaunchedEffect(voice) {
@@ -121,6 +145,16 @@ fun VoiceHub(modifier: Modifier = Modifier) {
     )
     val nextItem = SetupWalkthrough.next(progress, facts)
     val needsSetup = nextItem != null || !VoiceChecklist.ready(device) || welcomeFailed
+    val location = if (onOpenProvider != null) "onboarding voice step" else "settings voice panel"
+    val snapshot = "Current HUD surface: $location. Next setup item: ${nextItem?.id ?: "none reported"}. " +
+        "Microphone permission: ${facts.microphone}. Provider key configured: ${facts.provider}. " +
+        "Speech and recognizer readiness may be unverified. Visible controls and external screens are unknown."
+    SideEffect { grounding.value = snapshot }
+    var previousGrounding by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(snapshot) {
+        if (previousGrounding != null && previousGrounding != snapshot && voice.isActive) voice.cancel()
+        previousGrounding = snapshot
+    }
 
     Column(
         modifier = modifier
@@ -149,14 +183,16 @@ fun VoiceHub(modifier: Modifier = Modifier) {
                         )
                         Button(
                             onClick = {
-                                runCatching {
+                                val jump = onOpenProvider
+                                if (jump != null) jump()
+                                else runCatching {
                                     context.startActivity(android.content.Intent(context, com.mcpintelligence.fr3k.ui.settings.SettingsActivity::class.java))
                                 }
                                 progress = SetupAndroid.progress(context)
                                 refresh()
                             },
                             modifier = Modifier.fillMaxWidth(),
-                        ) { Text("OPEN AI PROVIDER SETTINGS") }
+                        ) { Text(if (onOpenProvider != null) "GO TO THE AI STEP" else "OPEN AI PROVIDER SETTINGS") }
                     }
                     "voice_tuning" -> {
                         Text("Pick the reply voice in Android's voice settings, then set speed below.", color = Fr3kPalette.TextDim, fontSize = 11.sp)
@@ -321,8 +357,9 @@ private fun deviceOf(readiness: AndroidVoice.Readiness?, context: Context): Voic
         val keys = app.settings.settings.value
         val id = app.activeProviderId
         when (id) {
-            com.mcpintelligence.fr3k.core.ProviderIds.OPENCODE_GO -> app.secureStore.get(keys.opencodeApiKeyKey) != null
+            com.mcpintelligence.fr3k.core.AiProviderPreference.OPENCODE -> app.secureStore.get(keys.opencodeApiKeyKey) != null
             com.mcpintelligence.fr3k.core.ProviderIds.OPENROUTER -> app.secureStore.get(keys.openrouterApiKeyKey) != null
+            com.mcpintelligence.fr3k.core.ProviderIds.GROQ -> app.secureStore.get(keys.groqApiKeyKey) != null
             else -> false
         }
     }.getOrDefault(false)

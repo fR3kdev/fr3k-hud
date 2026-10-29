@@ -137,10 +137,10 @@ class OnboardingActivity : ComponentActivity() {
 
 private enum class OnboardingStep(val title: String) {
     WELCOME("FR3K HUD · ONE-TIME SETUP"),
+    VOICE("CHECK YOUR VOICE"),
     PERMISSIONS("GRANT WHAT FR3K NEEDS"),
     CONNECTIONS("CONNECT AND VERIFY DEVICE TOOLS"),
     AI("CONFIGURE AI PROVIDER + MODEL"),
-    VOICE("CHECK YOUR VOICE"),
     MCP("AGENT CONNECTION · MCP DIAGNOSTICS"),
     READY("READY · FR3K HUD"),
 }
@@ -244,7 +244,7 @@ private fun OnboardingScreen(
                     )
                     Spacer(Modifier.height(32.dp))
                     Button(
-                        onClick = { step = OnboardingStep.PERMISSIONS },
+                        onClick = { step = OnboardingStep.VOICE },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Fr3kPalette.Accent, contentColor = Fr3kPalette.Bg),
                     ) { Text("BEGIN SETUP", fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold) }
@@ -273,6 +273,20 @@ private fun OnboardingScreen(
                             )
                         },
                     )
+                    Spacer(Modifier.height(10.dp))
+                    Button(onClick = {
+                        val permissions = mutableListOf(
+                            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA,
+                            Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION,
+                        )
+                        if (Build.VERSION.SDK_INT >= 31) permissions.addAll(listOf(
+                            Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN,
+                        ))
+                        if (Build.VERSION.SDK_INT >= 33) permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                        val missing = permissions.filter { activity.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+                        if (missing.isNotEmpty()) activity.requestPermissions(missing.toTypedArray(), 7014)
+                    }, modifier = Modifier.fillMaxWidth()) { Text("APPROVE ALL STANDARD PERMISSIONS") }
+                    Text("Android will ask for each permission. Overlay and other special access must be granted separately in settings.", color = Fr3kPalette.TextDim)
                     Spacer(Modifier.height(32.dp))
                     Button(
                         onClick = { step = OnboardingStep.CONNECTIONS },
@@ -396,7 +410,7 @@ private fun OnboardingScreen(
 
                 OnboardingStep.AI -> {
                     Text("Select the AI provider, store its key privately, load the live model catalogue and pick a model here.", color = Fr3kPalette.Text)
-                    listOf(AiProviderPreference.OPENCODE to "OPENCODE GO",
+                    listOf(AiProviderPreference.GROQ to "GROQ", AiProviderPreference.OPENCODE to "OPENCODE GO",
                         AiProviderPreference.OPENROUTER to "OPENROUTER").forEach { (id, title) ->
                         OutlinedButton(onClick = {
                             aiChoice = id
@@ -407,9 +421,11 @@ private fun OnboardingScreen(
                             Text((if (aiChoice == id) "● " else "○ ") + title)
                         }
                     }
-                    val credentialKey = if (aiChoice == AiProviderPreference.OPENROUTER)
-                        app.settings.settings.value.openrouterApiKeyKey
-                    else app.settings.settings.value.opencodeApiKeyKey
+                    val credentialKey = when (aiChoice) {
+                        AiProviderPreference.GROQ -> app.settings.settings.value.groqApiKeyKey
+                        AiProviderPreference.OPENROUTER -> app.settings.settings.value.openrouterApiKeyKey
+                        else -> app.settings.settings.value.opencodeApiKeyKey
+                    }
                     val hasKey = !app.secureStore.get(credentialKey).isNullOrBlank()
                     Text("API KEY: " + if (hasKey) "STORED (encrypted)" else "NOT STORED",
                         color = if (hasKey) Fr3kPalette.Ok else Fr3kPalette.Warn)
@@ -428,7 +444,12 @@ private fun OnboardingScreen(
                     Button(onClick = {
                         workScope.launch {
                             aiStatus = "Fetching models…"
-                            if (aiChoice == AiProviderPreference.OPENROUTER) {
+                            if (aiChoice == AiProviderPreference.GROQ) {
+                                app.groqProvider.models().fold(
+                                    onSuccess = { models -> aiOptions = models.map { it to it }; aiStatus = "${models.size} models loaded. Choose below." },
+                                    onFailure = { aiStatus = "Refresh failed: ${it.message}" },
+                                )
+                            } else if (aiChoice == AiProviderPreference.OPENROUTER) {
                                 app.openRouterProvider.refreshAllModels().fold(
                                     onSuccess = { models ->
                                         aiOptions = models.map { it.id to (it.name + if (it.free) " · FREE" else " · MAY BE PAID") }
@@ -454,7 +475,10 @@ private fun OnboardingScreen(
                         aiOptions.filter { it.first.contains(aiModelFilter, true) || it.second.contains(aiModelFilter, true) }
                             .forEach { (id, label) ->
                                 DropdownMenuItem(text = { Text(label) }, onClick = {
-                                    if (aiChoice == AiProviderPreference.OPENROUTER) {
+                                    if (aiChoice == AiProviderPreference.GROQ) {
+                                        app.groqProvider.setModel(id)
+                                        app.settings.update { it.copy(groqModel = id) }
+                                    } else if (aiChoice == AiProviderPreference.OPENROUTER) {
                                         app.openRouterProvider.setModel(id)
                                         app.settings.update { it.copy(openrouterModel = id) }
                                     } else {
@@ -478,15 +502,17 @@ private fun OnboardingScreen(
                     OutlinedButton(onClick = {
                         activity.startActivity(Intent(activity, SettingsActivity::class.java))
                     }, modifier = Modifier.fillMaxWidth()) { Text("ADVANCED AI SETTINGS") }
-                    Button(onClick = { step = OnboardingStep.VOICE }, modifier = Modifier.fillMaxWidth()) {
-                        Text("NEXT · CHECK YOUR VOICE")
+                    Button(onClick = { step = OnboardingStep.MCP }, modifier = Modifier.fillMaxWidth()) {
+                        Text("NEXT · MCP & DIAGNOSTICS")
                     }
                 }
 
                 OnboardingStep.VOICE -> {
-                    com.mcpintelligence.fr3k.ui.voice.VoiceHub()
-                    Button(onClick = { step = OnboardingStep.MCP }, modifier = Modifier.fillMaxWidth()) {
-                        Text("NEXT · MCP & DIAGNOSTICS")
+                    // Voice first: this is the step that proves the microphone, the provider and speech
+                    // output before the operator is asked for anything else.
+                    com.mcpintelligence.fr3k.ui.voice.VoiceHub(onOpenProvider = { step = OnboardingStep.AI })
+                    Button(onClick = { step = OnboardingStep.PERMISSIONS }, modifier = Modifier.fillMaxWidth()) {
+                        Text("NEXT · GRANT WHAT FR3K NEEDS")
                     }
                 }
 
