@@ -538,6 +538,15 @@ private fun SettingsScreen(onClose: () -> Unit) {
                         },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Fr3kGhostButton(
+                        text = "USE DOCUMENTED GO ENDPOINT",
+                        onClick = {
+                            endpointInput = "https://opencode.ai/inference/go"
+                            app.settings.update { it.copy(opencodegoEndpoint = endpointInput) }
+                            status = "endpoint set to the documented Go base URL"
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Text("model: ${provider.selectedModel()}", color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                     OutlinedTextField(
                         value = modelInput,
@@ -600,6 +609,10 @@ private fun SettingsScreen(onClose: () -> Unit) {
 
             Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "background voice", subtitle = "battery optimisation exemption") {
                 com.mcpintelligence.fr3k.providers.BatteryOptimisationPanel()
+            }
+
+            Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "blackwave pairing", subtitle = "gateway payload, checked before use") {
+                com.mcpintelligence.fr3k.ui.blackwave.BlackwavePairingPanel()
             }
 
             Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "telemetry") {

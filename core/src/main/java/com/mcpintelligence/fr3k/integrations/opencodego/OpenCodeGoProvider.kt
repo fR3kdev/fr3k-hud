@@ -44,6 +44,12 @@ class OpenCodeGoProvider(
     override val requiresNetwork: Boolean = true
     override val requiresApiKey: Boolean = true
 
+    /** Go/Zen refuse requests without a stable session header (error: missing x-opencode-session). */
+    private fun applyOpenCodeSession(conn: HttpURLConnection) {
+        conn.setRequestProperty("x-opencode-session", com.mcpintelligence.fr3k.integrations.providers.OpenCodeSession.id)
+        conn.setRequestProperty("User-Agent", "FR3K-HUD")
+    }
+
     @Volatile
     private var currentModel: String = defaultModel
 
@@ -95,6 +101,7 @@ class OpenCodeGoProvider(
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Authorization", "Bearer $key")
+            applyOpenCodeSession(this)
         }
         try {
             conn.outputStream.bufferedWriter(Charsets.UTF_8).use { it.write(body.toString()) }
@@ -123,6 +130,7 @@ class OpenCodeGoProvider(
                 readTimeout = 8_000
                 requestMethod = "GET"
                 setRequestProperty("Authorization", "Bearer $key")
+                applyOpenCodeSession(this)
             }
             try {
                 val code = conn.responseCode
@@ -173,6 +181,7 @@ class OpenCodeGoProvider(
                 doInput = true
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("Authorization", "Bearer $key")
+                applyOpenCodeSession(this)
             }
             try {
                 OutputStreamWriter(conn.outputStream, Charsets.UTF_8).use { it.write(body.toString()); it.flush() }
@@ -216,6 +225,7 @@ class OpenCodeGoProvider(
                     readTimeout = 8_000
                     requestMethod = "GET"
                     setRequestProperty("Authorization", "Bearer $key")
+                applyOpenCodeSession(this)
                 }
                 try {
                     when (val code = conn.responseCode) {

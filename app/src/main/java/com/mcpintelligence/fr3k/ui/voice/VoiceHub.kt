@@ -306,12 +306,16 @@ fun VoiceHub(modifier: Modifier = Modifier) {
 /** Reads the live device state. Provider readiness is read from the HUD's stored credentials. */
 private fun deviceOf(readiness: AndroidVoice.Readiness?, context: Context): VoiceChecklist.Device {
     val app = runCatching { Fr3kApplication.get() }.getOrNull()
-    val settings = app?.settings?.settings?.value
-    val provider = app?.selectedProviderReady() == true
+    // A key saved through the per-provider Settings panels is a configured provider even though it
+    // never wrote the verification stamp; only claim "missing" when nothing is stored at all.
+    val provider = app?.selectedProviderReady() == true || app?.providerSetupService?.hasKeyForActive() == true
     return VoiceChecklist.Device(
         microphone = readiness?.microphone ?: micGranted(context),
-        tts = readiness?.ttsEngine ?: false,
-        recogniser = readiness?.recogniser ?: false,
+        // Unknown until the engine answers: reporting false here told operators to install a speech
+        // engine they already had.
+        tts = readiness?.ttsEngine ?: true,
+        recogniser = readiness?.recogniser
+            ?: runCatching { android.speech.SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false),
         provider = provider,
     )
 }

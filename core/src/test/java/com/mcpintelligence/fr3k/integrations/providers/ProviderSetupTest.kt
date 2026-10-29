@@ -125,6 +125,37 @@ class ProviderSetupTest {
         assertEquals("openrouter", settings.settings.value.activeAgentProvider)
     }
 
+    @Test fun `OpenCode requests carry the required session header and other providers do not`() = runTest {
+        val server = MockWebServer()
+        // models, then inference
+        server.enqueue(MockResponse().setBody("""{"data":[{"id":"deepseek-v4.1-flash"}]}"""))
+        server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"role":"assistant","content":"OK"}}]}"""))
+        // and once for a Groq call that must stay clean
+        server.enqueue(MockResponse().setBody("""{"data":[{"id":"openai/gpt-oss-120b"}]}"""))
+        server.start()
+        try {
+            val service = ProviderSetupService(AppSettings(), { _, _ -> }, { server.url("/v1").toString() })
+            val catalog = service.validate(AgentProvider.OPENCODE_GO, "test-only-key")
+            val modelsRequest = server.takeRequest()
+            assertTrue("models request must carry a session", modelsRequest.getHeader("x-opencode-session")!!.startsWith("ses_"))
+            service.saveSelection(AgentProvider.OPENCODE_GO, "test-only-key", catalog.models.first().id, catalog)
+            val inferenceRequest = server.takeRequest()
+            assertEquals(modelsRequest.getHeader("x-opencode-session"), inferenceRequest.getHeader("x-opencode-session"))
+            assertTrue(inferenceRequest.getHeader("User-Agent")!!.contains("FR3K"))
+            service.validate(AgentProvider.GROQ, "test-only-key")
+            assertNull("Groq must not receive an OpenCode header", server.takeRequest().getHeader("x-opencode-session"))
+        } finally { server.shutdown() }
+    }
+
+    @Test fun `a configured provider with a stored key is not reported as missing`() = runTest {
+        val settings = AppSettings()
+        val secrets = mutableMapOf("openrouter.api.key" to "stored-key")
+        val service = ProviderSetupService(settings, { k, v -> secrets[k] = v }, { "http://127.0.0.1:1/v1" }, { secrets[it] })
+        assertTrue(service.hasKeyForActive())
+        secrets.clear()
+        assertFalse(service.hasKeyForActive())
+    }
+
     @Test fun `shared backend reads selected provider and model on every turn and retains tool calls`() = runTest {
         val server = MockWebServer()
         repeat(2) { server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"browser__read","arguments":"{}"}}]}}]}""")) }

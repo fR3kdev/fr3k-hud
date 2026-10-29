@@ -10,7 +10,7 @@ import java.net.URL
 
 enum class AgentProvider(val id: String, val title: String, val endpoint: String, val signupUrl: String, val keyUrl: String, val guidance: String, val requestedModel: String?) {
     GROQ("groq", "Groq (recommended free tier)", "https://api.groq.com/openai/v1", "https://console.groq.com", "https://console.groq.com/keys", "Sign up, create an API key, then paste it below. Free tier has rate and usage limits; it is not unlimited.", "openai/gpt-oss-120b"),
-    OPENCODE_GO("opencode-go", "OpenCode Go", "https://opencode.ai/zen/go/v1", "https://opencode.ai/go", "https://opencode.ai/auth", "Sign in, subscribe to Go, then create a workspace API key. Subscription limits apply.", "deepseek-v4.1-flash"),
+    OPENCODE_GO("opencode-go", "OpenCode Go", "https://opencode.ai/zen/go/v1", "https://opencode.ai/go", "https://opencode.ai/auth", "Sign in, subscribe to Go, then create a workspace API key. Go is required: free-tier chat models answer 403 outside the OpenCode client. Requests carry a stable x-opencode-session; if the endpoint answers 404, set it to https://opencode.ai/inference/go in the OpenCode Go panel.", "deepseek-v4.1-flash"),
     OPENROUTER("openrouter", "OpenRouter", "https://openrouter.ai/api/v1", "https://openrouter.ai", "https://openrouter.ai/settings/keys", "Create an API key. With no available credit, choose a zero-price model. Free model rate limits still apply.", "deepseek/deepseek-v4.1-flash");
     companion object { fun fromId(id: String) = entries.firstOrNull { it.id == id } }
 }
@@ -75,6 +75,18 @@ class ProviderSetupService(
 
     fun hasSavedKey(provider: AgentProvider): Boolean =
         readSecret(keySlot(provider))?.isNotBlank() == true
+
+    /**
+     * True when the active provider already has a stored credential.
+     *
+     * Setup checklists ask "is there anything left to do?", not "was this exact selection verified
+     * in this app version". Keys saved through the per-provider Settings panels never wrote the
+     * verification stamp, so requiring the stamp made a working setup look unconfigured.
+     */
+    fun hasKeyForActive(): Boolean {
+        val provider = AgentProvider.fromId(settings.settings.value.activeAgentProvider) ?: return false
+        return hasSavedKey(provider)
+    }
 
     /**
      * Reuse an already stored key: verify it with a real inference, then make that provider/model
@@ -172,6 +184,11 @@ class ProviderSetupService(
             conn.instanceFollowRedirects = false
             conn.setRequestProperty("Authorization", "Bearer $key")
             conn.setRequestProperty("Content-Type", "application/json")
+            if (provider == AgentProvider.OPENCODE_GO) {
+                // Documented requirement: Go rejects requests that carry no session (MissingSessionID).
+                conn.setRequestProperty("x-opencode-session", OpenCodeSession.id)
+                conn.setRequestProperty("User-Agent", "FR3K-HUD")
+            }
             if (body != null) { conn.requestMethod = "POST"; conn.doOutput = true; conn.outputStream.bufferedWriter().use { it.write(body.toString()) } }
             val code = conn.responseCode
             if (code !in 200..299) throw ProviderHttpException(code, detail = conn.errorStream?.bufferedReader()?.use { it.readText() })

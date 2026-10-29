@@ -125,12 +125,29 @@ class Fr3kApplication : Application() {
         super.onCreate()
         instance = this
         bootstrap()
+        installOpenCodeSession()
         // Register the Shizuku listeners at process scope so the binder /
         // permission state is tracked once, not per Activity. Without this
         // the Integrations panel's Shizuku section renders "manager not
         // installed" even when the binder is live but the callback hasn't
         // arrived yet.
         com.mcpintelligence.fr3k.integrations.shizuku.ShizukuBridge.start(this)
+    }
+
+    /**
+     * OpenCode Go/Zen needs a stable `x-opencode-session` on every request. Keep one per install so
+     * prompt cache and backend affinity survive a restart.
+     */
+    private fun installOpenCodeSession() {
+        runCatching {
+            val prefs = getSharedPreferences("fr3k_hud_prefs", MODE_PRIVATE)
+            var id = prefs.getString("opencode_session", null)
+            if (!com.mcpintelligence.fr3k.integrations.providers.OpenCodeSession.valid(id)) {
+                id = "ses_" + java.util.UUID.randomUUID().toString().replace("-", "").take(24)
+                prefs.edit().putString("opencode_session", id).commit()
+            }
+            com.mcpintelligence.fr3k.integrations.providers.OpenCodeSession.installPersisted(id)
+        }
     }
 
     private fun bootstrap() {
