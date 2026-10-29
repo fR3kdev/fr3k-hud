@@ -25,3 +25,7 @@ Thumbs.db
 /tmp/
 __pycache__/
 *.pyc
+
+# Generated app-mod fixtures (reproduce with scripts/build_appmod_fixtures.py)
+app/src/main/assets/app-control/*.apk
+!app/src/main/assets/app-control/*.idsig

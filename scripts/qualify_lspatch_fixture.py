@@ -19,11 +19,18 @@ def main():
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     source = root/'patch-fixture/build/outputs/apk/debug/patch-fixture-debug.apk'
-    sdk = Path('/usr/lib/android-sdk')
+    sdk = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME')
+               or next((p for p in (Path.home()/'Android/Sdk', Path('/usr/lib/android-sdk')) if p.is_dir()), ''))
     tools = sdk/'build-tools/35.0.1'
     android = sdk/'platforms/android-35/android.jar'
-    env = dict(os.environ, JAVA_HOME='/usr/lib/jvm/java-17-openjdk-amd64')
-    env['PATH'] = env['JAVA_HOME']+'/bin:'+env['PATH']
+    java17 = Path(os.environ.get('JAVA_HOME') or next(
+        (p for p in sorted(Path('/usr/lib/jvm').glob('*17*')) if (p/'bin/javac').is_file()), ''))
+    if not android.is_file() or not tools.is_dir():
+        raise SystemExit('Android SDK not found; set ANDROID_SDK_ROOT')
+    if not java17:
+        raise SystemExit('JDK 17 not found; set JAVA_HOME')
+    env = dict(os.environ, JAVA_HOME=str(java17))
+    env['PATH'] = str(java17/'bin')+':'+env['PATH']
     def run(cmd):
         subprocess.run([str(x) for x in cmd], env=env, check=True)
     badging = subprocess.check_output([str(tools/'aapt'), 'dump', 'badging', str(source)], text=True)
@@ -52,7 +59,10 @@ def main():
         archive.write(dex/'classes.dex', 'classes.dex')
     # LSPatch embeds this module; no standalone module/manager APK is installed.
     before = hashlib.sha256(source.read_bytes()).hexdigest()
-    subprocess.run(['/usr/lib/jvm/java-25-openjdk-amd64/bin/java', '-jar', str(args.lspatch_jar.resolve()),
+    # LSPatch needs a newer JVM than the Android toolchain; resolve it rather than hardcode one host.
+    lspatch_java = os.environ.get('LSPATCH_JAVA') or next(
+        (str(p) for p in sorted(Path('/usr/lib/jvm').glob('*'), reverse=True) if (p/'bin/java').is_file()), 'java')
+    subprocess.run([lspatch_java, '-jar', str(args.lspatch_jar.resolve()),
         '-l', '0', '-m', str(apk), '-o', str(out), '-f', str(source)], check=True)
     assert hashlib.sha256(source.read_bytes()).hexdigest() == before, 'Original fixture changed'
     patched = sorted(out.glob('*-lspatched.apk'))

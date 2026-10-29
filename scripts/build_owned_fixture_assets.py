@@ -9,10 +9,16 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'app/src/main/assets/app-control'
-WORK = Path('/home/parrot/.hermes/cache/scratch/hud-hook-asset-build')
-ANDROID = Path('/usr/lib/android-sdk/platforms/android-35/android.jar')
-TOOLS = Path('/usr/lib/android-sdk/build-tools/35.0.1')
-API = Path('/home/parrot/.hermes/cache/scratch/hud-fixture-qualified/xposed-api-82.jar')
+# Paths are resolved per machine: a hardcoded home directory only ever worked on one host.
+SCRATCH = Path(os.environ.get('FR3K_SCRATCH', Path.home() / '.hermes/cache/scratch'))
+WORK = Path(os.environ.get('FR3K_FIXTURE_WORK', SCRATCH / 'hud-hook-asset-build'))
+SDK = Path(os.environ.get('ANDROID_SDK_ROOT') or os.environ.get('ANDROID_HOME')
+           or next((p for p in (Path.home() / 'Android/Sdk', Path('/usr/lib/android-sdk')) if p.is_dir()), ''))
+ANDROID = SDK / 'platforms/android-35/android.jar'
+TOOLS = SDK / 'build-tools/35.0.1'
+API = Path(os.environ.get('FR3K_XPOSED_API', SCRATCH / 'hud-fixture-qualified/xposed-api-82.jar'))
+JAVA_HOME = Path(os.environ.get('JAVA_HOME') or next(
+    (p for p in sorted(Path('/usr/lib/jvm').glob('*17*')) if (p / 'bin/javac').is_file()), ''))
 MANIFEST_EXPECTED = 'f48c635f1c7469fdec0e00ad2ea0b7a6b2f5b55065784a35b7ca3a84615e8e25'
 
 
@@ -24,8 +30,14 @@ def main():
     if not API.is_file():
         raise SystemExit('Run scripts/qualify_lspatch_fixture.py once to download the pinned Xposed API jar')
     assert digest(API) == MANIFEST_EXPECTED, 'Xposed API artifact changed; review before using'
-    env = dict(os.environ, JAVA_HOME='/usr/lib/jvm/java-17-openjdk-amd64')
-    env['PATH'] = env['JAVA_HOME'] + '/bin:' + env['PATH']
+    if not ANDROID.is_file():
+        raise SystemExit(f'android.jar not found at {ANDROID}; set ANDROID_SDK_ROOT')
+    if not TOOLS.is_dir():
+        raise SystemExit(f'build-tools not found at {TOOLS}; set ANDROID_SDK_ROOT')
+    if not JAVA_HOME:
+        raise SystemExit('JDK 17 not found; set JAVA_HOME')
+    env = dict(os.environ, JAVA_HOME=str(JAVA_HOME))
+    env['PATH'] = str(JAVA_HOME / 'bin') + ':' + env['PATH']
     if WORK.exists():
         shutil.rmtree(WORK)
     classes = WORK / 'classes'
