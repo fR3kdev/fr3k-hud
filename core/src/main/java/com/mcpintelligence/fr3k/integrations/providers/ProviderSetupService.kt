@@ -23,6 +23,8 @@ class ProviderSetupService(
     private val settings: AppSettings,
     private val writeSecret: (String, String) -> Unit,
     private val endpoint: (AgentProvider) -> String = { it.endpoint },
+    /** Reads a previously saved key so an existing configuration can be reused without re-entry. */
+    private val readSecret: (String) -> String? = { null },
 ) {
     suspend fun validate(provider: AgentProvider, key: String): ProviderValidation = withContext(Dispatchers.IO) {
         if (key.isBlank()) return@withContext ProviderValidation(provider, ValidationStatus.INVALID_KEY, message = "Enter an API key.")
@@ -71,15 +73,46 @@ class ProviderSetupService(
     private fun stamp(provider: AgentProvider, model: String, key: String): String =
         java.security.MessageDigest.getInstance("SHA-256").digest("${provider.id}\n$model\n$key".toByteArray()).joinToString("") { "%02x".format(it) }
 
+    fun hasSavedKey(provider: AgentProvider): Boolean =
+        readSecret(keySlot(provider))?.isNotBlank() == true
+
+    /**
+     * Reuse an already stored key: verify it with a real inference, then make that provider/model
+     * active. Nothing is written unless the provider actually answered, so this cannot silently mark
+     * an unverified selection ready.
+     */
+    suspend fun activateWithStoredKey(provider: AgentProvider): ProviderValidation = withContext(Dispatchers.IO) {
+        val key = readSecret(keySlot(provider))?.takeIf { it.isNotBlank() }
+            ?: return@withContext ProviderValidation(provider, ValidationStatus.INVALID_KEY, message = "No saved ${provider.title} key on this device. Enter one first.")
+        val model = when (provider) {
+            AgentProvider.GROQ -> settings.settings.value.groqModel
+            AgentProvider.OPENCODE_GO -> settings.settings.value.opencodegoModel
+            AgentProvider.OPENROUTER -> settings.settings.value.openrouterModel
+        }.ifBlank { selectedModel() }
+        try {
+            val reply = infer(provider, key, model)
+            check(reply.isNotBlank())
+            settings.update { s ->
+                s.copy(activeAgentProvider = provider.id, verifiedAgentSelection = stamp(provider, model, key))
+            }
+            ProviderValidation(provider, ValidationStatus.VALID, defaultModel = model, inferenceVerified = true,
+                message = "Existing ${provider.title} key verified with $model; provider is now active.")
+        } catch (e: CancellationException) { throw e }
+        catch (e: ProviderHttpException) {
+            ProviderValidation(provider, if (e.code == 429) ValidationStatus.RATE_LIMITED else ValidationStatus.ERROR,
+                message = "Existing key rejected for $model: HTTP ${e.code}${e.detail?.let { ": $it" } ?: ""}. Nothing changed.")
+        } catch (_: Exception) {
+            ProviderValidation(provider, ValidationStatus.ERROR, message = "Existing ${provider.title} key could not be verified. Nothing changed.")
+        }
+    }
+
     /** Explicit user action: performs a tiny billable inference before securely saving. */
     suspend fun saveSelection(provider: AgentProvider, key: String, model: String, catalog: ProviderValidation): ProviderValidation = withContext(Dispatchers.IO) {
         if (key.isBlank() || catalog.provider != provider || catalog.status != ValidationStatus.VALID || catalog.models.none { it.id == model })
             return@withContext ProviderValidation(provider, ValidationStatus.UNAVAILABLE, message = "Validate the key and choose an advertised model first.")
         try {
-            val response = request(provider, key, "/chat/completions", JSONObject().put("model", model).put("stream", false)
-                .put("max_tokens", 1024).put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", "Reply OK."))))
-            val message = response.getJSONArray("choices").getJSONObject(0).getJSONObject("message")
-            check(message.optString("role") == "assistant" && message.optString("content").isNotBlank() && !message.isNull("content"))
+            val content = infer(provider, key, model)
+            check(content.isNotBlank())
             writeSecret(keySlot(provider), key)
             settings.update { s ->
                 val selected = when(provider) {
@@ -96,9 +129,40 @@ class ProviderSetupService(
                 catalog.models.any { it.id == "openrouter/free" && it.free }) {
                 val fallback = saveSelection(provider, key, "openrouter/free", catalog)
                 fallback.copy(message = "Paid model has insufficient credit. Switched to openrouter/free. ${fallback.message}")
-            } else catalog.copy(status = if(e.code == 429) ValidationStatus.RATE_LIMITED else ValidationStatus.ERROR, message = "Inference HTTP ${e.code}. Selection not saved.")
+            } else catalog.copy(status = if(e.code == 429) ValidationStatus.RATE_LIMITED else ValidationStatus.ERROR,
+                message = "Inference HTTP ${e.code}${e.detail?.let { ": $it" } ?: ""}. Selection not saved." +
+                    if (e.code == 400) " Try another advertised model." else "")
         }
         catch(_: Exception) { catalog.copy(status = ValidationStatus.ERROR, message = "Inference or secure save failed. Selection not verified.") }
+    }
+
+    /**
+     * Minimal billable inference. A request-shape rejection (HTTP 400) is retried once with the
+     * provider's own model-id convention and without an output budget, and the provider's error body
+     * is carried out in [ProviderHttpException.detail] so the operator sees the real reason.
+     */
+    private fun infer(provider: AgentProvider, key: String, model: String): String {
+        val attempts = mutableListOf(model to true, model to false)
+        if (provider == AgentProvider.OPENCODE_GO && '/' !in model) attempts.add("opencode-go/$model" to false)
+        var last: ProviderHttpException? = null
+        for ((candidate, budget) in attempts) {
+            try {
+                return attempt(provider, key, candidate, budget)
+            } catch (e: ProviderHttpException) {
+                if (e.code != 400) throw e
+                last = e
+            }
+        }
+        throw last ?: ProviderHttpException(400)
+    }
+
+    private fun attempt(provider: AgentProvider, key: String, model: String, budget: Boolean): String {
+        val body = JSONObject().put("model", model).put("stream", false)
+        if (budget) body.put("max_tokens", 1024)
+        body.put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", "Reply OK.")))
+        val response = request(provider, key, "/chat/completions", body)
+        val message = response.getJSONArray("choices").getJSONObject(0).getJSONObject("message")
+        return message.optString("content")
     }
 
     internal fun request(provider: AgentProvider, key: String, path: String, body: JSONObject? = null): JSONObject {
@@ -110,9 +174,18 @@ class ProviderSetupService(
             conn.setRequestProperty("Content-Type", "application/json")
             if (body != null) { conn.requestMethod = "POST"; conn.doOutput = true; conn.outputStream.bufferedWriter().use { it.write(body.toString()) } }
             val code = conn.responseCode
-            if (code !in 200..299) throw ProviderHttpException(code)
+            if (code !in 200..299) throw ProviderHttpException(code, detail = conn.errorStream?.bufferedReader()?.use { it.readText() })
             return JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
         } finally { conn.disconnect() }
     }
 }
-internal class ProviderHttpException(val code: Int): Exception("Provider HTTP $code")
+
+/** [detail] is the provider's own bounded error text, never a credential or a request echo. */
+internal class ProviderHttpException(val code: Int, detail: String? = null) : Exception("Provider HTTP $code") {
+    val detail: String? = detail
+        ?.replace(Regex("(?i)bearer\\s+[A-Za-z0-9._\\-]+"), "bearer <redacted>")
+        ?.replace(Regex("[\\r\\n\\t]+"), " ")
+        ?.trim()
+        ?.take(300)
+        ?.ifBlank { null }
+}

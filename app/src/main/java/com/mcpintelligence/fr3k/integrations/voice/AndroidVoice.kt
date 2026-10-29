@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -99,6 +100,8 @@ class AndroidVoice(
     private var utteranceSerial = 0
     private var pendingPlayback: (() -> Unit)? = null
     @Volatile private var speaking = false
+    private var speechStarted = false
+    private var startWatchdog: (() -> Unit)? = null
     private var microphoneMuted = false
     private var welcomeResult: ((Boolean) -> Unit)? = null
 
@@ -323,10 +326,20 @@ class AndroidVoice(
             if (!ttsReady) { finishSpeech(id, false); return }
             applyTuning()
             speaking = true
+            speechStarted = false
             publish(VoiceState.SPEAKING, "Speaking…")
             if (tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) {
                 finishSpeech(id, false)
+                return
             }
+            // An engine can accept the utterance and never start it. Without this the UI would sit on
+            // "Speaking…" forever with no audio, which reads as a silent success.
+            startWatchdog?.invoke()
+            val watchdog = Runnable {
+                if (completion.activeId == id && !speechStarted) finishSpeech(id, false)
+            }
+            handler.postDelayed(watchdog, SPEECH_START_TIMEOUT_MS)
+            startWatchdog = { handler.removeCallbacks(watchdog) }
         }
         ensureTts()
         if (ttsReady || ttsInitFailed) play()
@@ -344,7 +357,9 @@ class AndroidVoice(
     private fun ensureTts(): TextToSpeech {
         tts?.let { return it }
         // Always dispatch initialization: constructors may invoke their callback before returning.
-        val created = TextToSpeech(context) { status ->
+        // Application context: an engine tied to an Activity dies with it and then reports neither
+        // start nor error, leaving the UI stuck on "Speaking…" with no audio.
+        val created = TextToSpeech(context.applicationContext) { status ->
             handler.post {
                 if (!closed) {
                     val engine = tts
@@ -359,19 +374,27 @@ class AndroidVoice(
             }
         }
         created.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) = Unit
+            override fun onStart(utteranceId: String?) { handler.post { speechStarted = true; startWatchdog?.invoke() } }
             override fun onDone(utteranceId: String?) { handler.post { finishSpeech(utteranceId, true) } }
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) { handler.post { finishSpeech(utteranceId, false) } }
             override fun onError(utteranceId: String?, errorCode: Int) { handler.post { finishSpeech(utteranceId, false) } }
             override fun onStop(utteranceId: String?, interrupted: Boolean) { handler.post { finishSpeech(utteranceId, false) } }
         })
+        created.setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        )
         tts = created
         return created
     }
 
     private fun finishSpeech(utteranceId: String?, success: Boolean) {
         if (utteranceId == null || utteranceId != completion.activeId) return
+        startWatchdog?.invoke()
+        startWatchdog = null
         speaking = false
         pendingPlayback = null
         completion.finish(utteranceId, success)
@@ -414,5 +437,8 @@ class AndroidVoice(
         scope.cancel()
     }
 
-    private companion object { const val ANSWER_TIMEOUT_MS = 90_000L }
+    private companion object {
+        const val ANSWER_TIMEOUT_MS = 90_000L
+        const val SPEECH_START_TIMEOUT_MS = 1_500L
+    }
 }

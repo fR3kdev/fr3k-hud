@@ -103,20 +103,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Auto-start the HUD service if overlay + notification perms are
-        // already granted. The orb should appear on app launch without the
-        // user having to tap "Start". If perms are missing, the user can
-        // still tap "Start" from the dashboard to grant them.
+        // Auto-start only when the operator has turned the floating HUD on. It is an explicit opt-in:
+        // launching the app, or rebooting, must not put an orb on screen by itself.
         try {
-            val canOverlay = com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher.canDrawOverlays(this)
-            val canNotif = android.os.Build.VERSION.SDK_INT < 33 ||
-                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-                android.content.pm.PackageManager.PERMISSION_GRANTED
-            if (canOverlay && canNotif) {
-                android.util.Log.i("FR3K", "auto-starting HudOverlayService from MainActivity.onCreate")
-                startForegroundService(Intent(this, HudOverlayService::class.java))
+            val enabled = com.mcpintelligence.fr3k.Fr3kApplication.get().settings.settings.value.hudEnabled
+            if (!enabled) {
+                android.util.Log.i("FR3K", "floating HUD stays off (hudEnabled=false)")
             } else {
-                android.util.Log.i("FR3K", "skipping auto-start (overlay=$canOverlay, notif=$canNotif)")
+                val canOverlay = com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher.canDrawOverlays(this)
+                val canNotif = android.os.Build.VERSION.SDK_INT < 33 ||
+                    checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (canOverlay && canNotif) {
+                    android.util.Log.i("FR3K", "auto-starting HudOverlayService (operator enabled it)")
+                    startForegroundService(Intent(this, HudOverlayService::class.java))
+                } else {
+                    android.util.Log.i("FR3K", "skipping auto-start (overlay=$canOverlay, notif=$canNotif)")
+                }
             }
         } catch (t: Throwable) {
             android.util.Log.e("FR3K", "auto-start failed", t)
@@ -142,7 +145,8 @@ class MainActivity : ComponentActivity() {
             // Use startForegroundService, NOT startService: the HUD is a foreground
             // service on API 26+ and plain startService will throw
             // IllegalStateException.
-            if (com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher.canDrawOverlays(this)) {
+            if (com.mcpintelligence.fr3k.Fr3kApplication.get().settings.settings.value.hudEnabled &&
+                com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher.canDrawOverlays(this)) {
                 startForegroundService(Intent(this, HudOverlayService::class.java))
             }
         }

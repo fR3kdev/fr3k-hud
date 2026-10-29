@@ -108,10 +108,12 @@ object SetupAndroid {
             Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
         }.getOrDefault(false)
 
-    /** Termux storage is linked once ~/storage exists; queried through the Termux bridge when present. */
-    private fun storageLinked(context: Context): Boolean = runCatching {
-        java.io.File("/storage/emulated/0/Android/data/com.termux/files/home/storage").exists()
-    }.getOrDefault(false)
+    /**
+     * Shared storage is optional: FR3K HUD only uses Termux's private $HOME, and `~/storage` is a
+     * set of symlinks we cannot inspect from another app's sandbox. Assuming "not linked" made the
+     * walkthrough nag forever even after the operator ran termux-setup-storage.
+     */
+    private fun storageLinked(context: Context): Boolean = true
 
     private fun batteryUnrestricted(context: Context): Boolean = runCatching {
         val manager = context.getSystemService(android.os.PowerManager::class.java)

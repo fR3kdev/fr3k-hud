@@ -56,6 +56,75 @@ class ProviderSetupTest {
         } finally { server.shutdown() }
     }
 
+    @Test fun `a 400 save retries the provider model convention and reports the provider reason`() = runTest {
+        val server = MockWebServer()
+        // The chat endpoint rejects the output budget, then the bare catalog id, then accepts the prefix.
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"message":"unsupported parameter max_tokens"}}"""))
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"message":"model must be prefixed: opencode-go/<id>"}}"""))
+        server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"role":"assistant","content":"OK"}}]}"""))
+        server.start()
+        try {
+            val settings = AppSettings()
+            val secrets = mutableMapOf<String, String>()
+            val service = ProviderSetupService(settings, { k, v -> secrets[k] = v }, { server.url("/v1").toString() })
+            val catalog = ProviderValidation(AgentProvider.OPENCODE_GO, ValidationStatus.VALID,
+                listOf(ProviderModel("deepseek-v4.1-flash", "DeepSeek")))
+            val result = service.saveSelection(AgentProvider.OPENCODE_GO, "test-only-key", "deepseek-v4.1-flash", catalog)
+            assertTrue(result.message, result.inferenceVerified)
+            val first = org.json.JSONObject(server.takeRequest().body.readUtf8())
+            val second = org.json.JSONObject(server.takeRequest().body.readUtf8())
+            val third = org.json.JSONObject(server.takeRequest().body.readUtf8())
+            assertEquals("deepseek-v4.1-flash", first.getString("model"))
+            assertTrue(first.has("max_tokens"))
+            assertFalse("second attempt drops the output budget", second.has("max_tokens"))
+            assertEquals("opencode-go/deepseek-v4.1-flash", third.getString("model"))
+        } finally { server.shutdown() }
+    }
+
+    @Test fun `a rejected save reports the provider text and saves nothing`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"message":"unsupported parameter max_tokens"}}"""))
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"error":{"message":"unsupported parameter max_tokens"}}"""))
+        server.start()
+        try {
+            val settings = AppSettings()
+            val secrets = mutableMapOf<String, String>()
+            val service = ProviderSetupService(settings, { k, v -> secrets[k] = v }, { server.url("/v1").toString() })
+            val catalog = ProviderValidation(AgentProvider.GROQ, ValidationStatus.VALID, listOf(ProviderModel("openai/gpt-oss-120b", "GPT OSS")))
+            val result = service.saveSelection(AgentProvider.GROQ, "test-only-key", "openai/gpt-oss-120b", catalog)
+            assertFalse(result.inferenceVerified)
+            assertTrue("provider reason must be visible: " + result.message, result.message.contains("unsupported parameter max_tokens"))
+            assertTrue(secrets.isEmpty())
+        } finally { server.shutdown() }
+    }
+
+    @Test fun `an existing saved key becomes active only after it really answers`() = runTest {
+        val server = MockWebServer()
+        server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"role":"assistant","content":"OK"}}]}"""))
+        server.start()
+        try {
+            val settings = AppSettings()
+            val secrets = mutableMapOf("groq.api.key" to "stored-key")
+            val service = ProviderSetupService(settings, { k, v -> secrets[k] = v }, { server.url("/v1").toString() }, { secrets[it] })
+            assertTrue(service.hasSavedKey(AgentProvider.GROQ))
+            assertEquals("openrouter", settings.settings.value.activeAgentProvider)
+            val result = service.activateWithStoredKey(AgentProvider.GROQ)
+            assertTrue(result.inferenceVerified)
+            assertEquals("groq", settings.settings.value.activeAgentProvider)
+            assertTrue(service.isReady { secrets[it] })
+            assertEquals("stored-key", server.takeRequest().getHeader("Authorization")!!.removePrefix("Bearer "))
+        } finally { server.shutdown() }
+    }
+
+    @Test fun `a missing stored key never changes the active provider`() = runTest {
+        val settings = AppSettings()
+        val service = ProviderSetupService(settings, { _, _ -> }, { "http://127.0.0.1:1/v1" }, { null })
+        assertFalse(service.hasSavedKey(AgentProvider.OPENCODE_GO))
+        val result = service.activateWithStoredKey(AgentProvider.OPENCODE_GO)
+        assertFalse(result.inferenceVerified)
+        assertEquals("openrouter", settings.settings.value.activeAgentProvider)
+    }
+
     @Test fun `shared backend reads selected provider and model on every turn and retains tool calls`() = runTest {
         val server = MockWebServer()
         repeat(2) { server.enqueue(MockResponse().setBody("""{"choices":[{"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"browser__read","arguments":"{}"}}]}}]}""")) }

@@ -1,8 +1,8 @@
 {
  "build_apk": "/home/fr3k/BLACKWAVE-STANDALONE/work/fr3k-hud/app/build/outputs/apk/debug/app-debug.apk",
  "delivery_apk": "/home/fr3k/FR3K-HUD-0.4.16-voice.apk",
- "sha256": "49f213bae02af2c89232d4ef68895dedc0c2c521358244fb2ce59a0cff7537a1",
- "bytes": 65480039,
+ "sha256": "69af4c56e0734fa672a55c04e0782347b1c5e33966874e09645005313b07a6bd",
+ "bytes": 65785791,
  "signature": [
   "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3"
  ],

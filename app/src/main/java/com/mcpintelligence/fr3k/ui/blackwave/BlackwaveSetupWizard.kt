@@ -116,6 +116,13 @@ class SetupState(
             if (!add(scope)) remove(scope)
         }
     }
+
+    /** One switch for the whole manifest-declared list; the per-scope checkboxes stay usable. */
+    fun setAllScopes(scopes: Collection<String>, enabled: Boolean) {
+        enabledScopes = enabledScopes.toMutableSet().apply {
+            if (enabled) addAll(scopes) else removeAll(scopes.toSet())
+        }
+    }
 }
 
 class BlackwaveSetupActivity : ComponentActivity() {
@@ -602,7 +609,30 @@ private fun WizardStepBody(
             )
             Spacer(Modifier.height(6.dp))
             val scopes = probe?.role?.allowed_scopes?.ifEmpty { null } ?: BwScopes.LABELS.keys.sorted()
+            val allEnabled = scopes.isNotEmpty() && scopes.all { it in session.enabledScopes }
             Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { session.setAllScopes(scopes, !allEnabled) },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = allEnabled,
+                        onCheckedChange = { session.setAllScopes(scopes, it) },
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (allEnabled) "ALL ${scopes.size} FEATURES ENABLED" else "ENABLE ALL ${scopes.size} FEATURES",
+                            color = if (allEnabled) Fr3kPalette.Ok else Fr3kPalette.Accent,
+                            fontFamily = FontFamily.Monospace, fontSize = 11.sp,
+                        )
+                        Text(
+                            "One tap for every scope this role allows; individual switches below still apply.",
+                            color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp,
+                        )
+                    }
+                }
                 scopes.forEach { scope ->
                     Row(
                         modifier = Modifier

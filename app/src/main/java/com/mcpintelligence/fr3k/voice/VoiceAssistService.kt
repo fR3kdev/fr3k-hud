@@ -1,7 +1,12 @@
 package com.mcpintelligence.fr3k.voice
 
 import android.app.Service
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Intent
+import android.media.AudioAttributes
 import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -21,8 +26,67 @@ class VoiceAssistService : Service() {
     private var active: Message? = null
     private val completion = VoiceAssistProtocol.SpeechCompletion()
     private val incoming = Messenger(Handler(Looper.getMainLooper()) { handle(Message.obtain(it)); true })
+    private val approvalPrompts = mutableMapOf<String, Long>()
+    private val pendingCallers = java.util.ArrayDeque<Int>()
+    @Volatile private var callerUid: Int = -1
+    /** Captures the real caller before Messenger hands the message to the main-thread handler. */
+    private val gated = object : Binder() {
+        override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
+            val uid = Binder.getCallingUid()
+            callerUid = uid
+            synchronized(pendingCallers) { pendingCallers.addLast(uid) }
+            // transact(), not onTransact(): the latter is protected. The parcel is still at position 0
+            // because nothing was read, so it forwards unchanged.
+            return incoming.binder.transact(code, data, reply, flags)
+        }
+    }
     override fun onBind(intent: Intent?): IBinder? =
-        if (intent?.action == VoiceAssistProtocol.ACTION) incoming.binder else null
+        if (intent?.action == VoiceAssistProtocol.ACTION) gated else null
+
+    /**
+     * Signature permission already limits callers to this signing key; this is the operator's own
+     * consent on top of it. Unapproved callers are refused *and* shown a prompt, so a companion can
+     * never start capturing or speaking silently.
+     */
+    private fun approvedCaller(): Boolean {
+        val uid = synchronized(pendingCallers) { pendingCallers.pollFirst() ?: callerUid }
+        // In-process callers (the HUD's own UI) are always the operator.
+        if (uid <= 0 || uid == Process.myUid()) return true
+        val packageName = packageManager.getPackagesForUid(uid)?.firstOrNull() ?: return false
+        val certificate = ConnectionApproval.certificateSha256(this, packageName) ?: return false
+        if (ConnectionApproval.isApproved(this, packageName, certificate)) return true
+        requestApproval(packageName, certificate)
+        return false
+    }
+
+    private fun requestApproval(packageName: String, certificate: String) {
+        val now = System.currentTimeMillis()
+        val last = approvalPrompts[packageName] ?: 0L
+        if (now - last < 30_000) return
+        approvalPrompts[packageName] = now
+        val label = ConnectionApproval.label(this, packageName)
+        val prompt = ConnectionApprovalActivity.intent(this, packageName, label, certificate, "drive voice and ask the shared agent")
+        val shown = runCatching { startActivity(prompt) }.isSuccess
+        if (!shown) notifyApproval(packageName, label, prompt)
+    }
+
+    private fun notifyApproval(packageName: String, label: String, prompt: Intent) {
+        val manager = getSystemService(NotificationManager::class.java) ?: return
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL, "Connection requests", NotificationManager.IMPORTANCE_HIGH)
+        )
+        val pending = PendingIntent.getActivity(this, packageName.hashCode(), prompt, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val notification = Notification.Builder(this, CHANNEL)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle("$label wants to use FR3K HUD voice")
+            .setContentText("Tap to allow or deny the connection.")
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .build()
+        runCatching { manager.notify(packageName.hashCode(), notification) }
+    }
+
+    private companion object { const val CHANNEL = "fr3k-connection-approvals" }
 
     private suspend fun speechReady(): Boolean {
         if (tts == null) {
@@ -30,6 +94,12 @@ class VoiceAssistService : Service() {
                 val engine = tts
                 val ready = result == TextToSpeech.SUCCESS && engine != null && engine.setLanguage(Locale.getDefault()) >= 0
                 if (ready) {
+                    engine?.setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build()
+                    )
                     engine?.setSpeechRate(VoiceTuning.rate(applicationContext))
                     engine?.setPitch(VoiceTuning.pitch(applicationContext))
                     engine?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -58,6 +128,11 @@ class VoiceAssistService : Service() {
         return if (app.secureStore.get(key).isNullOrBlank()) "No key for selected HUD provider: ${settings.activeAgentProvider}" else null
     }
     private fun handle(message: Message) {
+        if (!approvedCaller()) {
+            // The prompt has been shown (or throttled); nothing is captured, asked or spoken.
+            error(message, "FR3K HUD is waiting for the operator to approve this connection")
+            return
+        }
         if (message.what == VoiceAssistProtocol.MSG_STATUS) {
             scope.launch {
                 val error = providerError() ?: if (!speechReady()) "HUD speech engine unavailable or language not installed" else null

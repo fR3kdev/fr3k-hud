@@ -1,6 +1,7 @@
 package com.mcpintelligence.fr3k.integrations.xiaozhi
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -236,6 +237,12 @@ internal class AndroidXiaozhiSpeaker(
         val created = TextToSpeech(appContext) { status ->
             val engine = holder[0]
             ready = status == TextToSpeech.SUCCESS && engine != null && engine.setLanguage(Locale.getDefault()) >= 0
+            if (ready) engine?.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANT)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
             val text = pending; pending = null
             if (ready && text != null) engine?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fr3k-voice")
         }

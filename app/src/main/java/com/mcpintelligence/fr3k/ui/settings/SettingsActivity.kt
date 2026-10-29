@@ -128,8 +128,40 @@ private fun SettingsScreen(onClose: () -> Unit) {
 
             Fr3kPanel(modifier = Modifier.fr3kAppear(1), title = "HUD") {
                 Column {
-                    Toggle("HUD overlay enabled", settings.hudEnabled) { v ->
-                        app.settings.update { it.copy(hudEnabled = v) }
+                    var hudProblem by remember { mutableStateOf<String?>(null) }
+                    Toggle("HUD overlay enabled (floating orb)", settings.hudEnabled) { v ->
+                        if (v) {
+                            val missing = com.mcpintelligence.fr3k.hud.HudLauncher.missingPermission(context)
+                            if (missing != null) {
+                                hudProblem = "Grant $missing permission, then turn this on again."
+                                runCatching {
+                                    context.startActivity(
+                                        if (missing == "overlay") com.mcpintelligence.fr3k.permissions.SpecialPermissionLauncher.overlayIntent(context)
+                                        else android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                }
+                            } else if (com.mcpintelligence.fr3k.hud.HudLauncher.start(context)) {
+                                app.settings.update { it.copy(hudEnabled = true) }
+                                hudProblem = null
+                            } else {
+                                hudProblem = "The floating HUD could not start; check the overlay permission."
+                            }
+                        } else {
+                            com.mcpintelligence.fr3k.hud.HudLauncher.stop(context)
+                            app.settings.update { it.copy(hudEnabled = false) }
+                            hudProblem = null
+                        }
+                    }
+                    Text(
+                        if (com.mcpintelligence.fr3k.hud.HudLauncher.isRunning(context)) "Floating HUD is running."
+                        else "Floating HUD is off. It stays off until you turn it on.",
+                        color = if (com.mcpintelligence.fr3k.hud.HudLauncher.isRunning(context)) Fr3kPalette.Ok else Fr3kPalette.TextDim,
+                        fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+                    )
+                    hudProblem?.let {
+                        Text(it, color = Fr3kPalette.Warn, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                     }
                     Spacer(Modifier.height(Fr3kDimens.SpacingSm))
                     Text("edge margin: ${settings.hudEdgeMarginDp} dp", color = Fr3kPalette.Text, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
@@ -561,6 +593,14 @@ private fun SettingsScreen(onClose: () -> Unit) {
             }
 
             VoiceAssistantPanel()
+
+            Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "voice provider", subtitle = "switch with keys already saved") {
+                com.mcpintelligence.fr3k.providers.ActiveProviderPanel(service = app.providerSetupService)
+            }
+
+            Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "background voice", subtitle = "battery optimisation exemption") {
+                com.mcpintelligence.fr3k.providers.BatteryOptimisationPanel()
+            }
 
             Fr3kPanel(modifier = Modifier.fr3kAppear(7), title = "telemetry") {
                 Toggle("telemetry enabled (crash-free only)", telemetry) { v -> telemetry = v; app.settings.update { it.copy(telemetryEnabled = v) } }

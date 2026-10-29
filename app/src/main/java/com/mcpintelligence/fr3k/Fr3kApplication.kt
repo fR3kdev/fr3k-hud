@@ -68,7 +68,7 @@ class Fr3kApplication : Application() {
     }
 
     val providerSetupService by lazy {
-        com.mcpintelligence.fr3k.integrations.providers.ProviderSetupService(settingsImpl, secureStore::put)
+        com.mcpintelligence.fr3k.integrations.providers.ProviderSetupService(settingsImpl, secureStore::put, readSecret = secureStore::get)
     }
     fun selectedProviderReady(): Boolean = providerSetupService.isReady(secureStore::get)
 

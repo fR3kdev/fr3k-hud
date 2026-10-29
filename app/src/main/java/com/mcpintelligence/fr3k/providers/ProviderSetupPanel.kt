@@ -7,9 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.integrations.providers.*
+import com.mcpintelligence.fr3k.ui.Fr3kPalette
 import kotlinx.coroutines.launch
 
 /** Insert in any scrollable settings surface. No raw credential is saveable or rendered. */
@@ -52,11 +55,33 @@ fun ProviderSetupPanel(
             scope.launch {
                 try {
                     val result = service.validate(provider, key.trim())
-                    catalog = result; model = result.defaultModel; status = result.message
+                    catalog = result
+                    // Never leave the operator with no model chosen: a default that is not advertised
+                    // would fail the save with a bare provider error.
+                    model = result.defaultModel
+                        ?: result.models.firstOrNull { !it.free }?.id
+                        ?: result.models.firstOrNull()?.id
+                    status = result.message
                     onValidated()
                 } finally { busy = false }
             }
         }) { Text(if (busy) "Checking…" else "Validate key and list models") }
+        if (service.hasSavedKey(provider)) {
+            Text(
+                "A ${provider.title} key is already saved on this device. Reusing it verifies the stored key with one small request and makes it active; nothing is displayed.",
+                color = Fr3kPalette.TextDim, fontFamily = FontFamily.Monospace, fontSize = 10.sp,
+            )
+            Button(enabled = !busy, onClick = {
+                busy = true
+                scope.launch {
+                    try {
+                        val result = service.activateWithStoredKey(provider)
+                        status = result.message
+                        if (result.inferenceVerified) onSaved()
+                    } finally { busy = false }
+                }
+            }, modifier = Modifier.fillMaxWidth()) { Text("USE SAVED KEY") }
+        }
         if (catalog?.status == ValidationStatus.VALID) {
             Text("Requested: ${if (provider == AgentProvider.GROQ) settings.requestedGroqModel else settings.requestedDeepseekModel}. Advertised ID: ${provider.requestedModel}")
             Box {

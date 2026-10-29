@@ -122,10 +122,13 @@ class OnboardingActivity : ComponentActivity() {
      * service only when overlay + notifications are BOTH granted.
      */
     private fun maybeStartHudAfterGrant() {
+        // The floating orb is opt-in: finishing setup must not put it on screen. It starts only after
+        // the operator turns "HUD overlay enabled" on in Settings.
+        val enabled = Fr3kApplication.get().settings.settings.value.hudEnabled
         val canOverlay = SpecialPermissionLauncher.canDrawOverlays(this)
         val canNotif = Build.VERSION.SDK_INT < 33 ||
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (canOverlay && canNotif) {
+        if (enabled && canOverlay && canNotif) {
             startForegroundService(Intent(this, HudOverlayService::class.java))
         }
     }

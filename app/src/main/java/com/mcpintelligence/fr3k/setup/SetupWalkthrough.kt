@@ -136,9 +136,14 @@ object SetupWalkthrough {
         ),
         SetupItem(
             id = "termux_storage",
-            title = "Termux storage",
-            detail = "In Termux run: termux-setup-storage, then allow the storage prompt.",
-            spoken = "In Termux, run termux setup storage, and allow the storage prompt when it appears.",
+            title = "Termux storage (optional)",
+            detail = "FR3K HUD only uses Termux's private \$HOME, so shared storage is not required. " +
+                "If you want it, run termux-setup-storage. When it fails with error 302 " +
+                "(\"Clearing ~/storage directory failed\"), stale bind mounts are in the way: run " +
+                "`rm -rf \"\$HOME/storage\"` inside Termux, then termux-setup-storage again. " +
+                "Skipping this changes nothing for voice or the bridge.",
+            spoken = "Shared storage is optional: the HUD only uses Termux's own home folder. " +
+                "If storage setup fails with error three oh two, clear the storage folder in Termux and retry, or skip it.",
             optional = true,
             skippable = true,
         ),
