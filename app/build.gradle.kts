@@ -10,11 +10,14 @@ android {
     buildToolsVersion = "35.0.1"
 
     defaultConfig {
-        applicationId = "com.mcpintelligence.fr3k.hud"
+        // Parallel-install variant of the pre-app-mod line: its own application id so it can live
+        // next to the 0.4.24 build. The namespace is unchanged, so classes and resources are shared.
+        applicationId = "com.mcpintelligence.fr3k.hud.a416"
+        resValue("string", "app_name", "FR3K HUD 0.4.16")
         minSdk = 31
         targetSdk = 35
         versionCode = 416
-        versionName = "0.4.16"
+        versionName = "0.4.16-parallel"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
