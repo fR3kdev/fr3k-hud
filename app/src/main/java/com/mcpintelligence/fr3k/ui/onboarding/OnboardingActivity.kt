@@ -140,6 +140,7 @@ private enum class OnboardingStep(val title: String) {
     PERMISSIONS("GRANT WHAT FR3K NEEDS"),
     CONNECTIONS("CONNECT AND VERIFY DEVICE TOOLS"),
     AI("CONFIGURE AI PROVIDER + MODEL"),
+    VOICE("CHECK YOUR VOICE"),
     MCP("AGENT CONNECTION · MCP DIAGNOSTICS"),
     READY("READY · FR3K HUD"),
 }
@@ -477,6 +478,13 @@ private fun OnboardingScreen(
                     OutlinedButton(onClick = {
                         activity.startActivity(Intent(activity, SettingsActivity::class.java))
                     }, modifier = Modifier.fillMaxWidth()) { Text("ADVANCED AI SETTINGS") }
+                    Button(onClick = { step = OnboardingStep.VOICE }, modifier = Modifier.fillMaxWidth()) {
+                        Text("NEXT · CHECK YOUR VOICE")
+                    }
+                }
+
+                OnboardingStep.VOICE -> {
+                    com.mcpintelligence.fr3k.ui.voice.VoiceHub()
                     Button(onClick = { step = OnboardingStep.MCP }, modifier = Modifier.fillMaxWidth()) {
                         Text("NEXT · MCP & DIAGNOSTICS")
                     }
