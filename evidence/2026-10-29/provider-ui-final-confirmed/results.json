@@ -1,0 +1,56 @@
+[
+  {
+    "resolution": "720x1600",
+    "density": 320,
+    "checks": [
+      "voice-first launch",
+      "Groq reachable",
+      "OpenCode Go reachable",
+      "OpenRouter reachable",
+      "OpenCode Go selected; matching instructions and key link shown",
+      "OpenRouter selected; matching instructions and key link shown",
+      "Groq selected; matching instructions and key link shown",
+      "invalid Groq key rejected via actual HTTPS",
+      "mute exposes typed input",
+      "unmute",
+      "optional Hermes offer; unavailable bridge and secure-key boundary; verified action hidden"
+    ],
+    "status": "PASS"
+  },
+  {
+    "resolution": "1080x2400",
+    "density": 420,
+    "checks": [
+      "voice-first launch",
+      "Groq reachable",
+      "OpenCode Go reachable",
+      "OpenRouter reachable",
+      "OpenCode Go selected; matching instructions and key link shown",
+      "OpenRouter selected; matching instructions and key link shown",
+      "Groq selected; matching instructions and key link shown",
+      "invalid Groq key rejected via actual HTTPS",
+      "mute exposes typed input",
+      "unmute",
+      "optional Hermes offer; unavailable bridge and secure-key boundary; verified action hidden"
+    ],
+    "status": "PASS"
+  },
+  {
+    "resolution": "1440x3120",
+    "density": 560,
+    "checks": [
+      "voice-first launch",
+      "Groq reachable",
+      "OpenCode Go reachable",
+      "OpenRouter reachable",
+      "OpenCode Go selected; matching instructions and key link shown",
+      "OpenRouter selected; matching instructions and key link shown",
+      "Groq selected; matching instructions and key link shown",
+      "invalid Groq key rejected via actual HTTPS",
+      "mute exposes typed input",
+      "unmute",
+      "optional Hermes offer; unavailable bridge and secure-key boundary; verified action hidden"
+    ],
+    "status": "PASS"
+  }
+]

@@ -6,6 +6,12 @@
         android:name="com.mcpintelligence.fr3k.hud.permission.CONTROL_OVERLAY"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.mcpintelligence.fr3k.hud.permission.CONTROL_OVERLAY" />
+
+    <!-- Shared voice engine for other FR3K apps signed with the same key. -->
+    <permission
+        android:name="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- ============================================================== -->
@@ -20,6 +26,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Tier-1: user-granted optional capabilities                   -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
@@ -49,7 +56,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
-    <!-- Storage / media read -->
+    <!-- Storage / media read.
+         READ_MEDIA_* only exist from API 33; on API 31/32 the runtime
+         permission the LSPatch/Morphe grant buttons target is
+         READ_EXTERNAL_STORAGE. It MUST be declared or requestPermissions()
+         silently no-ops (no dialog, no callback) — the exact "button does
+         nothing" symptom. maxSdkVersion=32 keeps it off API 33+ where it
+         is no longer grantable. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
@@ -300,6 +315,11 @@
             android:excludeFromRecents="true"
             android:theme="@style/Theme.Fr3kHud" />
         <activity
+            android:name="com.mcpintelligence.fr3k.voice.ConnectionApprovalActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.Fr3kHud.Dialog" />
+        <activity
             android:name="com.mcpintelligence.fr3k.ui.settings.SettingsActivity"
             android:exported="true"
             android:excludeFromRecents="true"
@@ -350,6 +370,16 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="fr3k_hud_overlay" />
+        </service>
+
+        <!-- Shared voice: only apps signed with the same key may bind (see VoiceAssistProtocol). -->
+        <service
+            android:name="com.mcpintelligence.fr3k.voice.VoiceAssistService"
+            android:exported="true"
+            android:permission="com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST">
+            <intent-filter>
+                <action android:name="com.mcpintelligence.fr3k.voice.VOICE_ASSIST" />
+            </intent-filter>
         </service>
 
         <service
@@ -442,5 +472,21 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Tier-2 Shizuku. The Shizuku manager discovers client apps through
+             this provider: it binds `authority` = <applicationId>.shizuku and
+             hands the process the Shizuku binder via provider.call(). Without
+             this exact entry the Shizuku app never learns we exist, our
+             package is absent from its "authorized applications" list, and
+             Shizuku.requestPermission() has no server to reach. The
+             INTERACT_ACROSS_USERS_FULL permission is the documented guard
+             that stops ordinary apps from driving the provider. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     </application>
 </manifest>

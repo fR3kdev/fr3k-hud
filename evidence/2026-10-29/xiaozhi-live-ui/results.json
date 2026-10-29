@@ -1,0 +1,18 @@
+{
+  "checks": [
+    "voice assistant panel reachable in Settings",
+    "live endpoint shown in the panel",
+    "reply voice shows exactly one active path and a matching caption",
+    "consent gate accepted",
+    "rejected handshake reported as activation pending",
+    "live OTA code shown; no websocket is opened while activation is pending"
+  ],
+  "status": "PASS",
+  "reply_voice": {
+    "active": "ANDROID \u00b7 ACTIVE",
+    "caption": "Replies are spoken by the Android system voice."
+  },
+  "activation_code_label": "Activation code: 367217",
+  "activation_code": "367217",
+  "server_notice": null
+}

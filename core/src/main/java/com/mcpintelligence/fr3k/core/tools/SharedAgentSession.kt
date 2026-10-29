@@ -2,6 +2,8 @@ package com.mcpintelligence.fr3k.core.tools
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import org.json.JSONArray
@@ -28,6 +30,9 @@ class SharedAgentSession(
     private val mutex = Mutex()
     private val mutableLines = MutableStateFlow<List<SessionLine>>(emptyList())
     val lines = mutableLines.asStateFlow()
+    private val mutableFinalReplies = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    /** Successful final provider answers only; no replay, tool chatter, or errors. */
+    val finalReplies = mutableFinalReplies.asSharedFlow()
     private val mutableApproval = MutableStateFlow<ToolApproval?>(null)
     val approval = mutableApproval.asStateFlow()
     private val mutableBusy = MutableStateFlow(false)
@@ -105,6 +110,7 @@ class SharedAgentSession(
                 if (content.isNotBlank()) line("agent", content)
                 if (calls == null || calls.length() == 0) {
                     if (content.isBlank()) line("agent", "Provider returned no answer or tool call.")
+                    else mutableFinalReplies.tryEmit(content)
                     return
                 }
                 var completed = 0

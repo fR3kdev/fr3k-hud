@@ -2,10 +2,14 @@ package com.mcpintelligence.fr3k.ui.blackwave
 
 import android.app.ActivityManager
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -136,10 +140,24 @@ object BwScopes {
 /** Status row in the same shape as the §10 diagnostics rows. */
 @Composable
 fun StatusRow(label: String, level: BwLevel, detail: String) {
+    val levelColor = when (level) {
+        BwLevel.PASS -> Fr3kPalette.Ok
+        BwLevel.WARN -> Fr3kPalette.Warn
+        BwLevel.FAIL -> Fr3kPalette.Err
+    }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .size(width = 3.dp, height = 18.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(levelColor.copy(alpha = 0.85f)),
+        )
         Text(
             text = label.uppercase(),
             color = Fr3kPalette.Text,
@@ -155,13 +173,6 @@ fun StatusRow(label: String, level: BwLevel, detail: String) {
             fontSize = 9.sp,
             modifier = Modifier.weight(1f),
         )
-        Fr3kBadge(
-            text = level.name,
-            color = when (level) {
-                BwLevel.PASS -> Fr3kPalette.Ok
-                BwLevel.WARN -> Fr3kPalette.Warn
-                BwLevel.FAIL -> Fr3kPalette.Err
-            },
-        )
+        Fr3kBadge(text = level.name, color = levelColor)
     }
 }

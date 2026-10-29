@@ -451,6 +451,26 @@ private fun SettingsScreen(onClose: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
+            Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "voice assistant") {
+                VoiceAssistantPanel()
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "background voice") {
+                BatteryOptimisationPanel()
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "blackwave pairing") {
+                com.mcpintelligence.fr3k.ui.blackwave.BlackwavePairingPanel()
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             com.mcpintelligence.fr3k.ui.Fr3kPanel(title = "telemetry") {
                 Column {
                     Toggle("telemetry enabled (crash-free only)", telemetry) { v -> telemetry = v; app.settings.update { it.copy(telemetryEnabled = v) } }

@@ -93,13 +93,51 @@ object PermissionRegistry {
         }
 
     /**
-     * All Android runtime permissions the app declares. Built by reflecting
-     * over the feature matrix so adding a new feature auto-adds its perms
-     * to the "GRANT ALL" workflow.
+     * All Android runtime (dangerous) permissions the app actually declares
+     * in its manifest.
+     *
+     * Derived from `PackageManager` instead of the `Feature` matrix so a
+     * newly declared runtime permission can never be silently omitted from
+     * the "GRANT ALL" flow. The matrix below only governs the *per-feature*
+     * buttons; this is the authoritative set for the one-tap grant.
+     *
+     * Previously this walked `Feature.entries`, which meant any runtime
+     * permission declared in the manifest but not attached to a feature —
+     * CAMERA was exactly such a case — was excluded, so "GRANT ALL" never
+     * actually granted everything.
      */
-    fun allDeclaredRuntimePermissions(): List<String> = Feature.entries
-        .flatMap { permissionsFor(it) }
-        .distinct()
+    fun allDeclaredRuntimePermissions(context: Context): List<String> {
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        val requested = runCatching {
+            pm.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+                .requestedPermissions
+        }.getOrNull() ?: return emptyList()
+        return requested.filter { perm ->
+            // Only dangerous permissions are runtime-grantable.
+            val dangerous = runCatching {
+                val info = pm.getPermissionInfo(perm, 0)
+                (info.protectionLevel and android.content.pm.PermissionInfo.PROTECTION_MASK_BASE) ==
+                    android.content.pm.PermissionInfo.PROTECTION_DANGEROUS
+            }.getOrDefault(false)
+            // Drop permissions the current SDK no longer grants via the
+            // runtime dialog even though they remain in the manifest
+            // (READ_EXTERNAL_STORAGE is superseded by READ_MEDIA_* on 33+).
+            dangerous && isGrantableOnThisSdk(perm)
+        }
+    }
+
+    /**
+     * Permissions that are declared for older SDKs (with `maxSdkVersion`)
+     * but are no longer runtime-requestable on the running platform.
+     * Requesting them returns an immediate denial with no dialog, which
+     * looked like a dead button.
+     */
+    private fun isGrantableOnThisSdk(perm: String): Boolean = when (perm) {
+        Manifest.permission.READ_EXTERNAL_STORAGE -> Build.VERSION.SDK_INT < 33
+        Manifest.permission.WRITE_EXTERNAL_STORAGE -> Build.VERSION.SDK_INT < 30
+        else -> true
+    }
 
     /**
      * The subset of [allDeclaredRuntimePermissions] that haven't been
@@ -108,7 +146,7 @@ object PermissionRegistry {
      */
     fun runtimeNotGranted(context: Context): List<String> {
         if (Build.VERSION.SDK_INT < 23) return emptyList()
-        return allDeclaredRuntimePermissions().filter { perm ->
+        return allDeclaredRuntimePermissions(context).filter { perm ->
             ContextCompat.checkSelfPermission(context, perm) != PackageManager.PERMISSION_GRANTED
         }
     }

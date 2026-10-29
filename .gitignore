@@ -23,3 +23,5 @@ Thumbs.db
 *.pid
 *.swp
 /tmp/
+__pycache__/
+*.pyc

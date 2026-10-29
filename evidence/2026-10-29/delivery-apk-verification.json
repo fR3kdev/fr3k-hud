@@ -1,0 +1,99 @@
+{
+  "hud": {
+    "path": "/home/fr3k/BLACKWAVE-STANDALONE/work/fr3k-hud/app/build/outputs/apk/debug/app-debug.apk",
+    "bytes": 65480039,
+    "sha256": "481bd5359bf8ee889df3c43dd35350bc098a3f74f31f98bb3c1c085436cba671",
+    "badging": [
+      "package: name='com.mcpintelligence.fr3k.hud' versionCode='416' versionName='0.4.16' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+      "targetSdkVersion:'35'"
+    ],
+    "signature": [
+      "Verifies",
+      "Verified using v1 scheme (JAR signing): false",
+      "Verified using v2 scheme (APK Signature Scheme v2): true",
+      "Verified using v3 scheme (APK Signature Scheme v3): false",
+      "Verified using v3.1 scheme (APK Signature Scheme v3.1): false",
+      "Verified using v4 scheme (APK Signature Scheme v4): false",
+      "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3",
+      "Signer #1 public key SHA-256 digest: 3d1620f533fc52c5c76429dda46907efc553c9b24cdb4f5499ad471be395c301"
+    ],
+    "zipalign": [
+      "Verification succesful"
+    ],
+    "zip_integrity": "PASS",
+    "dex_classes": {
+      "ProviderSetupPanel": true,
+      "HermesTermuxSetupPanel": true,
+      "VoiceAssistService": true,
+      "SelectedProviderBackend": true
+    },
+    "arm64_native_alignment": [
+      {
+        "file": "lib/arm64-v8a/libandroidx.graphics.path.so",
+        "load_alignment": [
+          "0x4000"
+        ]
+      },
+      {
+        "file": "lib/arm64-v8a/libdatastore_shared_counter.so",
+        "load_alignment": [
+          "0x4000"
+        ]
+      }
+    ]
+  },
+  "blackwave": {
+    "path": "/home/fr3k/BLACKWAVE-STANDALONE/work/blackwave/apps/android-companion/app/build/outputs/apk/debug/app-debug.apk",
+    "bytes": 43861654,
+    "sha256": "7d6c7dd6ffa6689692d6a9df7a2bb9d2967e75c5f4329f8cf1a636925de23a8e",
+    "badging": [
+      "package: name='com.fr3k.blackwave.debug' versionCode='1' versionName='0.1.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+      "targetSdkVersion:'35'"
+    ],
+    "signature": [
+      "Verifies",
+      "Verified using v1 scheme (JAR signing): false",
+      "Verified using v2 scheme (APK Signature Scheme v2): true",
+      "Verified using v3 scheme (APK Signature Scheme v3): false",
+      "Verified using v3.1 scheme (APK Signature Scheme v3.1): false",
+      "Verified using v4 scheme (APK Signature Scheme v4): false",
+      "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3",
+      "Signer #1 public key SHA-256 digest: 3d1620f533fc52c5c76429dda46907efc553c9b24cdb4f5499ad471be395c301"
+    ],
+    "zipalign": [
+      "Verification succesful"
+    ],
+    "zip_integrity": "PASS",
+    "dex_classes": {
+      "VoiceHelpCard": true,
+      "VoiceLoop": true,
+      "HudVoiceClient": true
+    },
+    "arm64_native_alignment": [
+      {
+        "file": "lib/arm64-v8a/libandroidx.graphics.path.so",
+        "load_alignment": [
+          "0x4000"
+        ]
+      },
+      {
+        "file": "lib/arm64-v8a/libbarhopper_v3.so",
+        "load_alignment": [
+          "0x4000"
+        ]
+      },
+      {
+        "file": "lib/arm64-v8a/libdatastore_shared_counter.so",
+        "load_alignment": [
+          "0x4000"
+        ]
+      },
+      {
+        "file": "lib/arm64-v8a/libimage_processing_util_jni.so",
+        "load_alignment": [
+          "0x1000"
+        ]
+      }
+    ]
+  }
+}

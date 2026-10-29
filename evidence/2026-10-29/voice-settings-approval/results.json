@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "app launch does not start the floating HUD",
+    "settings reports the floating HUD as off; stays off until turned on",
+    "toggle ON starts HudOverlayService and the panel says running",
+    "toggle OFF stops HudOverlayService",
+    "voice provider switch lists each provider with its saved-key state",
+    "battery optimisation panel reports current exemption state",
+    "companion request raises the HUD approval prompt",
+    "prompt names the requesting package and its signer",
+    "approval is recorded and the prompt closes",
+    "companion voice card is reachable after approval"
+  ],
+  "status": "PASS"
+}

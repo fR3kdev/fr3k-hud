@@ -1,0 +1,32 @@
+{
+  "hud_worktree": {
+    "tests": 209,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reports": 40
+  },
+  "hud_staged_snapshot": {
+    "tests": 172,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reports": 33
+  },
+  "companion_worktree": {
+    "tests": 17,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reports": 4
+  },
+  "companion_staged_snapshot": {
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "reports": 2
+  },
+  "local_total": 226,
+  "staged_total": 183
+}

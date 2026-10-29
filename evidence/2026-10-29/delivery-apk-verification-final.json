@@ -1,0 +1,62 @@
+{
+  "HUD": {
+    "build_apk": "/home/fr3k/BLACKWAVE-STANDALONE/work/fr3k-hud/app/build/outputs/apk/debug/app-debug.apk",
+    "delivery_apk": "/home/fr3k/FR3K-HUD-0.4.16-voice.apk",
+    "sha256": "481bd5359bf8ee889df3c43dd35350bc098a3f74f31f98bb3c1c085436cba671",
+    "bytes": 65480039,
+    "signature": [
+      "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3"
+    ],
+    "badging": [
+      "package: name='com.mcpintelligence.fr3k.hud' versionCode='416' versionName='0.4.16' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+      "minSdkVersion:'31'",
+      "targetSdkVersion:'35'",
+      "uses-permission: name='android.permission.READ_EXTERNAL_STORAGE' maxSdkVersion='32'"
+    ],
+    "zipalign": [
+      "Verification succesful"
+    ],
+    "native_alignment": {
+      "lib/arm64-v8a/libandroidx.graphics.path.so": [
+        "0x4000"
+      ],
+      "lib/arm64-v8a/libdatastore_shared_counter.so": [
+        "0x4000"
+      ]
+    }
+  },
+  "BLACKWAVE": {
+    "build_apk": "/home/fr3k/BLACKWAVE-STANDALONE/work/blackwave/apps/android-companion/app/build/outputs/apk/debug/app-debug.apk",
+    "delivery_apk": "/home/fr3k/FR3K-BLACKWAVE-0.1.0-voice.apk",
+    "sha256": "3f4e81f740350fa5f499e67e2575328f21585f2aee1e66683e043a19f0c1b658",
+    "bytes": 49780930,
+    "signature": [
+      "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3"
+    ],
+    "badging": [
+      "package: name='com.fr3k.blackwave.debug' versionCode='1' versionName='0.1.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+      "minSdkVersion:'26'",
+      "targetSdkVersion:'35'"
+    ],
+    "zipalign": [
+      "Verification succesful"
+    ],
+    "native_alignment": {
+      "lib/arm64-v8a/libandroidx.graphics.path.so": [
+        "0x4000"
+      ],
+      "lib/arm64-v8a/libbarhopper_v3.so": [
+        "0x4000"
+      ],
+      "lib/arm64-v8a/libdatastore_shared_counter.so": [
+        "0x4000"
+      ],
+      "lib/arm64-v8a/libimage_processing_util_jni.so": [
+        "0x4000"
+      ],
+      "lib/arm64-v8a/libsurface_util_jni.so": [
+        "0x4000"
+      ]
+    }
+  }
+}

@@ -39,6 +39,10 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions.unitTests.all {
+        it.systemProperty("fr3k.appDir", project.projectDir.absolutePath)
+    }
+
     buildFeatures {
         aidl = true
         compose = true
@@ -82,6 +86,8 @@ dependencies {
     implementation("org.bouncycastle:bcpkix-jdk15to18:1.81")
     implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation(project(":capability"))
+    // Pure Java Opus codec for the Xiaozhi voice path (no native ABI dependency).
+    implementation("io.github.jaredmdobson:concentus:1.0.2")
     implementation(project(":core"))
     implementation(project(":protocol"))
     implementation(project(":transport"))
@@ -125,6 +131,14 @@ dependencies {
     // its "apps that can use this" list. With the AAR, requestPermission
     // pops the SUI grant dialog and our package gets registered.
     implementation("dev.rikka.shizuku:api:13.1.5")
+    // The `provider` artifact carries `rikka.shizuku.ShizukuProvider`, the
+    // ContentProvider the Shizuku manager binds to in order to hand our
+    // process its binder. Without it in the APK + AndroidManifest, the
+    // Shizuku app has NO way to discover us, so our package never appears
+    // in its "authorized applications" list and Shizuku.requestPermission()
+    // can never reach Shizuku. Tiny (~7 KB) but mandatory for the tier-2
+    // integration to function at all.
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

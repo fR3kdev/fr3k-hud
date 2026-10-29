@@ -1,0 +1,66 @@
+[
+  {
+    "resolution": "1080x2400",
+    "attempts": [
+      {
+        "gpu": "lavapipe",
+        "evidence": "evidence/2026-10-29/companion-per-resolution/1080x2400-lavapipe",
+        "installed": true,
+        "matrix_exit": 0,
+        "stdout": "{\"resolution\": \"1080x2400\", \"density\": 420, \"checks\": [\"voice card on opening Fleet page\", \"cross-app greeting completed via actual HUD TTS callback\", \"start reports missing selected provider honestly; no false listening\", \"mic mute switch on\", \"typed-send reaches real HUD readiness; missing-key failure visible\"], \"status\": \"PASS\"}\n",
+        "stderr": "",
+        "results": [
+          {
+            "resolution": "1080x2400",
+            "density": 420,
+            "checks": [
+              "voice card on opening Fleet page",
+              "cross-app greeting completed via actual HUD TTS callback",
+              "start reports missing selected provider honestly; no false listening",
+              "mic mute switch on",
+              "typed-send reaches real HUD readiness; missing-key failure visible"
+            ],
+            "status": "PASS"
+          }
+        ],
+        "status": "PASS",
+        "emulator_alive_after": true,
+        "emulator_segfault": false,
+        "emulator_log_tail": "        | Advertising in: /run/user/1000/avd/running/pid_66644.ini\nINFO         | Successfully initialized netsim WiFi\nINFO         | Activated packet streamer for bluetooth emulation\nINFO         | Setting display: 0 configuration to: 1080x2400, dpi: 160x160 \nINFO         | setDisplayActiveConfig: id:0, 1080x2400\nINFO         | emulatorSetupEnvironment: Environment scene is not required\nUSER_INFO    | Emulator is performing a full startup. This may take upto two minutes, or more.\nINFO         | Boot completed in 19224 ms\nINFO         | Increasing screen off timeout, logcat buffer size to 2M.\n"
+      }
+    ],
+    "status": "PASS"
+  },
+  {
+    "resolution": "1440x3120",
+    "attempts": [
+      {
+        "gpu": "lavapipe",
+        "evidence": "evidence/2026-10-29/companion-per-resolution/1440x3120-lavapipe",
+        "installed": true,
+        "matrix_exit": 0,
+        "stdout": "{\"resolution\": \"1440x3120\", \"density\": 560, \"checks\": [\"voice card on opening Fleet page\", \"cross-app greeting completed via actual HUD TTS callback\", \"start reports missing selected provider honestly; no false listening\", \"mic mute switch on\", \"typed-send reaches real HUD readiness; missing-key failure visible\"], \"status\": \"PASS\"}\n",
+        "stderr": "",
+        "results": [
+          {
+            "resolution": "1440x3120",
+            "density": 560,
+            "checks": [
+              "voice card on opening Fleet page",
+              "cross-app greeting completed via actual HUD TTS callback",
+              "start reports missing selected provider honestly; no false listening",
+              "mic mute switch on",
+              "typed-send reaches real HUD readiness; missing-key failure visible"
+            ],
+            "status": "PASS"
+          }
+        ],
+        "status": "PASS",
+        "emulator_alive_after": true,
+        "emulator_segfault": false,
+        "emulator_log_tail": "        | Advertising in: /run/user/1000/avd/running/pid_68308.ini\nINFO         | Activated packet streamer for bluetooth emulation\nINFO         | Successfully initialized netsim WiFi\nINFO         | Setting display: 0 configuration to: 1440x3120, dpi: 160x160 \nINFO         | setDisplayActiveConfig: id:0, 1440x3120\nINFO         | emulatorSetupEnvironment: Environment scene is not required\nUSER_INFO    | Emulator is performing a full startup. This may take upto two minutes, or more.\nINFO         | Boot completed in 16420 ms\nINFO         | Increasing screen off timeout, logcat buffer size to 2M.\n"
+      }
+    ],
+    "status": "PASS"
+  }
+]

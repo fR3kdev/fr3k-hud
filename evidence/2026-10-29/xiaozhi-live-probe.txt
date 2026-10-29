@@ -1,0 +1,6 @@
+OTA 200
+  activation block: yes code: present
+  websocket: wss://voice.fr3k.dev/xiaozhi/v1/ token: present
+  firmware url advertises activation state: True
+WSS open
+WSS reply: {"type": "stt", "text": "\u8bf7\u767b\u5f55\u63a7\u5236\u9762\u677f\uff0c\u8f93\u5165508752\uff0c\u7ed1\u5b9a\u8bbe\u5907", "session_id": "c92c994e-4ba5-45ac-abae-b86421f62227"}
