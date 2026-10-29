@@ -1,0 +1,23 @@
+[
+  {
+    "resolution": "720x1600",
+    "density": 320,
+    "checks": [],
+    "status": "FAIL",
+    "error": "UI hierarchy capture failed: "
+  },
+  {
+    "resolution": "1080x2400",
+    "density": 420,
+    "checks": [],
+    "status": "FAIL",
+    "error": "Control not reachable: CHECK YOUR VOICE"
+  },
+  {
+    "resolution": "1440x3120",
+    "density": 560,
+    "checks": [],
+    "status": "FAIL",
+    "error": "Control not reachable: CHECK YOUR VOICE"
+  }
+]

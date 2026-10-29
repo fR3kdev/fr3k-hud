@@ -22,11 +22,15 @@ def exact(device, text):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence', required=True)
+    parser.add_argument('--resolution', choices=['720x1600', '1080x2400', '1440x3120'])
+    parser.add_argument('--keep-size', action='store_true', help='Use with dedicated single-resolution test emulators')
     args = parser.parse_args()
     d = Device(args.evidence)
     results = []
     try:
         for size, density in [('720x1600', 320), ('1080x2400', 420), ('1440x3120', 560)]:
+            if args.resolution and args.resolution != size:
+                continue
             item = {'resolution': size, 'density': density, 'checks': [], 'status': 'FAIL'}
             try:
                 d.adb('shell', 'am', 'force-stop', PKG)
@@ -73,9 +77,10 @@ def main():
             (d.evidence / 'results.json').write_text(json.dumps(results, indent=2))
             print(json.dumps(item), flush=True)
     finally:
-        d.adb('shell', 'wm', 'size', 'reset')
-        d.adb('shell', 'wm', 'density', 'reset')
-    return 0 if len(results) == 3 and all(item['status'] == 'PASS' for item in results) else 1
+        if not args.keep_size:
+            d.adb('shell', 'wm', 'size', 'reset')
+            d.adb('shell', 'wm', 'density', 'reset')
+    return 0 if len(results) == (1 if args.resolution else 3) and all(item['status'] == 'PASS' for item in results) else 1
 
 
 if __name__ == '__main__':

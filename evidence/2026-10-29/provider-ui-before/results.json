@@ -1,0 +1,23 @@
+[
+  {
+    "resolution": "720x1600",
+    "density": 320,
+    "checks": [],
+    "status": "FAIL",
+    "error": "cat: /sdcard/voice-matrix-1.xml: No such file or directory\n"
+  },
+  {
+    "resolution": "1080x2400",
+    "density": 420,
+    "checks": [],
+    "status": "FAIL",
+    "error": ""
+  },
+  {
+    "resolution": "1440x3120",
+    "density": 560,
+    "checks": [],
+    "status": "FAIL",
+    "error": ""
+  }
+]

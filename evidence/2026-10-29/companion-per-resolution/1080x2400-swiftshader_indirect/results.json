@@ -1,0 +1,14 @@
+[
+  {
+    "resolution": "1080x2400",
+    "density": 420,
+    "checks": [
+      "voice card on opening Fleet page",
+      "cross-app greeting completed via actual HUD TTS callback",
+      "start reports missing selected provider honestly; no false listening",
+      "mic mute switch on"
+    ],
+    "status": "FAIL",
+    "error": ""
+  }
+]

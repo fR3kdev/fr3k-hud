@@ -33,6 +33,28 @@ class XiaozhiControllerTest {
         controller.close()
         assertEquals(XiaozhiController.Status.CLOSED, controller.status)
     }
+    @Test fun refusedHandshakeBecomesActivationRequiredWithServerText() {
+        val id = XiaozhiController.Identity("02:00:00:00:00:01", "123e4567-e89b-42d3-a456-426614174000")
+        val listener = java.util.concurrent.atomic.AtomicReference<VoiceTransport.Listener>()
+        val transport = object : VoiceTransport {
+            override fun connect(url: String, headers: Map<String, String>, listenerArg: VoiceTransport.Listener) { listener.set(listenerArg) }
+            override fun send(text: String) = true
+            override fun close() {}
+        }
+        val controller = XiaozhiController(identity = { id }, discover = { _, _, _ ->
+            Bootstrap.Result.Ready("wss://example.invalid/", "token", 1)
+        }, makeSession = { config, identity, events -> VoiceSession(config, identity.deviceId, identity.clientId, transport, onEvent = events) })
+        controller.discover(true)
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+        while (listener.get() == null && System.nanoTime() < deadline) Thread.sleep(10)
+        listener.get().onOpen()
+        listener.get().onText("""{"type":"stt","text":"bind this device with code 508752","session_id":"s-1"}""")
+        val until = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+        while (controller.status != XiaozhiController.Status.ACTIVATION_REQUIRED && System.nanoTime() < until) Thread.sleep(10)
+        assertEquals(XiaozhiController.Status.ACTIVATION_REQUIRED, controller.status)
+        assertEquals("bind this device with code 508752", controller.serverNotice)
+        controller.close()
+    }
     @Test fun discoveryRequiresExplicitConsent() {
         var calls = 0
         val controller = XiaozhiController(identity = { XiaozhiController.Identity("02:00:00:00:00:01", "123e4567-e89b-42d3-a456-426614174000") }, discover = { _, _, _ -> calls++; Bootstrap.Result.Invalid })

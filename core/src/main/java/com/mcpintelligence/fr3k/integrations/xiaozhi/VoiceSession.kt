@@ -87,6 +87,8 @@ class VoiceSession(
     sealed class Event {
         class Audio(val payload: ByteArray, val timestamp: Long) : Event()
         class Tts(val state: String, val text: String?) : Event()
+        /** Server text that is not session protocol, e.g. "bind this device with code N". */
+        class ServerNotice(val text: String) : Event()
     }
     private var sessionId = ""
     private var listening = false
@@ -150,7 +152,13 @@ class VoiceSession(
         val validVersion = version == null || ((version as? JsonPrimitive)?.takeUnless { it.isString }?.intOrNull == config.version)
         val session = root?.get("session_id")
         if (str("type") != "hello" || str("transport") != "websocket" || !validVersion ||
-            (session != null && (str("session_id").isNullOrBlank() || str("session_id")!!.any { it.isISOControl() }))) { fail(); return }
+            (session != null && (str("session_id").isNullOrBlank() || str("session_id")!!.any { it.isISOControl() }))) {
+            // A real server answers an unbound device with {"type":"stt","text":"..."} instead of a
+            // hello. Surface that instruction verbatim, then fail: the operator needs the real reason.
+            val notice = str("text")?.trim()?.takeIf { it.isNotEmpty() && it.length <= 512 && it.none { c -> c.isISOControl() } }
+            if (notice != null) onEvent(Event.ServerNotice(notice))
+            fail(); return
+        }
         val params = root?.get("audio_params")
         if (params != null) {
             val audio = params as? JsonObject ?: run { fail(); return }

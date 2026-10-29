@@ -1,0 +1,29 @@
+{
+ "build_apk": "/home/fr3k/BLACKWAVE-STANDALONE/work/fr3k-hud/app/build/outputs/apk/debug/app-debug.apk",
+ "delivery_apk": "/home/fr3k/FR3K-HUD-0.4.16-voice.apk",
+ "sha256": "dd038fc64434d6f545bec3529a96fc97097105f0af75febff4832cc72d9550bb",
+ "bytes": 65480039,
+ "signature": [
+  "Signer #1 certificate SHA-256 digest: d763d5f7853f6b1d4ca88d2d0fd21ad53414e9c600e753526dd4110c724894b3"
+ ],
+ "badging": [
+  "package: name='com.mcpintelligence.fr3k.hud' versionCode='416' versionName='0.4.16' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'",
+  "minSdkVersion:'31'",
+  "targetSdkVersion:'35'",
+  "uses-permission: name='com.mcpintelligence.fr3k.hud.permission.CONTROL_OVERLAY'",
+  "uses-permission: name='com.mcpintelligence.fr3k.hud.permission.VOICE_ASSIST'",
+  "uses-permission: name='android.permission.INTERNET'"
+ ],
+ "zipalign_16k": [
+  "Verification succesful"
+ ],
+ "native_alignment": {
+  "lib/arm64-v8a/libandroidx.graphics.path.so": [
+   "0x4000"
+  ],
+  "lib/arm64-v8a/libdatastore_shared_counter.so": [
+   "0x4000"
+  ]
+ },
+ "all_arm64_load_segments_page_aligned": true
+}

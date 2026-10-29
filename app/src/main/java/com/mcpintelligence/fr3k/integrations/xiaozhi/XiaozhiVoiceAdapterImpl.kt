@@ -19,6 +19,8 @@ internal interface XiaozhiControllerLink : AutoCloseable {
     val activationCode: String?
     val sessionState: VoiceSession.State
     val downlinkSampleRate: Int
+    /** Verbatim server instruction when it refuses the handshake, e.g. "bind with code N". */
+    val serverNotice: String? get() = null
     fun discover(consented: Boolean)
     fun startListening(): Boolean
     fun stopListening(): Boolean
@@ -103,7 +105,8 @@ internal class XiaozhiVoiceAdapterImpl(
             XiaozhiController.Status.DISCOVERING -> publish(VoicePhase.CONNECTING, "Discovering")
             XiaozhiController.Status.ACTIVATION_REQUIRED -> publish(
                 VoicePhase.ACTIVATION_PENDING,
-                if (code == null) "Activation pending on the server" else "Enter this code in the server console, then reconnect",
+                controller?.serverNotice
+                    ?: if (code == null) "Activation pending on the server" else "Enter this code in the server console, then reconnect",
                 code
             )
             XiaozhiController.Status.CONNECTING -> publish(VoicePhase.CONNECTING, "Opening voice channel")
@@ -147,6 +150,11 @@ internal class XiaozhiVoiceAdapterImpl(
                 }
             }
             is VoiceSession.Event.Audio -> if (!androidTtsOutput) audio?.enqueue(event.payload)
+            // The server's own words when it refuses the handshake (e.g. "bind with code N").
+            is VoiceSession.Event.ServerNotice -> onMain {
+                if (closed) return@onMain
+                publish(VoicePhase.ACTIVATION_PENDING, event.text)
+            }
         }
     }
 
@@ -273,6 +281,7 @@ internal fun realXiaozhiVoiceAdapter(context: Context): XiaozhiVoiceAdapter {
                 override val activationCode get() = controller.activationCode
                 override val sessionState get() = controller.session?.state ?: VoiceSession.State.IDLE
                 override val downlinkSampleRate get() = controller.session?.downlinkSampleRate ?: 24000
+                override val serverNotice get() = controller.serverNotice
                 override fun discover(consented: Boolean) = controller.discover(consented)
                 override fun startListening(): Boolean = controller.session?.startListening(VoiceSession.ListenMode.MANUAL) == true
                 override fun stopListening(): Boolean = controller.session?.stopListening() == true

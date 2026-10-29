@@ -49,6 +49,9 @@ class XiaozhiController(
         private set
     @Volatile var session: VoiceSession? = null
         private set
+    /** Verbatim server text from the last rejected handshake, e.g. the binding instruction. */
+    @Volatile var serverNotice: String? = null
+        private set
     private val worker = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "xiaozhi-controller").apply { isDaemon = true } }
     private var generation = 0
 
@@ -56,7 +59,7 @@ class XiaozhiController(
     @Synchronized fun discover(consented: Boolean) {
         if (!consented || status == Status.CLOSED || status == Status.DISCOVERING) return
         val run = ++generation
-        session?.close(); session = null; activationCode = null
+        session?.close(); session = null; activationCode = null; serverNotice = null
         publish(Status.DISCOVERING)
         worker.execute {
             val id: Identity
@@ -70,7 +73,10 @@ class XiaozhiController(
                     Bootstrap.Result.ActivationPending -> publish(Status.ACTIVATION_REQUIRED)
                     Bootstrap.Result.Invalid -> publish(Status.ERROR)
                     is Bootstrap.Result.Ready -> {
-                        val created = try { makeSession(result, id) { event -> if (generation == run && status != Status.CLOSED) onEvent(event) } }
+                        val created = try { makeSession(result, id) { event ->
+                            if (event is VoiceSession.Event.ServerNotice) serverNotice = event.text
+                            if (generation == run && status != Status.CLOSED) onEvent(event)
+                        } }
                         catch (_: Exception) { publish(Status.ERROR); return@synchronized }
                         session = created
                         publish(Status.CONNECTING)
@@ -86,7 +92,9 @@ class XiaozhiController(
                 if (generation != run || status == Status.CLOSED || session !== current) return@synchronized
                 when (current.state) {
                     VoiceSession.State.READY -> if (status != Status.READY) publish(Status.READY)
-                    VoiceSession.State.FAILED, VoiceSession.State.CLOSED -> { publish(Status.ERROR); return@synchronized }
+                    // An unbound device is refused with an instruction, not a transport fault.
+                    VoiceSession.State.FAILED, VoiceSession.State.CLOSED ->
+                        publish(if (serverNotice != null) Status.ACTIVATION_REQUIRED else Status.ERROR)
                     else -> Unit
                 }
                 watch(run, current)

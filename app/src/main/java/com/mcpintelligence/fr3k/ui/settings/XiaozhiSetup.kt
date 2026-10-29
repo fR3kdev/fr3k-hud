@@ -18,13 +18,14 @@ import com.mcpintelligence.fr3k.ui.Fr3kPanel
 /** Live Xiaozhi voice configuration. The endpoint is real; enrollment status is shown honestly. */
 internal object XiaozhiSetup {
     const val endpoint = "https://voice.fr3k.dev/xiaozhi/ota/"
-    const val status = "USER-CONSENTED"
+    const val status = "ENDPOINT LIVE · DEVICE MUST BE BOUND"
     val instructions = listOf(
         "Bootstrap endpoint: $endpoint",
         "Identity: app-private random device ID + client UUID, generated on this device. It is a virtual identity, not a hardware MAC address.",
         "Discovery runs only after you tick consent and press CONNECT; nothing is contacted in the background.",
-        "Activation: if the server returns a code, enter it in the service console, then press CONNECT again.",
-        "Reply audio: Android system voice by default; switch to Xiaozhi server audio to hear the server voice.",
+        "Binding: the live service answers an unbound device with a code and a client-uuid session. Enter the code in your Xiaozhi control panel to bind this device, then press CONNECT again.",
+        "The server's own refusal text is shown verbatim above, so a rejected handshake is not reported as a generic network error.",
+        "Reply audio: Android system voice by default; switch to Xiaozhi server audio to hear the server's own Opus voice.",
     )
 }
 

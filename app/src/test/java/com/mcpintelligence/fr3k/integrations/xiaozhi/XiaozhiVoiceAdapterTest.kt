@@ -11,6 +11,8 @@ class XiaozhiVoiceAdapterTest {
         override var activationCode: String? = null
         override var sessionState = VoiceSession.State.IDLE
         override var downlinkSampleRate = 24000
+        var serverNoticeOverride: String? = null
+        override val serverNotice: String? get() = serverNoticeOverride
         var discoverCalls = 0
         var consentedArgs = mutableListOf<Boolean>()
         var listening = false
@@ -102,6 +104,17 @@ class XiaozhiVoiceAdapterTest {
         assertEquals("654321", h.adapter.status.value.activationCode)
         h.adapter.connect()
         assertEquals(2, h.controller.discoverCalls)
+    }
+
+    @Test fun serverRefusalTextIsShownVerbatimInsteadOfAGenericError() {
+        val h = Harness()
+        h.adapter.connect()
+        h.controller.serverNoticeOverride = "bind this device with code 508752"
+        h.controller.onEvent(VoiceSession.Event.ServerNotice("bind this device with code 508752"))
+        assertEquals(VoicePhase.ACTIVATION_PENDING, h.adapter.status.value.phase)
+        assertEquals("bind this device with code 508752", h.adapter.status.value.message)
+        h.controller.emit(XiaozhiController.Status.ACTIVATION_REQUIRED)
+        assertEquals("bind this device with code 508752", h.adapter.status.value.message)
     }
 
     @Test fun readyOpensPlaybackAtTheNegotiatedRate() {

@@ -34,6 +34,10 @@ All members are main-thread only. `status` phases: `IDLE`, `CONNECTING`,
   Opus audio plays. `XiaozhiAudio` keeps capture and playback on separate lifetimes so either
   ordering works.
 - `disconnect()` leaves the adapter reusable for a later connect; `close()` releases TTS too.
+- A refused handshake is not a transport fault. `VoiceSession` emits `Event.ServerNotice` carrying the
+  server's own text, `XiaozhiController` keeps it in `serverNotice` and reports `ACTIVATION_REQUIRED`
+  instead of `ERROR`, and the adapter shows that text verbatim. A protocol fault with no text still fails
+  quietly, so a malformed frame cannot inject UI copy.
 - No activation codes, tokens, or audio are logged.
 
 ## Output modes
@@ -47,8 +51,21 @@ The Reply voice row switches to `XIAOZHI`, which plays server audio and silences
 and speaker seams: consent gating, activation code, retry, negotiated rate, PTT release keeping
 playback, mic failure, both output modes, frame forwarding, disconnect/reconnect, close.
 
+## Live endpoint result (2026-10-29, read-only probe)
+
+`python3` probe against `https://voice.fr3k.dev/xiaozhi/ota/` with an unbound virtual identity:
+
+- `POST /xiaozhi/ota/` → HTTP 200 with `activation.code`, `websocket.url` (`wss://voice.fr3k.dev/xiaozhi/v1/`),
+  `websocket.token`, and a `firmware.url` that says `NOT_ACTIVATED`.
+- The WSS handshake with that token **opens**, the client `hello` is accepted, and the server answers
+  `{"type":"stt","text":"请登录控制面板，输入508752，绑定设备","session_id":"..."}` — the device is
+  not bound yet, so no voice session is granted until that code is entered in the Xiaozhi control panel.
+- Raw transcript: `evidence/2026-10-29/xiaozhi-live-probe.txt`.
+
+This is why the binding instruction now reaches the operator verbatim instead of a generic error.
+
 ## Still unverified
 
-Live microphone capture, network Opus round trip and speaker playback have not run on hardware.
-Enrollment is not completed; the bootstrap contract itself is confirmed against
-`https://voice.fr3k.dev/xiaozhi/ota/` (HTTP 200, activation code + `wss` websocket block).
+Live microphone capture, network Opus round trip and speaker playback have not run on hardware. The
+device has not been bound in the control panel, so an accepted `hello` and real server audio are not
+demonstrated; only the OTA contract, the token-bearing WSS handshake and the server's refusal path are.
