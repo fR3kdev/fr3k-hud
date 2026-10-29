@@ -31,7 +31,40 @@ internal class VoiceTurnGate {
     fun stop() { active = false }
 }
 
+internal class VoiceSpeechCompletion {
+    var activeId: String? = null
+        private set
+    private var callback: ((Boolean) -> Unit)? = null
+    fun begin(id: String, onResult: (Boolean) -> Unit) {
+        activeId = id
+        callback = onResult
+    }
+    fun clear() { activeId = null; callback = null }
+    fun finish(id: String?, success: Boolean): Boolean {
+        if (id == null || id != activeId) return false
+        val result = callback
+        clear()
+        result?.invoke(success)
+        return true
+    }
+}
+
 enum class VoiceState { IDLE, LISTENING, THINKING, SPEAKING, ERROR }
+
+/** Subscribe before send (no replay), with one deadline covering provider/tool execution too. */
+internal suspend fun awaitVoiceReply(
+    replies: kotlinx.coroutines.flow.Flow<String>,
+    timeoutMs: Long,
+    send: suspend () -> Unit,
+): String? = withTimeoutOrNull(timeoutMs) {
+    coroutineScope {
+        val answer = async(start = CoroutineStart.UNDISPATCHED) { replies.first() }
+        try {
+            send()
+            answer.await()
+        } finally { answer.cancel() }
+    }
+}
 
 /**
  * Android-native voice assistant over the shared HUD agent session.
@@ -62,9 +95,11 @@ class AndroidVoice(
     private var turn: Job? = null
     private var generation = 0
     private var conversing = false
-    private var pendingFinished: (() -> Unit)? = null
+    private val completion = VoiceSpeechCompletion()
+    private var utteranceSerial = 0
+    private var pendingPlayback: (() -> Unit)? = null
     @Volatile private var speaking = false
-    private var pendingWelcome: String? = null
+    private var microphoneMuted = false
     private var welcomeResult: ((Boolean) -> Unit)? = null
 
     /**
@@ -75,22 +110,21 @@ class AndroidVoice(
     fun speakWelcome(text: String, onResult: (Boolean) -> Unit) {
         mainThread()
         if (closed) { onResult(false); return }
+        stopConversation()
+        val current = generation
         welcomeResult = onResult
-        if (tts != null && ttsReady) {
-            if (tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fr3k-welcome") == TextToSpeech.SUCCESS) return
+        speak(text, current) { success ->
+            val result = welcomeResult
             welcomeResult = null
-            onResult(false)
-            return
+            result?.invoke(success)
         }
-        pendingWelcome = text
-        ensureTts()
     }
 
     /** True when a speech engine reported ready. */
     val speechReady: Boolean get() = ttsReady
 
     /** True while this adapter owns the microphone or the spoken reply, so other speech stays quiet. */
-    val isActive: Boolean get() = !closed && (conversing || gate.active || speaking || turn?.isActive == true)
+    val isActive: Boolean get() = !closed && (conversing || gate.active || speaking || completion.activeId != null || turn?.isActive == true)
 
     val inConversation: Boolean get() = conversing
 
@@ -119,7 +153,7 @@ class AndroidVoice(
     fun askTyped(text: String) {
         mainThread()
         if (closed || text.isBlank()) return
-        if (conversing) stopConversation()
+        stopConversation()
         val current = ++generation
         destroyRecognizer()
         ask(text, current)
@@ -128,34 +162,48 @@ class AndroidVoice(
     /** Press once: listen, answer, speak, listen again, until [stopConversation]. */
     fun startConversation() {
         mainThread()
-        if (closed || conversing) return
+        if (closed || conversing || microphoneMuted) return
         if (!hasMic()) { publish(VoiceState.ERROR, "Microphone permission required"); return }
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             publish(VoiceState.ERROR, "No speech recognition service installed")
             return
         }
+        stopConversation()
         conversing = true
         listen()
     }
 
     fun stopConversation() {
         mainThread()
-        if (!conversing) return
         conversing = false
         generation++
         destroyRecognizer()
         turn?.cancel(); turn = null
+        completion.clear()
+        pendingPlayback = null
         tts?.stop()
         speaking = false
-        pendingFinished = null
         gate.stop()
+        val result = welcomeResult
+        welcomeResult = null
+        result?.invoke(false)
         publish(VoiceState.IDLE, "Conversation ended")
+    }
+
+    /** Muting is unconditional teardown, even after an error; typed replies remain available.
+     * Unmuting never records automatically: the operator must tap to start again.
+     */
+    fun setMicrophoneMuted(muted: Boolean) {
+        mainThread()
+        if (closed) return
+        microphoneMuted = muted
+        if (muted) stopConversation()
     }
 
     /** Single push-to-talk turn. Returns false when the microphone permission is missing. */
     fun startFromUserGesture(): Boolean {
         mainThread()
-        if (closed) return false
+        if (closed || microphoneMuted) return false
         if (!hasMic()) { publish(VoiceState.ERROR, "Microphone permission required"); return false }
         if (conversing) return true
         when (gate.start(true, session.busy.value)) {
@@ -167,7 +215,7 @@ class AndroidVoice(
     }
 
     private fun listen() {
-        if (closed) return
+        if (closed || microphoneMuted) return
         val current = ++generation
         destroyRecognizer()
         try {
@@ -193,7 +241,7 @@ class AndroidVoice(
                                 publish(VoiceState.ERROR, "Microphone permission denied")
                             }
                             SpeechRecognizer.ERROR_RECOGNIZER_BUSY ->
-                                if (conversing) handler.postDelayed({ if (conversing) listen() }, 600) else gate.stop()
+                                if (conversing) handler.postDelayed({ if (conversing && current == generation) listen() }, 600) else gate.stop()
                             SpeechRecognizer.ERROR_CLIENT ->
                                 if (!conversing) gate.stop() // expected after stopListening()
                             else -> {
@@ -235,95 +283,104 @@ class AndroidVoice(
     private fun ask(text: String, current: Int) {
         publish(VoiceState.THINKING, "Thinking…")
         turn = scope.launch {
-            // Subscribe before sending: finalReplies has no replay.
-            val answer = async(start = CoroutineStart.UNDISPATCHED) { session.finalReplies.first() }
             val reply = try {
-                session.send(com.mcpintelligence.fr3k.voice.VoiceBriefing.prompt(text, appBriefing))
-                withTimeoutOrNull(ANSWER_TIMEOUT_MS) { if (answer.isCompleted) answer.await() else null }
+                awaitVoiceReply(session.finalReplies, ANSWER_TIMEOUT_MS) {
+                    session.send(com.mcpintelligence.fr3k.voice.VoiceBriefing.prompt(text, appBriefing))
+                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 null
-            } finally { answer.cancel() }
+            }
 
-            if (current != generation || closed) { gate.stop(); return@launch }
+            if (current != generation || closed) return@launch
             if (reply.isNullOrBlank()) {
                 gate.stop()
                 conversing = false
                 publish(VoiceState.ERROR, "No answer — check the HUD provider settings")
                 return@launch
             }
-            speak(reply, current) {
-                gate.stop()
-                if (conversing && current == generation && !closed) listen()
+            speak(reply, current) { success ->
+                if (current == generation && !closed) {
+                    gate.stop()
+                    if (!success) {
+                        conversing = false
+                        publish(VoiceState.ERROR, "Android text-to-speech unavailable")
+                    } else if (conversing) listen()
+                    else publish(VoiceState.IDLE, "Reply spoken")
+                }
             }
         }
     }
 
-    private fun speak(text: String, current: Int, onFinished: () -> Unit) {
-        if (text.isBlank() || closed || current != generation) return
-        pendingFinished = onFinished
+    private fun speak(text: String, current: Int, onFinished: (Boolean) -> Unit) {
+        if (text.isBlank() || closed || current != generation) { onFinished(false); return }
+        val id = "fr3k-${++utteranceSerial}"
+        completion.begin(id, onFinished)
         fun play() {
-            if (closed || current != generation) { pendingFinished = null; return }
+            if (closed || current != generation || completion.activeId != id) return
+            pendingPlayback = null
+            if (!ttsReady) { finishSpeech(id, false); return }
+            applyTuning()
             speaking = true
             publish(VoiceState.SPEAKING, "Speaking…")
-            if (!ttsReady || tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "fr3k-$current") != TextToSpeech.SUCCESS) {
-                speaking = false
-                publish(VoiceState.ERROR, "Android text-to-speech unavailable")
-                finishSpeech()
+            if (tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, id) != TextToSpeech.SUCCESS) {
+                finishSpeech(id, false)
             }
         }
-        if (tts != null) { play(); return }
         ensureTts()
-        play()
+        if (ttsReady || ttsInitFailed) play()
+        else pendingPlayback = ::play
+    }
+
+    /** Refresh an already initialized engine after the operator changes tuning. */
+    fun applyTuning() {
+        mainThread()
+        if (closed) return
+        tts?.setSpeechRate(com.mcpintelligence.fr3k.voice.VoiceTuning.rate(context))
+        tts?.setPitch(com.mcpintelligence.fr3k.voice.VoiceTuning.pitch(context))
     }
 
     private fun ensureTts(): TextToSpeech {
         tts?.let { return it }
-        // The init callback can fire before the constructor returns, so hold the instance.
-        val holder = arrayOfNulls<TextToSpeech>(1)
+        // Always dispatch initialization: constructors may invoke their callback before returning.
         val created = TextToSpeech(context) { status ->
-            val engine = holder[0]
-            ttsReady = status == TextToSpeech.SUCCESS && engine != null &&
-                engine.setLanguage(Locale.getDefault()) >= 0
-            ttsInitFailed = !ttsReady
-            engine?.setSpeechRate(com.mcpintelligence.fr3k.voice.VoiceTuning.rate(context))
-            engine?.setPitch(com.mcpintelligence.fr3k.voice.VoiceTuning.pitch(context))
-            val queued = pendingWelcome
-            if (!ttsReady) {
-                pendingWelcome = null
-                val failure = welcomeResult; welcomeResult = null
-                failure?.invoke(false)
-            } else if (queued != null) {
-                pendingWelcome = null
-                if (engine?.speak(queued, TextToSpeech.QUEUE_FLUSH, null, "fr3k-welcome") != TextToSpeech.SUCCESS) {
-                    val failure = welcomeResult; welcomeResult = null
-                    failure?.invoke(false)
+            handler.post {
+                if (!closed) {
+                    val engine = tts
+                    ttsReady = status == TextToSpeech.SUCCESS && engine != null &&
+                        engine.setLanguage(Locale.getDefault()) >= 0
+                    ttsInitFailed = !ttsReady
+                    applyTuning()
+                    val queued = pendingPlayback
+                    pendingPlayback = null
+                    queued?.invoke()
                 }
             }
         }
-        holder[0] = created
         created.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) = Unit
-            override fun onDone(utteranceId: String?) { handler.post { finishSpeech() } }
+            override fun onDone(utteranceId: String?) { handler.post { finishSpeech(utteranceId, true) } }
             @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) { handler.post { finishSpeech() } }
+            override fun onError(utteranceId: String?) { handler.post { finishSpeech(utteranceId, false) } }
+            override fun onError(utteranceId: String?, errorCode: Int) { handler.post { finishSpeech(utteranceId, false) } }
+            override fun onStop(utteranceId: String?, interrupted: Boolean) { handler.post { finishSpeech(utteranceId, false) } }
         })
         tts = created
         return created
     }
 
-    private fun finishSpeech() {
+    private fun finishSpeech(utteranceId: String?, success: Boolean) {
+        if (utteranceId == null || utteranceId != completion.activeId) return
         speaking = false
-        welcomeResult?.let { it(true) }
-        welcomeResult = null
-        val callback = pendingFinished
-        pendingFinished = null
-        callback?.invoke()
+        pendingPlayback = null
+        completion.finish(utteranceId, success)
     }
 
     /** Ends capture on release but keeps the transcript still being produced. */
     fun stopListening() {
         mainThread()
-        if (closed || conversing) return
+        if (closed || conversing || microphoneMuted) return
         if (recognizer != null) {
             runCatching { recognizer?.stopListening() }
             publish(VoiceState.THINKING, "Processing…")
@@ -344,15 +401,7 @@ class AndroidVoice(
     /** Cancels the current turn and speech, leaving nothing running. */
     fun cancel() {
         mainThread()
-        generation++
-        conversing = false
-        runCatching { recognizer?.cancel() }
-        destroyRecognizer()
-        turn?.cancel(); turn = null
-        tts?.stop()
-        speaking = false
-        pendingFinished = null
-        gate.stop()
+        stopConversation()
         publish(VoiceState.IDLE, "Stopped")
     }
 

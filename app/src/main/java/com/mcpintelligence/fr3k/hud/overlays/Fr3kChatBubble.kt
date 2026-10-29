@@ -227,7 +227,7 @@ class Fr3kChatBubble(
             setBackgroundColor(0xFF7d3cff.toInt())
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-            contentDescription = "Send to Hermes"
+            contentDescription = "Send to agent"
             setPadding(10.dp(), 6.dp(), 10.dp(), 6.dp())
             setOnClickListener { onSend() }
         }

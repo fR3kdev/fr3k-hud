@@ -50,6 +50,15 @@ class AppSettings(
         val blackwaveClientId: String = "fr3k-hud",
         val openrouterApiKeyKey: String = "openrouter.api.key",
         val openrouterModel: String = "openrouter/free",
+        val activeAgentProvider: String = "openrouter",
+        val groqApiKeyKey: String = "groq.api.key",
+        val groqModel: String = "openai/gpt-oss-120b",
+        val verifiedAgentSelection: String = "",
+        val requestedDeepseekModel: String = "deepseekv4.1-flash",
+        val requestedGroqModel: String = "gptoss120",
+        val opencodegoApiKeyKey: String = "opencodego.api.key",
+        val opencodegoModel: String = "opencode-go/default",
+        val opencodegoEndpoint: String = "https://opencode.ai/zen/go/v1",
         val termuxPackage: String = "com.termux",
         val autoShareTargets: List<String> = emptyList(),
         val telemetryEnabled: Boolean = true,
@@ -71,6 +80,15 @@ class AppSettings(
             put("blackwaveClientId", blackwaveClientId)
             put("openrouterApiKeyKey", openrouterApiKeyKey)
             put("openrouterModel", openrouterModel)
+            put("activeAgentProvider", activeAgentProvider)
+            put("groqApiKeyKey", groqApiKeyKey)
+            put("groqModel", groqModel)
+            put("verifiedAgentSelection", verifiedAgentSelection)
+            put("requestedDeepseekModel", requestedDeepseekModel)
+            put("requestedGroqModel", requestedGroqModel)
+            put("opencodegoApiKeyKey", opencodegoApiKeyKey)
+            put("opencodegoModel", opencodegoModel)
+            put("opencodegoEndpoint", opencodegoEndpoint)
             put("termuxPackage", termuxPackage)
             put("autoShareTargets", JSONArray(autoShareTargets))
             put("telemetryEnabled", telemetryEnabled)
@@ -102,6 +120,15 @@ class AppSettings(
                     blackwaveClientId = json.optString("blackwaveClientId", defaults.blackwaveClientId),
                     openrouterApiKeyKey = json.optString("openrouterApiKeyKey", defaults.openrouterApiKeyKey),
                     openrouterModel = json.optString("openrouterModel", defaults.openrouterModel),
+                    activeAgentProvider = json.optString("activeAgentProvider", defaults.activeAgentProvider).takeIf { it in setOf("openrouter", "opencode-go", "groq") } ?: defaults.activeAgentProvider,
+                    groqApiKeyKey = json.optString("groqApiKeyKey", defaults.groqApiKeyKey),
+                    groqModel = json.optString("groqModel", defaults.groqModel),
+                    verifiedAgentSelection = json.optString("verifiedAgentSelection", ""),
+                    requestedDeepseekModel = json.optString("requestedDeepseekModel", defaults.requestedDeepseekModel),
+                    requestedGroqModel = json.optString("requestedGroqModel", defaults.requestedGroqModel),
+                    opencodegoApiKeyKey = json.optString("opencodegoApiKeyKey", defaults.opencodegoApiKeyKey),
+                    opencodegoModel = json.optString("opencodegoModel", defaults.opencodegoModel),
+                    opencodegoEndpoint = json.optString("opencodegoEndpoint", defaults.opencodegoEndpoint),
                     termuxPackage = json.optString("termuxPackage", defaults.termuxPackage),
                     autoShareTargets = strings("autoShareTargets"),
                     telemetryEnabled = json.optBoolean("telemetryEnabled", defaults.telemetryEnabled),

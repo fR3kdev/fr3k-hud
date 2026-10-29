@@ -22,6 +22,21 @@ object VoiceAssistProtocol {
     /** HUD → client, always sent to `message.replyTo`. */
     const val MSG_RESULT = 100
 
+    /** v2: RESULT carries answer text; SPEECH_DONE is emitted only by TTS onDone. */
+    const val MSG_SPEECH_DONE = 101
+    const val KEY_VERSION = "version"
+    const val VERSION = 2
+    class SpeechCompletion {
+        private var current: String? = null
+        fun begin(id: String) { current = id }
+        fun cancel() { current = null }
+        fun finish(id: String): Boolean {
+            if (current != id) return false
+            current = null
+            return true
+        }
+    }
+
     const val KEY_PROMPT = "prompt"
     const val KEY_TEXT = "text"
     const val KEY_REPLY = "reply"

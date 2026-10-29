@@ -194,7 +194,7 @@ private fun AskScreen(extras: AskExtras, onClose: () -> Unit) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = if (inFlight) "SENDING…" else "SEND TO HERMES",
+                text = if (inFlight) "SENDING…" else "SEND TO AGENT",
                 fontFamily = FontFamily.Monospace,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             )

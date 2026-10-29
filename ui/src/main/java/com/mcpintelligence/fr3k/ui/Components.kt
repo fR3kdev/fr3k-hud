@@ -1,11 +1,14 @@
 package com.mcpintelligence.fr3k.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,8 +18,11 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,16 +33,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +56,64 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mcpintelligence.fr3k.protocol.DeviceStatus
+
+private val fr3kPressSpring = spring<Float>(dampingRatio = 0.55f, stiffness = 900f)
+
+/**
+ * Staggered entrance — fade + rise + micro-scale, replayed whenever the
+ * subtree enters fresh (screen open, list rebuild). `index` orders the cascade.
+ */
+@Composable
+fun Modifier.fr3kAppear(index: Int = 0, travelPx: Float = 26f): Modifier {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val slide by animateFloatAsState(
+        targetValue = if (shown) 0f else 1f,
+        animationSpec = tween(
+            durationMillis = Fr3kMotion.Slow,
+            delayMillis = (index * Fr3kMotion.Stagger).coerceAtMost(320),
+            easing = FastOutSlowInEasing,
+        ),
+        label = "fr3kAppear",
+    )
+    return graphicsLayer {
+        alpha = 1f - slide * 0.98f
+        translationY = slide * travelPx
+        scaleX = 1f - 0.025f * slide
+        scaleY = 1f - 0.025f * slide
+    }
+}
+
+/** App backdrop: vertical ambient gradient plus a slow aurora glow up top. */
+@Composable
+fun Fr3kAmbientBackground(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = modifier.fillMaxSize().background(Fr3kGradients.ScreenAmbient)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            listOf(Fr3kPalette.Accent.copy(alpha = 0.12f), Fr3kPalette.AccentDim.copy(alpha = 0.04f), Color.Transparent),
+                            center = Offset(size.width * 0.85f, -size.height * 0.03f),
+                            radius = size.width * 0.9f,
+                        ),
+                    )
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            listOf(Fr3kPalette.Ok.copy(alpha = 0.045f), Color.Transparent),
+                            center = Offset(size.width * 0.08f, size.height * 0.14f),
+                            radius = size.width * 0.55f,
+                        ),
+                    )
+                },
+        )
+        content()
+    }
+}
 
 /** Status dot — used everywhere we render an "online / offline / degraded" signal.
  *  Online/degraded dots breathe with a soft halo; colors cross-fade on state change.
@@ -92,50 +162,61 @@ fun Fr3kPanel(
     title: String? = null,
     subtitle: String? = null,
     accent: Color = Fr3kPalette.Accent,
+    contentPadding: Dp = Fr3kDimens.PanelPadding,
     content: @Composable () -> Unit,
 ) {
     val shape = RoundedCornerShape(Fr3kDimens.RadiusPanel)
-    Column(
+    Box(
         modifier = modifier
             .shadow(
                 elevation = Fr3kDimens.PanelElevation,
                 shape = shape,
                 clip = false,
-                ambientColor = accent.copy(alpha = 0.20f),
-                spotColor = accent.copy(alpha = 0.28f),
+                ambientColor = accent.copy(alpha = 0.16f),
+                spotColor = accent.copy(alpha = 0.30f),
             )
+            .clip(shape)
             .background(Fr3kGradients.PanelFill, shape)
-            .border(Fr3kDimens.PanelBorder, Fr3kGradients.panelBorder(accent), shape)
-            .padding(Fr3kDimens.PanelPadding),
+            .border(Fr3kDimens.PanelBorder, Fr3kGradients.panelBorder(accent), shape),
     ) {
-        if (title != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(width = 3.dp, height = 14.dp)
-                        .clip(CircleShape)
-                        .background(Brush.verticalGradient(listOf(accent, accent.copy(alpha = 0.12f)))),
-                )
-                Spacer(Modifier.width(Fr3kDimens.SpacingSm))
-                Text(
-                    text = title.uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = accent,
-                )
-                if (subtitle != null) {
+        Column(modifier = Modifier.padding(contentPadding)) {
+            if (title != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(width = 3.dp, height = 14.dp)
+                            .shadow(4.dp, CircleShape, clip = false, ambientColor = Color.Transparent, spotColor = accent.copy(alpha = 0.7f))
+                            .clip(CircleShape)
+                            .background(Brush.verticalGradient(listOf(accent, accent.copy(alpha = 0.12f)))),
+                    )
                     Spacer(Modifier.width(Fr3kDimens.SpacingSm))
                     Text(
-                        text = subtitle.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Fr3kPalette.TextDim,
+                        text = title.uppercase(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = accent,
                     )
+                    if (subtitle != null) {
+                        Spacer(Modifier.width(Fr3kDimens.SpacingSm))
+                        Text(
+                            text = subtitle.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Fr3kPalette.TextDim,
+                        )
+                    }
                 }
+                Spacer(Modifier.height(Fr3kDimens.SpacingSm))
+                Fr3kDivider(accent = accent)
+                Spacer(Modifier.height(Fr3kDimens.SpacingMd))
             }
-            Spacer(Modifier.height(Fr3kDimens.SpacingSm))
-            Fr3kDivider(accent = accent)
-            Spacer(Modifier.height(Fr3kDimens.SpacingMd))
+            content()
         }
-        content()
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Fr3kGradients.Sheen),
+        )
     }
 }
 
@@ -229,7 +310,8 @@ fun Fr3kButton(
     val shape = RoundedCornerShape(Fr3kDimens.RadiusRow)
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && enabled) 0.965f else 1f, tween(120), label = "btnScale")
+    val scale by animateFloatAsState(if (pressed && enabled) 0.965f else 1f, fr3kPressSpring, label = "btnScale")
+    val lift by animateFloatAsState(if (pressed && enabled) 1f else 0f, tween(Fr3kMotion.Fast), label = "btnLift")
     val glow by animateColorAsState(
         if (pressed && enabled) Fr3kPalette.Ok.copy(alpha = 0.75f) else Color.Transparent,
         tween(160),
@@ -239,15 +321,17 @@ fun Fr3kButton(
         modifier = modifier
             .scale(scale)
             .shadow(
-                elevation = if (enabled) 6.dp else 0.dp,
+                elevation = if (enabled) Fr3kDimens.ElevMid + (lift * 5f).dp else 0.dp,
                 shape = shape,
                 clip = false,
                 ambientColor = accent.copy(alpha = 0.25f),
-                spotColor = accent.copy(alpha = 0.45f),
+                spotColor = accent.copy(alpha = 0.5f),
             )
             .clip(shape)
             .background(
-                if (enabled) Brush.horizontalGradient(listOf(accent, Fr3kPalette.Magenta.copy(alpha = 0.88f)))
+                if (enabled) Brush.horizontalGradient(
+                    listOf(accent, Fr3kPalette.Magenta.copy(alpha = 0.88f + lift * 0.12f), Fr3kPalette.AccentLift.copy(alpha = 0.35f + lift * 0.45f)),
+                )
                 else Brush.horizontalGradient(listOf(Fr3kPalette.Surface, Fr3kPalette.SurfaceLow)),
                 shape,
             )
@@ -262,6 +346,13 @@ fun Fr3kButton(
             maxLines = 1,
             fontWeight = FontWeight.Bold,
             color = if (enabled) Fr3kPalette.Bg else Fr3kPalette.TextDim,
+        )
+        Box(
+            Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Fr3kGradients.Sheen),
         )
     }
 }
@@ -377,7 +468,8 @@ fun Fr3kRowItem(
         tween(140),
         label = "rowBrd",
     )
-    val scale by animateFloatAsState(if (pressed && enabled) 0.985f else 1f, tween(120), label = "rowScale")
+    val scale by animateFloatAsState(if (pressed && enabled) 0.985f else 1f, fr3kPressSpring, label = "rowScale")
+    val edge by animateFloatAsState(if (pressed && enabled) 1f else 0f, tween(Fr3kMotion.Fast), label = "rowEdge")
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -385,6 +477,15 @@ fun Fr3kRowItem(
             .clip(shape)
             .background(bg, shape)
             .border(1.dp, brd, shape)
+            .drawBehind {
+                if (edge > 0.01f) {
+                    drawRect(
+                        brush = Brush.verticalGradient(listOf(accent.copy(alpha = 0.95f), accent.copy(alpha = 0.25f))),
+                        topLeft = Offset(0f, size.height * (1f - edge) / 2f),
+                        size = Size(3.dp.toPx(), size.height * edge),
+                    )
+                }
+            }
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -417,5 +518,94 @@ fun Fr3kRowItem(
             Spacer(Modifier.width(Fr3kDimens.SpacingSm))
             trailing()
         }
+    }
+}
+
+/**
+ * Cohesive screen header: gradient wordmark, tracked eyebrow subtitle,
+ * glow rule and an optional trailing slot for status badges.
+ */
+@Composable
+fun Fr3kHeroHeader(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier,
+    colors: List<Color> = listOf(Fr3kPalette.Accent, Fr3kPalette.Ok),
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Fr3kDimens.SpacingSm)) {
+            Box(Modifier.weight(1f)) {
+                Fr3kGradientText(
+                    text = title,
+                    style = MaterialTheme.typography.displaySmall,
+                    colors = colors,
+                )
+            }
+            trailing?.invoke()
+        }
+        if (subtitle != null) {
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = subtitle.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = Fr3kPalette.TextDim,
+            )
+        }
+        Spacer(Modifier.height(Fr3kDimens.SpacingSm))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Fr3kGradients.Divider),
+        )
+    }
+}
+
+/** Thin gradient meter with a travelling shimmer — live progress signal. */
+@Composable
+fun Fr3kMeterBar(
+    fraction: Float,
+    modifier: Modifier = Modifier,
+    color: Color = Fr3kPalette.Accent,
+    height: Dp = 4.dp,
+    indeterminate: Boolean = false,
+) {
+    val animated by animateFloatAsState(fraction.coerceIn(0f, 1f), tween(Fr3kMotion.Standard), label = "meterFill")
+    val shape = RoundedCornerShape(Fr3kDimens.RadiusChip)
+    val transition = rememberInfiniteTransition(label = "meterShimmer")
+    val shimmer by transition.animateFloat(
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+        label = "meterShimmerPos",
+    )
+    val fill = if (indeterminate) 0.35f else animated
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .clip(shape)
+            .background(Fr3kPalette.SurfaceHigh.copy(alpha = 0.55f), shape),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth(fill)
+                .fillMaxHeight()
+                .clip(shape)
+                .background(
+                    Brush.horizontalGradient(listOf(color.copy(alpha = 0.55f), color, color.copy(alpha = 0.7f))),
+                )
+                .drawBehind {
+                    val x = shimmer * size.width
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.30f), Color.Transparent),
+                            startX = x - 70f,
+                            endX = x + 70f,
+                        ),
+                    )
+                },
+        )
     }
 }

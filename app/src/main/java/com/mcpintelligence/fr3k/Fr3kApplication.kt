@@ -59,9 +59,28 @@ class Fr3kApplication : Application() {
         )
     }
 
+    val openCodeGoProvider by lazy {
+        com.mcpintelligence.fr3k.integrations.opencodego.OpenCodeGoProvider(
+            endpointProvider = { settingsImpl.settings.value.opencodegoEndpoint },
+            apiKeyProvider = { secureStore.get(settingsImpl.settings.value.opencodegoApiKeyKey) },
+            defaultModel = settingsImpl.settings.value.opencodegoModel,
+        )
+    }
+
+    val providerSetupService by lazy {
+        com.mcpintelligence.fr3k.integrations.providers.ProviderSetupService(settingsImpl, secureStore::put)
+    }
+    fun selectedProviderReady(): Boolean = providerSetupService.isReady(secureStore::get)
+
     val agentSession by lazy {
         agentToolBus.register(com.mcpintelligence.fr3k.integrations.blackwave.BlackwaveAgentTool(blackwaveBridgeClient))
-        com.mcpintelligence.fr3k.core.tools.SharedAgentSession(agentToolBus, openRouterProvider, identity.deviceId)
+        com.mcpintelligence.fr3k.core.tools.SharedAgentSession(
+            agentToolBus,
+            com.mcpintelligence.fr3k.integrations.providers.SelectedProviderBackend(
+                settingsImpl, providerSetupService, secureStore::get,
+            ),
+            identity.deviceId,
+        )
     }
 
     /** Hoisted like [openRouterProvider] so the §10 diagnostics panel can probe it directly. */
@@ -119,6 +138,7 @@ class Fr3kApplication : Application() {
         registerHermes()
         registerOpenCode()
         registerOpenRouter()
+        registerOpenCodeGo()
         registerBlackwave()
         fr3kCore.pluginManager.register(GpsPlugin())
         fr3kCore.pluginManager.register(ShareCommandsPlugin(
@@ -173,6 +193,19 @@ class Fr3kApplication : Application() {
         fr3kCore.pluginManager.register(
             com.mcpintelligence.fr3k.integrations.openrouter.OpenRouterPlugin(
                 provider = openRouterProvider,
+                aiProviderRegistry = aiProviders,
+                commandFactory = { askCommand },
+            )
+        )
+    }
+
+    private fun registerOpenCodeGo() {
+        val askCommand = com.mcpintelligence.fr3k.integrations.opencodego.AskOpenCodeGoCommand(
+            provider = { openCodeGoProvider },
+        )
+        fr3kCore.pluginManager.register(
+            com.mcpintelligence.fr3k.integrations.opencodego.OpenCodeGoPlugin(
+                provider = openCodeGoProvider,
                 aiProviderRegistry = aiProviders,
                 commandFactory = { askCommand },
             )

@@ -39,7 +39,7 @@ plays the server's Opus audio and stops speaking text, so a reply is never playe
 ```
 HTTP 200
 keys: ['activation', 'firmware', 'server_time', 'websocket']
-activation: {"code": "986140", "message": "https://voice.fr3k.dev\n986140", "challenge": "02:e0:a8:e6:83:aa"}
+activation: {"code": "[REDACTED]", "message": "[REDACTED]", "challenge": "[REDACTED]"}
 websocket: {"token": "...", "url": "wss://..."}   (no "version" key)
 ```
 

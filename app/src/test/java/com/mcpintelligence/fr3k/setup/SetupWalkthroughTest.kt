@@ -57,6 +57,19 @@ class SetupWalkthroughTest {
         assertTrue(pending.any { it.id == "battery" })
     }
 
+    @Test fun providerInstructionsOfferChoiceAndRecommendGroq() {
+        val provider = SetupWalkthrough.items.single { it.id == "provider" }
+        assertTrue(provider.detail.contains("Groq"))
+        assertTrue(provider.detail.contains("OpenRouter"))
+        assertTrue(provider.detail.contains("OpenCode Go"))
+        assertTrue(provider.spoken.contains("Groq"))
+    }
+
+    @Test fun requiredProviderCannotBeBypassedByRememberedDone() {
+        val facts = allDone.copy(provider = false)
+        assertEquals("provider", SetupWalkthrough.next(mapOf("provider" to SetupStatus.DONE), facts)?.id)
+    }
+
     @Test fun providerKeyCannotBeSkipped() {
         val provider = SetupWalkthrough.items.single { it.id == "provider" }
         assertFalse("without a provider the assistant cannot answer at all", SetupWalkthrough.canSkip(provider))

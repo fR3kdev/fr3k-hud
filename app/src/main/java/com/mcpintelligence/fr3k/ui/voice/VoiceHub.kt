@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +54,10 @@ import com.mcpintelligence.fr3k.ui.Fr3kPalette
 fun VoiceHub(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val main = remember { Handler(Looper.getMainLooper()) }
-    val session = remember { Fr3kApplication.get().agentSession }
+    val app = remember { Fr3kApplication.get() }
+    val selectedSettings by app.settings.settings.collectAsState()
+    val session = remember { app.agentSession }
+    var showHermesSetup by remember { mutableStateOf(false) }
     var state by remember { mutableStateOf(VoiceState.IDLE) }
     var message by remember { mutableStateOf("Press start, then speak") }
     var lastReply by remember { mutableStateOf<String?>(null) }
@@ -108,7 +112,15 @@ fun VoiceHub(modifier: Modifier = Modifier) {
     }
     val check = readiness
     val device = deviceOf(check, context)
-    val needsSetup = !VoiceChecklist.ready(device) || welcomeFailed
+    val facts = SetupAndroid.facts(
+        context,
+        microphone = check?.microphone ?: micGranted(context),
+        tts = check?.ttsEngine ?: false,
+        recogniser = check?.recogniser ?: false,
+        provider = device.provider,
+    )
+    val nextItem = SetupWalkthrough.next(progress, facts)
+    val needsSetup = nextItem != null || !VoiceChecklist.ready(device) || welcomeFailed
 
     Column(
         modifier = modifier
@@ -121,14 +133,6 @@ fun VoiceHub(modifier: Modifier = Modifier) {
         Text("VOICE", color = Fr3kPalette.Accent, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
 
         if (needsSetup) {
-            val facts = SetupAndroid.facts(
-                context,
-                microphone = check?.microphone ?: micGranted(context),
-                tts = check?.ttsEngine ?: false,
-                recogniser = check?.recogniser ?: false,
-                provider = device.provider,
-            )
-            val nextItem = SetupWalkthrough.next(progress, facts)
             Text("Set up voice:", color = Fr3kPalette.Warn, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
             if (nextItem == null) {
                 Text("Everything on this device is set up.", color = Fr3kPalette.Ok, fontSize = 11.sp)
@@ -138,30 +142,14 @@ fun VoiceHub(modifier: Modifier = Modifier) {
                     nextItem.steps.forEachIndexed { index, step -> Text("  ${index + 1}. $step", color = Fr3kPalette.TextDim, fontSize = 11.sp) }
                 }
                 when (nextItem.id) {
-                    "provider" -> {
-                        Text("Default provider: OpenCode Go. The key is stored encrypted on this device only.", color = Fr3kPalette.TextDim, fontSize = 11.sp)
-                        androidx.compose.material3.OutlinedTextField(
-                            value = keyInput,
-                            onValueChange = { keyInput = it },
-                            label = { Text("OpenCode Go API key") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Button(
-                            onClick = {
-                                val key = keyInput.trim()
-                                if (key.isEmpty()) { keyStatus = "Enter the key first" } else {
-                                    val app = Fr3kApplication.get()
-                                    app.secureStore.put(app.settings.settings.value.opencodegoApiKeyKey, key)
-                                    keyInput = ""; keyStatus = "Key saved"
-                                    progress = SetupAndroid.progress(context)
-                                    refresh()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text("SAVE KEY") }
-                        keyStatus?.let { Text(it, color = Fr3kPalette.Accent, fontSize = 11.sp) }
-                    }
+                    "provider" -> com.mcpintelligence.fr3k.providers.ProviderSetupPanel(
+                        service = Fr3kApplication.get().providerSetupService,
+                        onSaved = {
+                            progress = SetupAndroid.progress(context)
+                            walkthrough = emptyList()
+                            refresh()
+                        },
+                    )
                     "voice_tuning" -> {
                         Text("Pick the reply voice in Android's voice settings, then set speed below.", color = Fr3kPalette.TextDim, fontSize = 11.sp)
                         Button(
@@ -257,6 +245,7 @@ fun VoiceHub(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 muted = !muted
+                voice.setMicrophoneMuted(muted)
                 if (muted) { voice.stopConversation(); conversing = false; message = "Microphone muted — type instead" }
                 else message = "Press start, then speak"
             },
@@ -301,6 +290,16 @@ fun VoiceHub(modifier: Modifier = Modifier) {
             "One press starts the conversation: it listens, answers out loud, then listens again until you stop it.",
             color = Fr3kPalette.TextDim, fontSize = 10.sp,
         )
+        Button(onClick = { showHermesSetup = !showHermesSetup }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (showHermesSetup) "HIDE OPTIONAL HERMES SETUP" else "HELP INSTALL HERMES IN TERMUX")
+        }
+        if (showHermesSetup) {
+            HermesTermuxSetupPanel(
+                provider = selectedSettings.activeAgentProvider,
+                model = app.providerSetupService.selectedModel(selectedSettings),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -308,10 +307,7 @@ fun VoiceHub(modifier: Modifier = Modifier) {
 private fun deviceOf(readiness: AndroidVoice.Readiness?, context: Context): VoiceChecklist.Device {
     val app = runCatching { Fr3kApplication.get() }.getOrNull()
     val settings = app?.settings?.settings?.value
-    val provider = settings != null && (
-        !app.secureStore.get(settings.openrouterApiKeyKey).isNullOrBlank() ||
-            !app.secureStore.get(settings.opencodegoApiKeyKey).isNullOrBlank()
-        )
+    val provider = app?.selectedProviderReady() == true
     return VoiceChecklist.Device(
         microphone = readiness?.microphone ?: micGranted(context),
         tts = readiness?.ttsEngine ?: false,

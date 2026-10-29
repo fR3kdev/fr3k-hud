@@ -76,8 +76,8 @@ object SetupWalkthrough {
         SetupItem(
             id = "provider",
             title = "Model provider key",
-            detail = "Paste an OpenCode Go API key so the assistant has something to answer with.",
-            spoken = "Next, add your OpenCode Go API key. It is the default provider.",
+            detail = "Choose Groq, OpenCode Go or OpenRouter, then validate your API key. Unsure? Start with Groq's rate-limited free tier.",
+            spoken = "Next, choose your model provider. If you are unsure, I recommend Groq's free tier. OpenCode Go and OpenRouter are also available.",
             optional = false,
             skippable = false,
         ),
@@ -171,8 +171,8 @@ object SetupWalkthrough {
     /** First unfinished item that is actually relevant on this device. */
     fun next(progress: Map<String, SetupStatus>, facts: SetupFacts): SetupItem? =
         items.firstOrNull { item ->
-            progress[item.id] != SetupStatus.DONE &&
-                progress[item.id] != SetupStatus.SKIPPED &&
+            (item.id == "provider" || progress[item.id] != SetupStatus.DONE) &&
+                (item.id == "provider" || progress[item.id] != SetupStatus.SKIPPED) &&
                 !satisfied(item, facts, progress) &&
                 !neutralised(item, progress, facts)
         }
@@ -206,10 +206,12 @@ object SetupWalkthrough {
     /** Remaining items, in order, that still need the operator. Used for the spoken overview. */
     fun pending(progress: Map<String, SetupStatus>, facts: SetupFacts): List<SetupItem> = buildList {
         val working = progress.toMutableMap()
+        var remainingFacts = facts
         while (true) {
-            val item = next(working, facts) ?: break
+            val item = next(working, remainingFacts) ?: break
             add(item)
             working[item.id] = SetupStatus.DONE
+            if (item.id == "provider") remainingFacts = remainingFacts.copy(provider = true)
         }
     }
 

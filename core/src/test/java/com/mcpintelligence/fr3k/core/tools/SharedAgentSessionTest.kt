@@ -2,6 +2,7 @@ package com.mcpintelligence.fr3k.core.tools
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.test.*
+import kotlinx.coroutines.flow.collect
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -9,6 +10,27 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SharedAgentSessionTest {
+    @Test fun finalRepliesExcludeToolPreambleAndFailures() = runTest {
+        val tool = Tool("blackwave.status", "status")
+        val bus = AgentToolBus().apply { register(tool) }
+        var turn = 0
+        val session = SharedAgentSession(bus, AgentSessionBackend { _, _ ->
+            when (turn++) {
+                0 -> call("call1", tool.id, emptyMap())
+                1 -> answer("Final reply")
+                else -> throw IllegalStateException("offline")
+            }
+        }, "phone")
+        val replies = mutableListOf<String>()
+        val collector = backgroundScope.launch { session.finalReplies.collect { replies.add(it) } }
+        runCurrent()
+        session.send("first")
+        runCurrent()
+        session.send("second")
+        runCurrent()
+        assertEquals(listOf("Final reply"), replies)
+        collector.cancel()
+    }
     private fun call(id: String, tool: String, args: Map<String,String>) = JSONObject().put("role", "assistant")
         .put("content", "I will run the requested operation.")
         .put("tool_calls", JSONArray().put(JSONObject().put("id", id).put("type", "function")

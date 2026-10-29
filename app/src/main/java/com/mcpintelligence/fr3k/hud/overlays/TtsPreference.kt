@@ -1,69 +1,70 @@
 package com.mcpintelligence.fr3k.hud.overlays
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
-/**
- * User preference + utility for the chat overlay's spoken-response feature.
- *
- * The toggle is read from SharedPreferences (`fr3k_hud_prefs`, key
- * `tts_enabled`). When enabled, every chat response is fed through
- * Android's built-in [TextToSpeech] engine.
- *
- * TTS is intentionally minimal:
- * - we do NOT call [TextToSpeech.setPitch] / setSpeechRate; the system
- *   picks defaults so a screen reader on the user's device still works.
- * - we DO short-circuit on empty / error responses so we never speak
- *   `opencode-zen error: ...` out loud (the user can read the transcript).
- */
+/** Opt-in speech for the visible chat bubble, using the Android system engine. */
 object TtsPreference {
     private const val PREFS = "fr3k_hud_prefs"
     private const val KEY = "tts_enabled"
+    private val main = Handler(Looper.getMainLooper())
+    private var engine: TextToSpeech? = null
+    private var ready = false
+    private var pending: String? = null
+    private var generation = 0
 
     fun isEnabled(ctx: Context): Boolean =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
 
     fun setEnabled(ctx: Context, value: Boolean) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY, value).apply()
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, value).apply()
     }
 
-    /**
-     * Speak [text] if TTS is enabled. Initialises the engine lazily on the
-     * first call. Safe to call from a coroutine on the IO dispatcher.
-     */
     fun speakIfEnabled(ctx: Context, text: String) {
-        if (!isEnabled(ctx)) return
         val clean = text.trim()
         if (clean.isEmpty()) return
-        // Skip obvious error / fallback messages so the user isn't told
-        // "opencode-zen error: 401" verbally.
-        if (clean.startsWith("opencode-zen error", ignoreCase = true)) return
-        if (clean.startsWith("hermes unreachable", ignoreCase = true)) return
-        getEngine(ctx).speak(clean, TextToSpeech.QUEUE_FLUSH, null, "fr3k-chat")
-    }
-
-    @Volatile
-    private var cached: TextToSpeech? = null
-
-    @Synchronized
-    private fun getEngine(ctx: Context): TextToSpeech {
-        cached?.let { return it }
-        val tts = TextToSpeech(ctx.applicationContext) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                cached?.language = Locale.getDefault()
+        val app = ctx.applicationContext
+        main.post {
+            if (!isEnabled(app)) return@post
+            if (ready) {
+                engine?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "fr3k-chat")
+            } else {
+                pending = clean
+                if (engine == null) {
+                    val token = ++generation
+                    engine = TextToSpeech(app) { status ->
+                        main.post {
+                            if (token != generation) return@post
+                            if (status == TextToSpeech.SUCCESS) {
+                                ready = true
+                                engine?.language = Locale.getDefault()
+                                val reply = pending
+                                pending = null
+                                if (reply != null && isEnabled(app))
+                                    engine?.speak(reply, TextToSpeech.QUEUE_FLUSH, null, "fr3k-chat")
+                            } else {
+                                pending = null
+                                engine?.shutdown()
+                                engine = null
+                            }
+                        }
+                    }
+                }
             }
         }
-        cached = tts
-        return tts
     }
 
-    /** Release the TTS engine. Call from your activity / service onDestroy. */
-    @Synchronized
     fun shutdown() {
-        cached?.stop()
-        cached?.shutdown()
-        cached = null
+        main.post {
+            generation++
+            pending = null
+            ready = false
+            engine?.stop()
+            engine?.shutdown()
+            engine = null
+        }
     }
 }

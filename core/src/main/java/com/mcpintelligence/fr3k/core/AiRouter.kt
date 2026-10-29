@@ -56,6 +56,8 @@ object ProviderIds {
     const val HERMES = "hermes"
     const val LOCAL = "ai.local"
     const val OPENROUTER = "openrouter"
+    /** OpenCode Go subscription provider (opencode.ai/zen/go). */
+    const val OPENCODE_GO = "opencode-go"
     const val DEEPSEEK = "deepseek"
     const val GROQ = "groq"
     const val AUTO = "auto"
